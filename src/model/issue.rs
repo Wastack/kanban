@@ -1,6 +1,8 @@
-use std::fmt::{Display, Formatter, write};
+use std::fmt::{Display, Formatter};
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub enum State {
     Analysis,
     Blocked,
@@ -15,11 +17,13 @@ pub trait Stateful {
     fn state_mut(&mut self) -> &mut State;
 }
 
-pub struct Description(String);
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Description(pub String);
 
 impl Display for Description {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, self.0)
+        write!(f, "{}", self.0)
     }
 }
 
@@ -28,9 +32,12 @@ pub trait Described {
     fn description_mut(&mut self) -> &mut Description;
 }
 
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Issue {
-    description: Description,
-    state: State,
+    pub(crate) description: Description,
+    pub(crate) state: State,
 }
 
 impl Stateful for Issue {

@@ -3,35 +3,60 @@ extern crate core;
 mod cli;
 mod model;
 mod render;
+mod storage;
 
-use std::fmt::{Display, Formatter};
-use std::io;
-use std::num::ParseIntError;
-use std::process::exit;
+use home::home_dir;
+use clap::Parser;
 use crate::cli::Commands;
+use crate::model::board::Board;
+use crate::model::issue::{Description, Issue, State};
+use crate::render::render::Renderer;
+use crate::render::stdoutrenderer::StdOutRenderer;
+use crate::storage::{Storage};
 
 
 fn main() {
-    if let Err(e) = process() {
-        println!("{}", e);
-        exit(1);
-    }
-}
-
-fn process() -> CliResult<()> {
     let root = cli::RootCli::parse();
-    Config::initialize(root.verbose)?;
+
+    let storage = storage::FileStorage{
+        source: home_dir().expect("Failed to get home directory")
+            .join(".kanban").into(),
+    };
+    let mut board = storage.load();
+
+    let mut board_changed= false;
 
     match root.command {
-        Commands::Add(description, state) => {
-            // TODO add issue with description and state
+        Some(Commands::Add{description, state}) => {
+            board.issues.push(Issue{
+                description: Description(description),
+                state: match state {
+                    None => State::Open,
+                    Some(s) => match s.to_lowercase().as_str() {
+                        "analysis" => State::Analysis,
+                        "blocked" => State::Blocked,
+                        "open" => State::Open,
+                        "progress" => State::InProgress,
+                        "review" => State::Review,
+                        "done" => State::Done,
+                        _ => panic!("unknown state"),
+                    }
+                }
+            });
+
+            board_changed = true;
         },
         None => {
-            // TODO list current issues
+            let out = StdOutRenderer::default().render_board(&board);
+            println!("{}", out)
         },
     }
 
-    Ok(())
+    if board_changed {
+        storage.save(&board)
+    }
 }
+
+
 
 

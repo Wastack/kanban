@@ -1,3 +1,3 @@
 
-mod render;
-mod stdout_redner;
+pub mod render;
+pub mod stdoutrenderer;
