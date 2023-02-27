@@ -1,5 +1,3 @@
-extern crate core;
-
 mod cli;
 mod model;
 mod render;
@@ -11,7 +9,7 @@ use crate::cli::Commands;
 use crate::model::board::Board;
 use crate::model::issue::{Description, Issue, State};
 use crate::render::render::Renderer;
-use crate::render::stdoutrenderer::StdOutRenderer;
+use crate::render::stdoutrenderer::TabularTextRenderer;
 use crate::storage::{Storage};
 
 
@@ -47,7 +45,7 @@ fn main() {
             board_changed = true;
         },
         None => {
-            let out = StdOutRenderer::default().render_board(&board);
+            let out = TabularTextRenderer::default().render_board(&board);
             println!("{}", out)
         },
     }
