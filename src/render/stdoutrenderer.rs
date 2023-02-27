@@ -12,19 +12,15 @@ impl Renderer for TabularTextRenderer {
 
     /// An example output:
     ///
-    /// Open
-    /// ----
-    ///
+    /// <b>Open</b>
     /// 0: foo
     /// 5: bar
     ///
-    /// In Progress
-    /// -----------
-    ///
+    /// <b>In Progress</b>
     /// 1: baz
     /// 3: and so on
     fn render_board(&self, board: &Board) -> String {
-        let result: String = vec![
+        vec![
             State::Analysis,
             State::Open,
             State::InProgress,
@@ -35,15 +31,14 @@ impl Renderer for TabularTextRenderer {
                 state_to_text(&tab).bold().to_string(),
                 board.issues
                     .iter()
-                    .filter(|i|  *i.state() == tab)
                     .enumerate()
+                    .filter(|(_, issue)|  *issue.state() == tab)
                     .fold::<String, _>(String::new(),|current: String, (index, issue): (usize, &Issue) |
                         current + &format!("{}: {}\n", index, issue.description()))
             ].join("\n")
         )
             .collect::<Vec<String>>()
-            .join("\n");
-        return result
+            .join("\n")
     }
 }
 
