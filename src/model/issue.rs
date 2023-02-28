@@ -21,6 +21,14 @@ pub trait Stateful {
 #[serde(rename_all = "camelCase")]
 pub struct Description(pub String);
 
+
+impl Description {
+    pub fn to_str(&self) -> &str {
+        return &self.0
+    }
+}
+
+
 impl Display for Description {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)

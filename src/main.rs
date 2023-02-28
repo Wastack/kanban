@@ -2,12 +2,13 @@ mod cli;
 mod model;
 mod render;
 mod storage;
+mod editor;
 
 use home::home_dir;
 use clap::Parser;
 use crate::cli::{Commands};
 use crate::model::board::Board;
-use crate::model::issue::{Description, Issue, State, Stateful};
+use crate::model::issue::{Described, Description, Issue, State, Stateful};
 use crate::render::render::Renderer;
 use crate::render::stdoutrenderer::TabularTextRenderer;
 use crate::storage::{Storage};
@@ -47,7 +48,18 @@ fn main() {
             *current_state = state;
 
             board_changed = true;
-        }
+        },
+        Some(Commands::Edit {index}) => {
+            let issue = board.issues.get_mut(index as usize)
+                .expect("did not find issue with index");
+            let edited_description = editor::open_editor(issue.description().to_str())
+                .expect("preparing editor failed");
+
+            let description = issue.description_mut();
+            description.0 = edited_description;
+
+            board_changed = true;
+        },
         None => {
             let out = TabularTextRenderer::default().render_board(&board);
             println!("{}", out)

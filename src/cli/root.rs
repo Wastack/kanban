@@ -31,20 +31,10 @@ pub(crate) enum Commands {
         index: u32,
         // New state to apply to the issue
         state: State,
-    }
-}
-
-impl FromStr for State {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().trim() {
-            "analysis" => Ok(State::Analysis),
-            "open" => Ok(State::Open),
-            "progress" => Ok(State::InProgress),
-            "review" => Ok(State::Review),
-            "done" => Ok(State::Done),
-            _ => Err(String::from("unknown state")),
-        }
+    },
+    /// Edit the description of an issue with $EDITOR (defaults to vim)
+    Edit {
+        // Index of the issue to edit
+        index: u32,
     }
 }
