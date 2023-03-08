@@ -23,9 +23,9 @@ impl Renderer for TabularTextRenderer {
         vec![
             State::Analysis,
             State::Open,
-            State::InProgress,
             State::Review,
             State::Done,
+            State::InProgress,
         ].into_iter().map(|tab|
             vec![
                 state_to_text(&tab).bold().to_string(),

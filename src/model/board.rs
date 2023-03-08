@@ -6,3 +6,4 @@ use serde::{Serialize, Deserialize};
 pub struct Board {
     pub issues: Vec<Issue>,
 }
+

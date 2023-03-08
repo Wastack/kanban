@@ -1,7 +1,7 @@
 use std::fs;
 use std::io::Write;
 use std::path::{PathBuf};
-use crate::Board;
+use crate::{Board};
 
 pub trait Storage {
     fn load(&self) -> Board;

@@ -8,7 +8,7 @@ use home::home_dir;
 use clap::Parser;
 use crate::cli::{Commands};
 use crate::model::board::Board;
-use crate::model::issue::{Described, Description, Issue, State, Stateful};
+use crate::model::issue::{Described, Description, elapsed_time_since_epoch, Issue, State, Stateful};
 use crate::render::render::Renderer;
 use crate::render::stdoutrenderer::TabularTextRenderer;
 use crate::storage::{Storage};
@@ -27,12 +27,13 @@ fn main() {
 
     match root.command {
         Some(Commands::Add{description, state}) => {
-            board.issues.push(Issue{
+            board.issues.insert(0, Issue{
                 description: Description(description),
                 state: match state {
                     None => State::Open,
                     Some(s) => s,
-                }
+                },
+                time_created: elapsed_time_since_epoch(),
             });
 
             board_changed = true;

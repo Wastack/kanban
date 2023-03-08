@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -44,8 +45,16 @@ pub trait Described {
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Issue {
+    /// Description (content) of the ticket
     pub(crate) description: Description,
+    /// State of the ticket
     pub(crate) state: State,
+    /// Time in seconds since the issue was created
+    ///
+    /// For backwards compatibility, if the field is missing, we take it as if it was
+    /// created just now.
+    #[serde(default = "elapsed_time_since_epoch")]
+    pub(crate) time_created: u64,
 }
 
 impl Stateful for Issue {
@@ -66,4 +75,10 @@ impl Described for Issue {
     fn description_mut(&mut self) -> &mut Description {
         &mut self.description
     }
+}
+
+pub fn elapsed_time_since_epoch() -> u64 {
+    let now = SystemTime::now();
+    let since_epoch = now.duration_since(UNIX_EPOCH).expect("Time went backwards");
+    since_epoch.as_secs()
 }

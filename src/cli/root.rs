@@ -38,3 +38,19 @@ pub(crate) enum Commands {
         index: u32,
     }
 }
+
+
+impl FromStr for State {
+        type Err = String;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s.to_lowercase().trim() {
+                   "analysis" => Ok(State::Analysis),
+                   "open" => Ok(State::Open),
+                   "progress" => Ok(State::InProgress),
+                   "review" => Ok(State::Review),
+                   "done" => Ok(State::Done),
+                   _ => Err(String::from("unknown state")),
+            }
+        }
+}
