@@ -27,10 +27,11 @@ pub(crate) enum Commands {
     },
     /// Move an issue to a new state
     Move {
-        // Index of the issue to delete
-        index: u32,
         // New state to apply to the issue
         state: State,
+
+        // One or multiple indices of issues that you move
+        indices: Vec<u32>,
     },
     /// Edit the description of an issue with $EDITOR (defaults to vim)
     Edit {

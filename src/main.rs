@@ -44,9 +44,20 @@ fn main() {
 
             board_changed = true;
         },
-        Some(Commands::Move {index, state}) => {
-            let current_state = board.issues[index as usize].state_mut();
-            *current_state = state;
+        Some(Commands::Move {indices, state}) => {
+            // Check if all indices are valid
+            if !indices.iter().all(|i|*i < board.issues.len() as u32) {
+                if indices.len() > 1 {
+                    panic!("at least one of the indices specified are out of range")
+                } else {
+                    panic!("index out of range")
+                }
+            }
+
+            for index in indices {
+                let current_state = board.issues[index as usize].state_mut();
+                *current_state = state;
+            }
 
             board_changed = true;
         },
