@@ -40,10 +40,46 @@ pub(crate) enum Commands {
     },
     /// Show issues
     Show {
-        /// Specifies what issue to show. If omitted, then it shows everything.
+        /// Specifies what issue to show. If omitted, then it shows everything
         what: Option<ShowCategory>
+    },
+    /// Change priority (order) of issues
+    Prio {
+        /// Action (and direction) to take on the issue
+        command: PrioCommand,
+
+        /// Index of the issue to be moved
+        index: u32,
     }
 }
+
+pub(crate) enum PrioCommand {
+    /// Top of its category
+    Top,
+    /// Bottom of its category
+    Bottom,
+    /// 1 entry up in its category
+    Up,
+    /// 1 entry down in its category
+    Down
+}
+
+
+impl FromStr for PrioCommand {
+    // TODO proper error handling?
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().trim() {
+            "top" => Ok(PrioCommand::Top),
+            "bottom" => Ok(PrioCommand::Bottom),
+            "up" => Ok(PrioCommand::Up),
+            "down" => Ok(PrioCommand::Down),
+            _ => Err(String::from("unknown priority command"))
+        }
+    }
+}
+
 
 pub(crate) enum ShowCategory {
     // Show all the done tickets

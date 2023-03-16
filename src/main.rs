@@ -6,7 +6,7 @@ mod editor;
 
 use home::home_dir;
 use clap::Parser;
-use crate::cli::{Commands, ShowCategory};
+use crate::cli::{Commands, ShowCategory, PrioCommand};
 use crate::model::board::Board;
 use crate::model::issue::{Described, Description, elapsed_time_since_epoch, Issue, State, Stateful};
 use crate::render::render::Renderer;
@@ -84,6 +84,17 @@ fn main() {
                     println!("{}", out)
                 }
             }
+        },
+        Some(Commands::Prio {command, index}) => {
+            // TODO Out Of Range
+            match command {
+                PrioCommand::Top => board.prio_top_in_category(index as usize),
+                PrioCommand::Bottom => board.prio_bottom_in_category(index as usize),
+                PrioCommand::Up => board.prio_up_in_category(index as usize),
+                PrioCommand::Down => board.prio_down_in_category(index as usize),
+            }
+
+            board_changed = true;
         },
         None => {
             let out = TabularTextRenderer::default().render_board(&board);
