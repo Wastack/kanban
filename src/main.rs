@@ -6,11 +6,11 @@ mod editor;
 
 use home::home_dir;
 use clap::Parser;
-use crate::cli::{Commands};
+use crate::cli::{Commands, ShowCategory};
 use crate::model::board::Board;
 use crate::model::issue::{Described, Description, elapsed_time_since_epoch, Issue, State, Stateful};
 use crate::render::render::Renderer;
-use crate::render::stdoutrenderer::TabularTextRenderer;
+use crate::render::stdoutrenderer::{OnlyDoneStdOutRenderer, TabularTextRenderer};
 use crate::storage::{Storage};
 
 
@@ -71,6 +71,19 @@ fn main() {
             description.0 = edited_description;
 
             board_changed = true;
+        },
+        Some(Commands::Show {what}) => {
+            match what {
+                Some(ShowCategory::Done) => {
+                    let out = OnlyDoneStdOutRenderer::default().render_board(&board);
+                    println!("{}", out)
+                },
+                None => {
+                    // TODO show all done stories this case?
+                    let out = TabularTextRenderer::default().render_board(&board);
+                    println!("{}", out)
+                }
+            }
         },
         None => {
             let out = TabularTextRenderer::default().render_board(&board);

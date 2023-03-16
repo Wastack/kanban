@@ -37,21 +37,44 @@ pub(crate) enum Commands {
     Edit {
         // Index of the issue to edit
         index: u32,
+    },
+    /// Show issues
+    Show {
+        /// Specifies what issue to show. If omitted, then it shows everything.
+        what: Option<ShowCategory>
     }
 }
 
+pub(crate) enum ShowCategory {
+    // Show all the done tickets
+    Done,
+}
+
+
+impl FromStr for ShowCategory {
+    // TODO proper error handling?
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().trim() {
+            "done" => Ok(ShowCategory::Done),
+            _ => Err(String::from("unknown category to show"))
+        }
+    }
+}
 
 impl FromStr for State {
-        type Err = String;
+    // TODO proper error handling?
+    type Err = String;
 
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            match s.to_lowercase().trim() {
-                   "analysis" => Ok(State::Analysis),
-                   "open" => Ok(State::Open),
-                   "progress" => Ok(State::InProgress),
-                   "review" => Ok(State::Review),
-                   "done" => Ok(State::Done),
-                   _ => Err(String::from("unknown state")),
-            }
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().trim() {
+               "analysis" => Ok(State::Analysis),
+               "open" => Ok(State::Open),
+               "progress" => Ok(State::InProgress),
+               "review" => Ok(State::Review),
+               "done" => Ok(State::Done),
+               _ => Err(String::from("unknown state")),
         }
+    }
 }

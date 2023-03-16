@@ -103,3 +103,18 @@ fn state_to_text(state: &State) -> &'static str {
         _ => panic!("unknown state")
     }
 }
+
+#[derive(Default)]
+pub struct OnlyDoneStdOutRenderer {}
+
+impl Renderer for OnlyDoneStdOutRenderer {
+    fn render_board(&self, board: &Board) -> String {
+        board.issues_with_state()
+            .get(&State::Done)
+            .unwrap_or(&Vec::new())
+            .iter()
+            .map(|IssueRef{issue, order}| format!("{}: {}", order, issue.description()))
+            .collect::<Vec<String>>()
+            .join("\n")
+    }
+}
