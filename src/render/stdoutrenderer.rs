@@ -1,42 +1,93 @@
-use crate::model::board::Board;
-use crate::model::issue::{Described, Stateful, State, Issue};
+use crate::model::board::{Board, BoardStateView, IssueRef};
+use crate::model::issue::{Described, State, Issue};
 use crate::render::render::Renderer;
 use colored::Colorize;
+use crate::elapsed_time_since_epoch;
 
 
 #[derive(Default)]
 pub struct TabularTextRenderer {}
 
 
+enum DisplayCategory {
+    Normal,
+    Overdue,
+}
+
+fn categorize(issue: &Issue) -> DisplayCategory {
+    let now = elapsed_time_since_epoch();
+    let two_weeks_in_secs = 60 * 60 * 24 * 14;
+
+    if now - issue.time_created >= two_weeks_in_secs && issue.state == State::Open {
+        DisplayCategory::Overdue
+    } else {
+        DisplayCategory::Normal
+    }
+}
+
+
 impl Renderer for TabularTextRenderer {
 
-    /// An example output:
-    ///
-    /// <b>Open</b>
-    /// 0: foo
-    /// 5: bar
-    ///
-    /// <b>In Progress</b>
-    /// 1: baz
-    /// 3: and so on
+
     fn render_board(&self, board: &Board) -> String {
+        let mut issues = board.issues_with_state();
+
+        // Keep only the first 4 issues of DONE
+        let mut done_issues_truncated = false;
+        let done_issues = issues.get_mut(&State::Done);
+        if let Some(done_issues) = done_issues {
+            if done_issues.len() > 4 {
+                done_issues_truncated = true;
+            }
+            done_issues.drain(4..);
+        }
+
         vec![
             State::Analysis,
             State::Open,
+            State::InProgress,
             State::Review,
             State::Done,
-            State::InProgress,
-        ].into_iter().map(|tab|
-            vec![
-                state_to_text(&tab).bold().to_string(),
-                board.issues
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, issue)|  *issue.state() == tab)
-                    .fold::<String, _>(String::new(),|current: String, (index, issue): (usize, &Issue) |
-                        current + &format!("{}: {}\n", index, issue.description()))
-            ].join("\n")
-        )
+        ]
+            .into_iter()
+            .map(|tab|
+                vec![
+                    // Header
+                    state_to_text(&tab).bold().to_string(),
+
+                    // Display the issues
+                    issues
+                        .get(&tab)
+                        .unwrap_or(&Vec::<IssueRef>::default())
+                        .iter()
+
+                        // make it to a string with display category (e.g. overdue)
+                        .map(|IssueRef {issue, order} |
+                                 (
+                                     format!("{}: {}", order, issue.description()),
+                                     categorize(issue)
+                                 )
+                        )
+
+                        // apply display category
+                        .map(|(text, category) |
+                            match category {
+                                DisplayCategory::Overdue => text.red().to_string(),
+                                DisplayCategory::Normal => text,
+                            }
+                        )
+
+                        .collect::<Vec<String>>()
+                        .join("\n"),
+
+                    // If there are not visible done issue, indicate it with a ...
+                    if tab == State::Done && done_issues_truncated {
+                        String::from("...")
+                    } else {
+                        String::default()
+                    }
+                ].join("\n")
+            )
             .collect::<Vec<String>>()
             .join("\n")
     }
