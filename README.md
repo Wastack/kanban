@@ -1,5 +1,5 @@
 # kanban-cli
-A simple yet elegant kanban board to get things done in terminal.
+A simple yet elegant kanban board to get things done.
 
 Inspired by `taskwarrior`. If you prefer a kanban board instead of a simple
 todo list, then this is your tool.
@@ -25,13 +25,21 @@ Done
 1: Design kanban-cli subcommands
 5: Implement kanban-cli edit
 6: Support moving issues for kanban-cli
-9: Define persistence model for kanban-cli
+...
 ```
 
 ```bash
 > ka add "New open issue"
 > ka add "New issue in analysis" analysis
-> ka move 3 done
+> ka move done 3
+> ka move done 3 4 5
 > ka edit 3  # Interactive editing of the issue with $EDITOR (defaults to vim)
+> ka prio up 3 # Move the issue in it's category. up/down/top/bottom
 > ka delete 3
+> ka show done # Show all done issues (`ka` only shows the 4 most recently closed issues)
 ```
+
+### Other highlights
+
+- Issues in Open that lasts more then 2 weeks are marked as overdue, and highlighted with red color (do not sit on your tasks).
+- Issues are stored in `$HOME/.kanban`, so that you can transfer your kanban to another machine.

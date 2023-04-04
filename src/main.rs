@@ -46,7 +46,7 @@ fn main() {
         },
         Some(Commands::Move {indices, state}) => {
             // Check if all indices are valid
-            if !indices.iter().all(|i|*i < board.issues.len() as u32) {
+            if !indices.iter().all(|i|*i < board.issues.len()) {
                 if indices.len() > 1 {
                     panic!("at least one of the indices specified are out of range")
                 } else {
@@ -55,14 +55,21 @@ fn main() {
             }
 
             for index in indices {
-                let current_state = board.issues[index as usize].state_mut();
-                *current_state = state;
+                let current_state = board.issues[index].state_mut();
+
+                if *current_state != state{
+                    *current_state = state;
+
+                    if state == State::Done {
+                        board.prio_top_in_category(index);
+                    }
+                }
             }
 
             board_changed = true;
         },
         Some(Commands::Edit {index}) => {
-            let issue = board.issues.get_mut(index as usize)
+            let issue = board.issues.get_mut(index)
                 .expect("did not find issue with index");
             let edited_description = editor::open_editor(issue.description().to_str())
                 .expect("preparing editor failed");

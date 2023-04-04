@@ -12,7 +12,7 @@ pub(crate) struct RootCli {
 
 #[derive(Subcommand)]
 pub(crate) enum Commands {
-    /// Adds a new issue
+    /// Add new issue
     Add {
         /// A text that describes the issue
         description: String,
@@ -23,24 +23,24 @@ pub(crate) enum Commands {
     /// Deletes an issue. This makes the indexes reassigned!
     Delete {
         // Index of the issue to delete
-        index: u32,
+        index: usize,
     },
-    /// Move an issue to a new state
+    /// Move issue to a new state
     Move {
         // New state to apply to the issue
         state: State,
 
         // One or multiple indices of issues that you move
-        indices: Vec<u32>,
+        indices: Vec<usize>,
     },
     /// Edit the description of an issue with $EDITOR (defaults to vim)
     Edit {
         // Index of the issue to edit
-        index: u32,
+        index: usize,
     },
     /// Show issues
     Show {
-        /// Specifies what issue to show. If omitted, then it shows everything
+        /// Specify what issue to show. If omitted, then it shows everything
         what: Option<ShowCategory>
     },
     /// Change priority (order) of issues
@@ -49,7 +49,7 @@ pub(crate) enum Commands {
         command: PrioCommand,
 
         /// Index of the issue to be moved
-        index: u32,
+        index: usize,
     }
 }
 

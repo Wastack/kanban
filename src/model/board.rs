@@ -105,6 +105,7 @@ impl BoardStateView for Board {
     }
 }
 
+/// And Issue referenced, and its position (a.k.a. order or priority) amongst all the issues.
 pub struct IssueRef<'a> {
     pub order: usize,
     pub issue: &'a Issue,
