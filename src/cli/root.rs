@@ -105,9 +105,7 @@ impl FromStr for State {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().trim() {
-               "analysis" => Ok(State::Analysis),
                "open" => Ok(State::Open),
-               "progress" => Ok(State::InProgress),
                "review" => Ok(State::Review),
                "done" => Ok(State::Done),
                _ => Err(String::from("unknown state")),

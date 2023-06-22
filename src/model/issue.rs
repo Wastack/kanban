@@ -5,10 +5,7 @@ use serde::{Serialize, Deserialize};
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum State {
-    Analysis,
-    Blocked,
     Open,
-    InProgress,
     Review,
     Done,
 }

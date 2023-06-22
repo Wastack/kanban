@@ -43,9 +43,7 @@ impl Renderer for TabularTextRenderer {
         }
 
         vec![
-            State::Analysis,
             State::Open,
-            State::InProgress,
             State::Review,
             State::Done,
         ]
@@ -95,12 +93,9 @@ impl Renderer for TabularTextRenderer {
 
 fn state_to_text(state: &State) -> &'static str {
     match state {
-        State::Analysis => "Analysis",
         State::Open => "Open",
-        State::InProgress => "In Progress",
         State::Review => "Review",
         State::Done => "Done",
-        _ => panic!("unknown state")
     }
 }
 

@@ -46,7 +46,7 @@ fn main() {
 
             board_changed = true;
         },
-        Some(Commands::Move {indices, state}) => {
+        Some(Commands::Move{indices, state}) => {
             // Check if all indices are valid
             if !indices.iter().all(|i|*i < board.issues.len()) {
                 if indices.len() > 1 {
@@ -70,7 +70,7 @@ fn main() {
 
             board_changed = true;
         },
-        Some(Commands::Edit {index}) => {
+        Some(Commands::Edit{index}) => {
             let issue = board.issues.get_mut(index)
                 .expect("did not find issue with index");
             let edited_description = editor::open_editor(issue.description().to_str())
@@ -81,7 +81,7 @@ fn main() {
 
             board_changed = true;
         },
-        Some(Commands::Show {what}) => {
+        Some(Commands::Show{what}) => {
             match what {
                 Some(ShowCategory::Done) => {
                     let out = OnlyDoneStdOutRenderer::default().render_board(&board);
@@ -94,7 +94,7 @@ fn main() {
                 }
             }
         },
-        Some(Commands::Prio {command, index}) => {
+        Some(Commands::Prio{command, index}) => {
             // TODO Out Of Range
             match command {
                 PrioCommand::Top => board.prio_top_in_category(index as usize),
