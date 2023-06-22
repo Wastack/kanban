@@ -27,6 +27,8 @@ fn main() {
 
     match root.command {
         Some(Commands::Add{description, state}) => {
+            let description = String::from(description.trim());
+
             board.issues.insert(0, Issue{
                 description: Description(description),
                 state: match state {
