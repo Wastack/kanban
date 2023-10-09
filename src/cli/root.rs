@@ -62,7 +62,7 @@ pub(crate) enum PrioCommand {
     /// 1 entry up in its category
     Up,
     /// 1 entry down in its category
-    Down
+    Down,
 }
 
 

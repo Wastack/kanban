@@ -118,7 +118,9 @@ fn main() {
     }
 
     if board_changed {
-        storage.save(&board)
+        storage.save(&board);
+        let out = TabularTextRenderer::default().render_board(&board);
+        println!("{}", out)
     }
 }
 
