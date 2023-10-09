@@ -93,7 +93,7 @@ impl Board {
 
 impl BoardStateView for Board {
     /// Returns the issues categorized by state, alongside their global order (priority). The
-    /// returned Vectors are ordered by their order.
+    /// returned Vectors are ordered by their priority.
     fn issues_with_state(&self) -> HashMap<State, Vec<IssueRef>> {
         self.issues.iter()
             .enumerate()

@@ -40,9 +40,15 @@ fn main() {
 
             board_changed = true;
         },
-        Some(Commands::Delete{index}) => {
-            // This will panic if out of range. Is that good?
-            board.issues.remove(index as usize);
+        Some(Commands::Delete{mut index}) => {
+            // Sort the indices in descending order,
+            // so that each removal does not affect the next index.
+            index.sort_unstable_by(|a, b| b.cmp(a));
+
+            for &i in &index {
+                // This will panic if out of range. Is that good?
+                board.issues.remove(i);
+            }
 
             board_changed = true;
         },

@@ -23,7 +23,7 @@ pub(crate) enum Commands {
     /// Deletes an issue. This makes the indexes reassigned!
     Delete {
         // Index of the issue to delete
-        index: usize,
+        index: Vec<usize>,
     },
     /// Move issue to a new state
     Move {
@@ -53,6 +53,7 @@ pub(crate) enum Commands {
     }
 }
 
+#[derive(Clone)]
 pub(crate) enum PrioCommand {
     /// Top of its category
     Top,
@@ -81,6 +82,7 @@ impl FromStr for PrioCommand {
 }
 
 
+#[derive(Clone)]
 pub(crate) enum ShowCategory {
     // Show all the done tickets
     Done,
