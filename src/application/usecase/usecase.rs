@@ -2,8 +2,8 @@ use crate::controllers::{Command};
 use crate::application::{elapsed_time_since_epoch, Issue, State};
 use crate::application::issue::{Description};
 use crate::storage::{home_file_storage, Storage};
-use crate::render::render::Renderer;
-use crate::render::stdoutrenderer::TabularTextRenderer;
+use crate::application::ports::presenter::Presenter;
+use crate::presenters::stdoutrenderer::TabularTextRenderer;
 
 
 /// A UseCase can be called to make an action on the board (e.g. adding an item).
@@ -41,7 +41,7 @@ impl UseCase for AddUseCase {
             });
 
             storage.save(&board);
-            println!("{}", TabularTextRenderer::default().render_board(&board));
+            TabularTextRenderer::default().render_board(&board);
 
             Some(Box::new(AddUseCase{}))
         } else {
@@ -57,6 +57,6 @@ impl UseCase for AddUseCase {
         board.issues.remove(0);
 
         storage.save(&board);
-        println!("{}", TabularTextRenderer::default().render_board(&board));
+        TabularTextRenderer::default().render_board(&board);
     }
 }

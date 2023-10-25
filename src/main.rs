@@ -1,17 +1,16 @@
 mod controllers;
 mod application;
-mod render;
+mod presenters;
 mod storage;
 mod editor;
-mod usecase;
 
 use clap::Parser;
-use crate::controllers::{Command, ShowCategory, PrioCommand};
+use crate::controllers::{Command, PrioCommand, ShowCategory};
 use crate::application::issue::{Described, Description, elapsed_time_since_epoch, Issue, State, Stateful};
-use crate::render::render::Renderer;
-use crate::render::stdoutrenderer::{OnlyDoneStdOutRenderer, TabularTextRenderer};
-use crate::storage::{Storage, home_file_storage};
-use crate::usecase::usecase::{AddUseCase, UseCase};
+use crate::application::ports::presenter::Presenter;
+use crate::presenters::stdoutrenderer::{OnlyDoneStdOutRenderer, TabularTextRenderer};
+use crate::storage::{home_file_storage, Storage};
+use application::usecase::usecase::{AddUseCase, UseCase};
 
 
 fn main() {
@@ -108,13 +107,11 @@ fn main() {
             Some(Command::Show{what}) => {
                 match what {
                     Some(ShowCategory::Done) => {
-                        let out = OnlyDoneStdOutRenderer::default().render_board(&board);
-                        println!("{}", out)
+                        OnlyDoneStdOutRenderer::default().render_board(&board);
                     },
                     None => {
                         // TODO show all done stories this case?
-                        let out = TabularTextRenderer::default().render_board(&board);
-                        println!("{}", out)
+                        TabularTextRenderer::default().render_board(&board);
                     }
                 }
             },
@@ -130,15 +127,13 @@ fn main() {
                 board_changed = true;
             },
             None => {
-                let out = TabularTextRenderer::default().render_board(&board);
-                println!("{}", out)
+                TabularTextRenderer::default().render_board(&board);
             },
         }
 
         if board_changed {
             storage.save(&board);
-            let out = TabularTextRenderer::default().render_board(&board);
-            println!("{}", out)
+            TabularTextRenderer::default().render_board(&board);
         }
 
     }

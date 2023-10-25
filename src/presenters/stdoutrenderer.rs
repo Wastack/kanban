@@ -1,6 +1,6 @@
 use crate::application::board::{Board, BoardStateView, IssueRef};
 use crate::application::issue::{Described, State, Issue};
-use crate::render::render::Renderer;
+use crate::application::ports::presenter::Presenter;
 use colored::Colorize;
 use crate::application::elapsed_time_since_epoch;
 
@@ -26,10 +26,10 @@ fn categorize(issue: &Issue) -> DisplayCategory {
 }
 
 
-impl Renderer for TabularTextRenderer {
+impl Presenter for TabularTextRenderer {
 
 
-    fn render_board(&self, board: &Board) -> String {
+    fn render_board(&self, board: &Board) {
         let mut issues = board.issues_with_state();
 
         let mut done_issues_truncated = false;
@@ -43,7 +43,7 @@ impl Renderer for TabularTextRenderer {
             done_issues.drain(4..);
         }
 
-        vec![
+        let result = vec![
             State::Open,
             State::Review,
             State::Done,
@@ -88,7 +88,9 @@ impl Renderer for TabularTextRenderer {
                 ].join("\n")
             )
             .collect::<Vec<String>>()
-            .join("\n")
+            .join("\n");
+
+        println!("{}", result)
     }
 }
 
@@ -103,14 +105,16 @@ fn state_to_text(state: &State) -> &'static str {
 #[derive(Default)]
 pub struct OnlyDoneStdOutRenderer {}
 
-impl Renderer for OnlyDoneStdOutRenderer {
-    fn render_board(&self, board: &Board) -> String {
-        board.issues_with_state()
+impl Presenter for OnlyDoneStdOutRenderer {
+    fn render_board(&self, board: &Board){
+        let result = board.issues_with_state()
             .get(&State::Done)
             .unwrap_or(&Vec::new())
             .iter()
             .map(|IssueRef{issue, order}| format!("{}: {}", order, issue.description()))
             .collect::<Vec<String>>()
-            .join("\n")
+            .join("\n");
+
+        println!("{}", result);
     }
 }

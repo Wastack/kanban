@@ -1,4 +1,6 @@
 pub mod model;
+pub mod usecase;
+pub mod ports;
 
 pub use model::issue;
 pub use model::board;
