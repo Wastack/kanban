@@ -7,11 +7,11 @@ use crate::model::issue::State;
 #[clap(author, version, about, long_about = None)]
 pub(crate) struct RootCli {
     #[clap(subcommand)]
-    pub(crate) command: Option<Commands>,
+    pub(crate) command: Option<Command>,
 }
 
-#[derive(Subcommand)]
-pub(crate) enum Commands {
+#[derive(Subcommand, Clone)]
+pub(crate) enum Command {
     /// Add new issue
     Add {
         /// A text that describes the issue

@@ -32,9 +32,10 @@ impl Renderer for TabularTextRenderer {
     fn render_board(&self, board: &Board) -> String {
         let mut issues = board.issues_with_state();
 
-        // Keep only the first 4 issues of DONE
         let mut done_issues_truncated = false;
         let done_issues = issues.get_mut(&State::Done);
+
+        // Keep only the first 4 issues of DONE
         if let Some(done_issues) = done_issues {
             if done_issues.len() > 4 {
                 done_issues_truncated = true;

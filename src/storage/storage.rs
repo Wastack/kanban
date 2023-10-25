@@ -1,6 +1,7 @@
 use std::fs;
 use std::io::Write;
 use std::path::{PathBuf};
+use home::home_dir;
 use crate::{Board};
 
 pub trait Storage {
@@ -10,6 +11,13 @@ pub trait Storage {
 
 pub struct FileStorage {
     pub source: PathBuf
+}
+
+pub fn home_file_storage() -> FileStorage {
+    FileStorage{
+        source: home_dir().expect("Failed to get home directory")
+            .join(".kanban").into(),
+    }
 }
 
 
