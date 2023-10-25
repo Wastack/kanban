@@ -4,10 +4,10 @@ mod adapters;
 
 use clap::Parser;
 use application::ports::issue_storage::IssueStorage;
-use crate::controllers::{Command, PrioCommand, ShowCategory};
+use crate::controllers::{Command, PrioCommand};
 use crate::application::issue::{State};
 use crate::application::ports::presenter::Presenter;
-use crate::adapters::presenters::stdoutrenderer::{OnlyDoneStdOutRenderer, TabularTextRenderer};
+use crate::adapters::presenters::stdoutrenderer::{TabularTextRenderer};
 use application::usecase::add::{AddUseCase};
 use crate::adapters::editors::os_default_editor::OsDefaultEditor;
 use crate::adapters::storages::FileStorage;
@@ -37,17 +37,6 @@ fn main() {
         },
         Some(Command::Edit{index}) => {
             EditUseCase::default().execute(index);
-        },
-        Some(Command::Show{what}) => {
-            match what {
-                Some(ShowCategory::Done) => {
-                    OnlyDoneStdOutRenderer::default().render_board(&board);
-                },
-                None => {
-                    // TODO show all done stories this case?
-                    TabularTextRenderer::default().render_board(&board);
-                }
-            }
         },
         Some(Command::Prio{command, index}) => {
             // TODO Out Of Range

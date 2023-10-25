@@ -38,11 +38,6 @@ pub(crate) enum Command {
         // Index of the issue to edit
         index: usize,
     },
-    /// Show issues
-    Show {
-        /// Specify what issue to show. If omitted, then it shows everything
-        what: Option<ShowCategory>
-    },
     /// Change priority (order) of issues
     Prio {
         /// Action (and direction) to take on the issue
@@ -81,25 +76,6 @@ impl FromStr for PrioCommand {
     }
 }
 
-
-#[derive(Clone)]
-pub(crate) enum ShowCategory {
-    // Show all the done tickets
-    Done,
-}
-
-
-impl FromStr for ShowCategory {
-    // TODO proper error handling?
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().trim() {
-            "done" => Ok(ShowCategory::Done),
-            _ => Err(String::from("unknown category to show"))
-        }
-    }
-}
 
 impl FromStr for State {
     // TODO proper error handling?
