@@ -1,10 +1,10 @@
-pub mod model;
+pub mod domain;
 pub mod usecase;
 pub mod ports;
 
-pub use model::issue;
-pub use model::board;
-pub use model::issue::Issue;
-pub use model::board::Board;
-pub use model::issue::State;
-pub use model::issue::elapsed_time_since_epoch;
+pub use domain::issue;
+pub use domain::board;
+pub use domain::issue::Issue;
+pub use domain::board::Board;
+pub use domain::issue::State;
+pub use domain::issue::elapsed_time_since_epoch;
