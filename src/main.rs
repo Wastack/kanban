@@ -1,17 +1,17 @@
 mod controllers;
 mod application;
-mod presenters;
-mod storage;
-mod editor;
+mod adapters;
 
 use clap::Parser;
 use application::ports::issue_storage::IssueStorage;
 use crate::controllers::{Command, PrioCommand, ShowCategory};
 use crate::application::issue::{Described, Description, elapsed_time_since_epoch, Issue, State, Stateful};
 use crate::application::ports::presenter::Presenter;
-use crate::presenters::stdoutrenderer::{OnlyDoneStdOutRenderer, TabularTextRenderer};
-use crate::storage::home_file_storage;
+use crate::adapters::presenters::stdoutrenderer::{OnlyDoneStdOutRenderer, TabularTextRenderer};
+use crate::adapters::storages::home_file_storage;
 use application::usecase::usecase::{AddUseCase, UseCase};
+use crate::adapters::editors::os_default_editor::OsDefaultEditor;
+use crate::application::ports::editor::Editor;
 
 
 fn main() {
@@ -97,8 +97,10 @@ fn main() {
             Some(Command::Edit{index}) => {
                 let issue = board.issues.get_mut(index)
                     .expect("did not find issue with index");
-                let edited_description = editor::open_editor(issue.description().to_str())
-                    .expect("preparing editor failed");
+                // TODO use port instead
+                let editor = OsDefaultEditor{};
+                let edited_description = editor.open_editor_with(issue.description().to_str())
+                    .expect("preparing editors failed");
 
                 let description = issue.description_mut();
                 description.0 = edited_description;

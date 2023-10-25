@@ -2,9 +2,9 @@ use crate::controllers::Command;
 use crate::application::{elapsed_time_since_epoch, Issue, State};
 use crate::application::issue::Description;
 use crate::application::ports::issue_storage::IssueStorage;
-use crate::storage::home_file_storage;
+use crate::adapters::storages::home_file_storage;
 use crate::application::ports::presenter::Presenter;
-use crate::presenters::stdoutrenderer::TabularTextRenderer;
+use crate::adapters::presenters::stdoutrenderer::TabularTextRenderer;
 
 
 /// A UseCase can be called to make an action on the board (e.g. adding an item).
