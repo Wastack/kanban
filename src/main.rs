@@ -5,11 +5,12 @@ mod storage;
 mod editor;
 
 use clap::Parser;
+use application::ports::issue_storage::IssueStorage;
 use crate::controllers::{Command, PrioCommand, ShowCategory};
 use crate::application::issue::{Described, Description, elapsed_time_since_epoch, Issue, State, Stateful};
 use crate::application::ports::presenter::Presenter;
 use crate::presenters::stdoutrenderer::{OnlyDoneStdOutRenderer, TabularTextRenderer};
-use crate::storage::{home_file_storage, Storage};
+use crate::storage::home_file_storage;
 use application::usecase::usecase::{AddUseCase, UseCase};
 
 

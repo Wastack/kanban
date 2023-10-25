@@ -1,13 +1,9 @@
 use std::fs;
 use std::io::Write;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use home::home_dir;
-use crate::application::{Board};
-
-pub trait Storage {
-    fn load(&self) -> Board;
-    fn save(&self, board: &Board);
-}
+use crate::application::Board;
+use crate::IssueStorage;
 
 pub struct FileStorage {
     pub source: PathBuf
@@ -20,8 +16,7 @@ pub fn home_file_storage() -> FileStorage {
     }
 }
 
-
-impl Storage for FileStorage {
+impl IssueStorage for FileStorage {
     fn load(&self) -> Board {
         let file_contents = fs::read_to_string(&self.source)
             .unwrap_or(String::from(""));
