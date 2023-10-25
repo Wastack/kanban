@@ -10,20 +10,16 @@ use crate::application::ports::presenter::Presenter;
 use crate::adapters::presenters::stdoutrenderer::{TabularTextRenderer};
 use application::usecase::add::{AddUseCase};
 use crate::adapters::editors::os_default_editor::OsDefaultEditor;
-use crate::adapters::storages::FileStorage;
 use crate::application::ports::editor::Editor;
 use crate::application::usecase::delete::DeleteUseCase;
 use crate::application::usecase::edit::EditUseCase;
+use crate::application::usecase::get::GetUseCase;
+use crate::application::usecase::prio::PrioUseCase;
 use crate::application::usecase::r#move::MoveUseCase;
 
 
 fn main() {
     let root = controllers::RootCli::parse();
-
-    let storage = FileStorage::default();
-    let mut board = storage.load();
-
-    let mut board_changed= false;
 
     match root.command {
         Some(Command::Add{description, state}) => {
@@ -39,27 +35,13 @@ fn main() {
             EditUseCase::default().execute(index);
         },
         Some(Command::Prio{command, index}) => {
-            // TODO Out Of Range
-            match command {
-                PrioCommand::Top => board.prio_top_in_category(index as usize),
-                PrioCommand::Bottom => board.prio_bottom_in_category(index as usize),
-                PrioCommand::Up => board.prio_up_in_category(index as usize),
-                PrioCommand::Down => board.prio_down_in_category(index as usize),
-            }
-
-            board_changed = true;
+            // TODO up is broken. Test?
+            PrioUseCase::default().execute(index, command);
         },
         None => {
-            TabularTextRenderer::default().render_board(&board);
+            GetUseCase::default().execute()
         },
     }
-
-    if board_changed {
-        storage.save(&board);
-        TabularTextRenderer::default().render_board(&board);
-    }
-
-
 
 }
 
