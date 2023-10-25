@@ -5,7 +5,7 @@ mod adapters;
 use clap::Parser;
 use application::ports::issue_storage::IssueStorage;
 use crate::controllers::{Command, PrioCommand, ShowCategory};
-use crate::application::issue::{Described, State};
+use crate::application::issue::{State};
 use crate::application::ports::presenter::Presenter;
 use crate::adapters::presenters::stdoutrenderer::{OnlyDoneStdOutRenderer, TabularTextRenderer};
 use application::usecase::add::{AddUseCase};
@@ -13,6 +13,7 @@ use crate::adapters::editors::os_default_editor::OsDefaultEditor;
 use crate::adapters::storages::FileStorage;
 use crate::application::ports::editor::Editor;
 use crate::application::usecase::delete::DeleteUseCase;
+use crate::application::usecase::edit::EditUseCase;
 use crate::application::usecase::r#move::MoveUseCase;
 
 
@@ -35,17 +36,7 @@ fn main() {
             MoveUseCase::default().execute(&indices, &state);
         },
         Some(Command::Edit{index}) => {
-            let issue = board.issues.get_mut(index)
-                .expect("did not find issue with index");
-            // TODO use port instead
-            let editor = OsDefaultEditor{};
-            let edited_description = editor.open_editor_with(issue.description().to_str())
-                .expect("preparing editors failed");
-
-            let description = issue.description_mut();
-            description.0 = edited_description;
-
-            board_changed = true;
+            EditUseCase::default().execute(index);
         },
         Some(Command::Show{what}) => {
             match what {

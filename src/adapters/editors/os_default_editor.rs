@@ -6,6 +6,7 @@ use std::io::{self, Error, Read, Write};
 use crate::application::ports::editor::Editor;
 
 
+#[derive(Default)]
 pub(crate) struct OsDefaultEditor {}
 
 impl Editor for OsDefaultEditor {
