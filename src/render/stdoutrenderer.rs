@@ -1,8 +1,8 @@
-use crate::model::board::{Board, BoardStateView, IssueRef};
-use crate::model::issue::{Described, State, Issue};
+use crate::application::board::{Board, BoardStateView, IssueRef};
+use crate::application::issue::{Described, State, Issue};
 use crate::render::render::Renderer;
 use colored::Colorize;
-use crate::elapsed_time_since_epoch;
+use crate::application::elapsed_time_since_epoch;
 
 
 #[derive(Default)]

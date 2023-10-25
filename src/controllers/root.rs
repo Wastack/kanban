@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use clap::{Parser, Subcommand};
-use crate::model::issue::State;
+use crate::application::State;
 
 /// Sema cli is a utility to tweak SEMA resources.
 #[derive(Parser)]

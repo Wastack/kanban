@@ -2,7 +2,7 @@ use std::fs;
 use std::io::Write;
 use std::path::{PathBuf};
 use home::home_dir;
-use crate::{Board};
+use crate::application::{Board};
 
 pub trait Storage {
     fn load(&self) -> Board;

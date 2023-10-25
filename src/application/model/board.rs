@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use crate::model::issue::Issue;
+use crate::application::issue::Issue;
 use serde::{Serialize, Deserialize};
-use crate::model::issue::State;
+use crate::application::issue::State;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]

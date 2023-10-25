@@ -1,14 +1,13 @@
-mod cli;
-mod model;
+mod controllers;
+mod application;
 mod render;
 mod storage;
 mod editor;
 mod usecase;
 
 use clap::Parser;
-use crate::cli::{Command, ShowCategory, PrioCommand};
-use crate::model::board::Board;
-use crate::model::issue::{Described, Description, elapsed_time_since_epoch, Issue, State, Stateful};
+use crate::controllers::{Command, ShowCategory, PrioCommand};
+use crate::application::issue::{Described, Description, elapsed_time_since_epoch, Issue, State, Stateful};
 use crate::render::render::Renderer;
 use crate::render::stdoutrenderer::{OnlyDoneStdOutRenderer, TabularTextRenderer};
 use crate::storage::{Storage, home_file_storage};
@@ -16,7 +15,7 @@ use crate::usecase::usecase::{AddUseCase, UseCase};
 
 
 fn main() {
-    let root = cli::RootCli::parse();
+    let root = controllers::RootCli::parse();
 
     let use_case_callbacks: Vec<fn(_) -> Option<Box<dyn UseCase>>>  = vec![AddUseCase::call];
 
