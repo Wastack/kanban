@@ -3,6 +3,7 @@ use crate::{IssueStorage, Presenter, TabularTextRenderer};
 
 pub mod add;
 pub mod delete;
+pub mod r#move;
 
 // TODO do something with this
 

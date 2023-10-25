@@ -18,7 +18,6 @@ impl DeleteUseCase {
         sorted_indices.sort_unstable_by(|a, b| b.cmp(a));
 
         for &i in &sorted_indices {
-            // This will panic if out of range. Is that good?
             board.issues.remove(i);
         }
 

@@ -5,7 +5,7 @@ mod adapters;
 use clap::Parser;
 use application::ports::issue_storage::IssueStorage;
 use crate::controllers::{Command, PrioCommand, ShowCategory};
-use crate::application::issue::{Described, State, Stateful};
+use crate::application::issue::{Described, State};
 use crate::application::ports::presenter::Presenter;
 use crate::adapters::presenters::stdoutrenderer::{OnlyDoneStdOutRenderer, TabularTextRenderer};
 use application::usecase::add::{AddUseCase};
@@ -13,6 +13,7 @@ use crate::adapters::editors::os_default_editor::OsDefaultEditor;
 use crate::adapters::storages::FileStorage;
 use crate::application::ports::editor::Editor;
 use crate::application::usecase::delete::DeleteUseCase;
+use crate::application::usecase::r#move::MoveUseCase;
 
 
 fn main() {
@@ -31,28 +32,7 @@ fn main() {
             DeleteUseCase::default().execute(&index);
         },
         Some(Command::Move{indices, state}) => {
-            // Check if all indices are valid
-            if !indices.iter().all(|i|*i < board.issues.len()) {
-                if indices.len() > 1 {
-                    panic!("at least one of the indices specified are out of range")
-                } else {
-                    panic!("index out of range")
-                }
-            }
-
-            for index in indices {
-                let current_state = board.issues[index].state_mut();
-
-                if *current_state != state{
-                    *current_state = state;
-
-                    if state == State::Done {
-                        board.prio_top_in_category(index);
-                    }
-                }
-            }
-
-            board_changed = true;
+            MoveUseCase::default().execute(&indices, &state);
         },
         Some(Command::Edit{index}) => {
             let issue = board.issues.get_mut(index)
