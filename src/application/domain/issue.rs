@@ -26,6 +26,12 @@ impl Description {
     }
 }
 
+impl From<&str> for Description {
+    fn from(s: &str) -> Self {
+        Self(s.trim().to_string())
+    }
+}
+
 
 impl Display for Description {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

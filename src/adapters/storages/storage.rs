@@ -9,10 +9,12 @@ pub struct FileStorage {
     pub source: PathBuf
 }
 
-pub fn home_file_storage() -> FileStorage {
-    FileStorage{
-        source: home_dir().expect("Failed to get home directory")
-            .join(".kanban").into(),
+impl Default for FileStorage {
+    fn default() -> Self {
+        FileStorage{
+            source: home_dir().expect("Failed to get home directory")
+                .join(".kanban").into(),
+        }
     }
 }
 

@@ -8,35 +8,27 @@ use crate::controllers::{Command, PrioCommand, ShowCategory};
 use crate::application::issue::{Described, State, Stateful};
 use crate::application::ports::presenter::Presenter;
 use crate::adapters::presenters::stdoutrenderer::{OnlyDoneStdOutRenderer, TabularTextRenderer};
-use crate::adapters::storages::home_file_storage;
 use application::usecase::add::{AddUseCase};
 use crate::adapters::editors::os_default_editor::OsDefaultEditor;
+use crate::adapters::storages::FileStorage;
 use crate::application::ports::editor::Editor;
+use crate::application::usecase::delete::DeleteUseCase;
 
 
 fn main() {
     let root = controllers::RootCli::parse();
 
-    let storage = home_file_storage();
+    let storage = FileStorage::default();
     let mut board = storage.load();
 
     let mut board_changed= false;
 
     match root.command {
         Some(Command::Add{description, state}) => {
-            AddUseCase::execute(description, state.unwrap_or(State::Open));
+            AddUseCase::default().execute(&description, state.unwrap_or(State::Open));
         },
-        Some(Command::Delete{mut index}) => {
-            // Sort the indices in descending order,
-            // so that each removal does not affect the next index.
-            index.sort_unstable_by(|a, b| b.cmp(a));
-
-            for &i in &index {
-                // This will panic if out of range. Is that good?
-                board.issues.remove(i);
-            }
-
-            board_changed = true;
+        Some(Command::Delete{index}) => {
+            DeleteUseCase::default().execute(&index);
         },
         Some(Command::Move{indices, state}) => {
             // Check if all indices are valid
