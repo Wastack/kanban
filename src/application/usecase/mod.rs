@@ -8,7 +8,7 @@ pub mod edit;
 pub mod prio;
 pub mod get;
 
-// TODO do something with this
+// TODO move it somewhere
 
 impl Default for Box<dyn IssueStorage> {
     fn default() -> Self {

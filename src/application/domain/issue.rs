@@ -19,16 +19,19 @@ pub trait Stateful {
 #[serde(rename_all = "camelCase")]
 pub struct Description(pub String);
 
-
-impl Description {
-    pub fn to_str(&self) -> &str {
-        return &self.0
-    }
-}
-
 impl From<&str> for Description {
     fn from(s: &str) -> Self {
         Self(s.trim().to_string())
+    }
+}
+
+impl Description{
+    pub fn set(&mut self, new_description: &str) {
+        self.0 = new_description.to_string();
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 }
 

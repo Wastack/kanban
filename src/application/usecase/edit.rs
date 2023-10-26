@@ -17,12 +17,10 @@ impl EditUseCase {
 
         let issue = board.issues.get_mut(index)
             .expect("did not find issue with index");
-        let edited_description = self.editor.open_editor_with(issue.description().to_str())
+        let edited_description = self.editor.open_editor_with(issue.description().as_str())
             .expect("preparing editors failed");
 
-        // TODO make this nicer?
-        let description = issue.description_mut();
-        description.0 = edited_description;
+        issue.description_mut().set(&edited_description);
 
         self.storage.save(&board);
         self.presenter.render_board(&board);
