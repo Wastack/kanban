@@ -21,6 +21,7 @@ impl DeleteUseCase {
             board.issues.remove(i);
         }
 
+        self.storage.save(&board);
         self.presenter.render_board(&board);
     }
 }

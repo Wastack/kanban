@@ -23,6 +23,7 @@ impl PrioUseCase {
             PrioCommand::Down => board.prio_down_in_category(index),
         }
 
+        self.storage.save(&board);
         self.presenter.render_board(&board);
     }
 }

@@ -35,6 +35,7 @@ impl MoveUseCase {
             }
         }
 
+        self.storage.save(&board);
         self.presenter.render_board(&board);
     }
 }

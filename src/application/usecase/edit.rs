@@ -24,6 +24,7 @@ impl EditUseCase {
         let description = issue.description_mut();
         description.0 = edited_description;
 
+        self.storage.save(&board);
         self.presenter.render_board(&board);
     }
 }

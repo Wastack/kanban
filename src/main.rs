@@ -35,7 +35,6 @@ fn main() {
             EditUseCase::default().execute(index);
         },
         Some(Command::Prio{command, index}) => {
-            // TODO up is broken. Test?
             PrioUseCase::default().execute(index, command);
         },
         None => {
