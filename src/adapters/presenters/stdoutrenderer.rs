@@ -1,3 +1,4 @@
+use std::error::Error;
 use crate::application::board::{Board, BoardStateView, IssueRef};
 use crate::application::issue::{Described, State, Issue};
 use crate::application::ports::presenter::Presenter;
@@ -92,6 +93,10 @@ impl Presenter for TabularTextRenderer {
 
         println!("{}", result)
     }
+
+    fn render_error(&self, err: &dyn Error) {
+        println!("{}", err)
+    }
 }
 
 fn state_to_text(state: &State) -> &'static str {
@@ -99,22 +104,5 @@ fn state_to_text(state: &State) -> &'static str {
         State::Open => "Open",
         State::Review => "Review",
         State::Done => "Done",
-    }
-}
-
-#[derive(Default)]
-pub struct OnlyDoneStdOutRenderer {}
-
-impl Presenter for OnlyDoneStdOutRenderer {
-    fn render_board(&self, board: &Board){
-        let result = board.issues_with_state()
-            .get(&State::Done)
-            .unwrap_or(&Vec::new())
-            .iter()
-            .map(|IssueRef{issue, order}| format!("{}: {}", order, issue.description()))
-            .collect::<Vec<String>>()
-            .join("\n");
-
-        println!("{}", result);
     }
 }

@@ -1,6 +1,6 @@
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
-use crate::Editor;
+use crate::{Editor, unwrap_or_return};
 use crate::application::domain::issue::Described;
 
 
@@ -15,10 +15,16 @@ impl EditUseCase {
     pub(crate) fn execute(&self, index: usize) {
         let mut board = self.storage.load();
 
-        let issue = board.issues.get_mut(index)
-            .expect("did not find issue with index");
-        let edited_description = self.editor.open_editor_with(issue.description().as_str())
-            .expect("preparing editors failed");
+        let issue = unwrap_or_return!(board
+            .get_issue_mut(index)
+            .inspect_err(|e| {
+                self.presenter.render_error(&e);
+            }));
+
+        let edited_description = unwrap_or_return!(self.editor
+            .open_editor_with(
+                issue.description().as_str())
+            .inspect_err(|e| self.presenter.render_error(&e)));
 
         issue.description_mut().set(&edited_description);
 

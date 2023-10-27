@@ -1,12 +1,21 @@
 use std::collections::HashMap;
 use crate::application::issue::Issue;
 use serde::{Serialize, Deserialize};
+use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::issue::State;
+
+
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Board {
     pub issues: Vec<Issue>,
+}
+
+impl Board {
+    pub fn get_issue_mut(&mut self, index: usize) -> DomainResult<&mut Issue> {
+        self.issues.get_mut(index).ok_or(DomainError::new("Index out of range"))
+    }
 }
 
 impl Board {
