@@ -94,7 +94,7 @@ impl Presenter for TabularTextRenderer {
         println!("{}", result)
     }
 
-    fn render_error(&self, err: &dyn Error) {
+    fn render_error(&mut self, err: &dyn Error) {
         println!("{}", err)
     }
 }

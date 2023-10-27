@@ -41,8 +41,8 @@ mod tests {
     use crate::application::{Board, Issue};
     use crate::application::issue::{Described, Description};
     use crate::{DeleteUseCase, IssueStorage, State};
-    use crate::adapters::presenters::nil_presenter::NilPresenter;
-    use crate::adapters::storages::memory_issue_storage::MemoryIssueStorage;
+    use crate::adapters::presenters::nil_presenter::test::NilPresenter;
+    use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
 
     #[test]
     fn test_execute_successful_deletion() {
@@ -61,7 +61,6 @@ mod tests {
         );
         sut.execute(&vec![1, 4, 5]);
 
-        then_two_errors_were_presented(&sut);
         then_board_did_not_change(&sut);
     }
 
@@ -77,10 +76,6 @@ mod tests {
 
     fn then_board_did_not_change(u: &DeleteUseCase) {
         assert_eq!(u.storage.load(), board_with_4_issues(), "Expected board not to have changed")
-    }
-
-    fn then_two_errors_were_presented(_u: &DeleteUseCase) {
-        // TODO
     }
 
     fn build_delete_usecase(board: Board) -> DeleteUseCase {
