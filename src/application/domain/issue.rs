@@ -15,7 +15,7 @@ pub trait Stateful {
     fn state_mut(&mut self) -> &mut State;
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Description(pub String);
 
@@ -48,7 +48,7 @@ pub trait Described {
 }
 
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Issue {
     /// Description (content) of the ticket

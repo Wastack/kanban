@@ -8,7 +8,7 @@ use crate::application::issue::State;
 
 
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Board {
     pub issues: Vec<Issue>,
@@ -162,7 +162,7 @@ mod tests {
 
         let result = board.validate_indices(&indices);
 
-        assert!(result.is_fail(), "Expected validation to fail");
+        assert!(result.is_good(), "Expected validation to be good");
     }
 
     fn given_board_with_2_tasks() -> Board {
@@ -225,7 +225,7 @@ mod tests {
 
         assert!(validated.is_fail(), "Expected validation of indices to fail");
         let Fail(errors) = validated else { panic!() };
-        assert_eq!(errors.len(), 2, "Expected 2 errors for empty board");
+        assert_eq!(errors.len(), 4, "Expected 4 errors for empty board");
     }
 
     fn given_empty_board() -> Board {

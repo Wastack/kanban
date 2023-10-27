@@ -10,7 +10,7 @@ pub(crate) struct PrioUseCase {
 }
 
 impl PrioUseCase {
-    pub(crate) fn execute(&self, index: usize, command: PrioCommand) {
+    pub(crate) fn execute(&mut self, index: usize, command: PrioCommand) {
         let mut board = self.storage.load();
 
         if let Err(err) = board.get_issue(index) {

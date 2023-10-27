@@ -11,7 +11,7 @@ pub(crate) struct AddUseCase {
 }
 
 impl AddUseCase {
-    pub(crate) fn execute(&self, description: &str, state: State) {
+    pub(crate) fn execute(&mut self, description: &str, state: State) {
         let mut board = self.storage.load();
 
         board.issues.insert(0, Issue{

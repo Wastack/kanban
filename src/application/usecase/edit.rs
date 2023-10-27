@@ -12,7 +12,7 @@ pub(crate) struct EditUseCase {
 }
 
 impl EditUseCase {
-    pub(crate) fn execute(&self, index: usize) {
+    pub(crate) fn execute(&mut self, index: usize) {
         let mut board = self.storage.load();
 
         let issue = unwrap_or_return!(board

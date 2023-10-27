@@ -32,7 +32,7 @@ impl IssueStorage for FileStorage {
         serde_yaml::from_str(&file_contents).expect("unexpected file format")
     }
 
-    fn save(&self, board: &Board) {
+    fn save(&mut self, board: &Board) {
         let content = serde_yaml::to_string(board)
             .expect("Internal error: cannot serialize board");
 

@@ -12,7 +12,7 @@ pub(crate) struct MoveUseCase {
 }
 
 impl MoveUseCase {
-    pub(crate) fn execute(&self, indices: &[usize], state: &State) {
+    pub(crate) fn execute(&mut self, indices: &[usize], state: &State) {
         let mut board = self.storage.load();
 
         let validated = board.validate_indices(indices);
