@@ -40,20 +40,34 @@ impl DeleteUseCase {
 mod tests {
     use crate::application::{Board, Issue};
     use crate::application::issue::{Described, Description};
-    use crate::{DeleteUseCase, State};
+    use crate::{DeleteUseCase, IssueStorage, State};
     use crate::adapters::presenters::nil_presenter::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::MemoryIssueStorage;
 
     #[test]
     fn test_execute_successful_deletion() {
-        let mut use_case = build_test_delete_usecase();
-        given_board_with_4_issues_stored(&mut use_case);
+        let mut sut = build_delete_usecase(
+            board_with_4_issues(),
+        );
+        sut.execute(&vec![1, 3, 0]);
 
-        // When executing use-case
-        use_case.execute(&vec![1, 3, 0]);
+        then_only_the_third_issue_remains(&sut);
+    }
 
-        // TODO is presenter called?
+    #[test]
+    fn test_execute_validation_failure() {
+        let mut sut = build_delete_usecase(
+            board_with_4_issues(),
+        );
+        sut.execute(&vec![1, 4, 5]);
 
+        then_two_errors_were_presented(&sut);
+        then_board_did_not_change(&sut);
+    }
+
+
+
+    fn then_only_the_third_issue_remains(use_case: &DeleteUseCase) {
         let saved_board = use_case.storage.load();
         assert_eq!(saved_board.issues.len(), 1, "Expected to contain only 1 issue after deletion");
 
@@ -61,19 +75,26 @@ mod tests {
         assert_eq!(remaining_issue.description(), &Description::from("Third task"), "Expected the third task to remain with index 0")
     }
 
-    fn build_test_delete_usecase() -> DeleteUseCase {
+    fn then_board_did_not_change(u: &DeleteUseCase) {
+        assert_eq!(u.storage.load(), board_with_4_issues(), "Expected board not to have changed")
+    }
+
+    fn then_two_errors_were_presented(_u: &DeleteUseCase) {
+        // TODO
+    }
+
+    fn build_delete_usecase(board: Board) -> DeleteUseCase {
+        let mut storage = MemoryIssueStorage::default();
+        storage.save(&board);
+
         DeleteUseCase {
-            storage: Box::new(MemoryIssueStorage::default()),
+            storage: Box::new(storage),
             presenter: Box::new(NilPresenter::default()),
         }
     }
 
-    #[test]
-    fn test_execute_validation_failure() {
-    }
-
-    fn given_board_with_4_issues_stored(u: &mut DeleteUseCase) {
-        let board = Board {
+    fn board_with_4_issues() -> Board {
+        Board {
             issues: vec![
                 Issue {
                     description: Description::from("First task"),
@@ -97,9 +118,7 @@ mod tests {
                     time_created: 1698397492,
                 },
             ],
-        };
-
-        u.storage.save(&board);
+        }
     }
 }
 
