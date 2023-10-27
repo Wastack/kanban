@@ -1,3 +1,4 @@
+use validated::Validated::Fail;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 
@@ -11,6 +12,15 @@ pub(crate) struct DeleteUseCase {
 impl DeleteUseCase {
     pub(crate) fn execute(&self, indices: &[usize]) {
         let mut board = self.storage.load();
+
+        let validated = board.validate_indices(indices);
+
+        if let Fail(errors) = validated {
+            errors.into_iter()
+                .for_each(|e| self.presenter.render_error(&e));
+            return
+
+        }
 
         // Sort the indices in descending order,
         // so that each removal does not affect the next index.

@@ -1,6 +1,8 @@
 use std::collections::HashMap;
+use nonempty_collections::NEVec;
 use crate::application::issue::Issue;
 use serde::{Serialize, Deserialize};
+use validated::Validated;
 use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::issue::State;
 
@@ -15,6 +17,24 @@ pub struct Board {
 impl Board {
     pub fn get_issue_mut(&mut self, index: usize) -> DomainResult<&mut Issue> {
         self.issues.get_mut(index).ok_or(DomainError::new("Index out of range"))
+    }
+
+    pub fn contains(&self, index: usize) -> bool {
+        self.issues.len() > index
+    }
+
+    pub fn validate_indices(&self, indices: &[usize]) -> Validated<(), DomainError> {
+        let errors: Vec<DomainError> = indices
+            .iter()
+            .filter(|&&i| !self.contains(i))
+            .map(|i|DomainError::new(&format!("Index out of range: {}", i)))
+            .collect();
+
+        if errors.is_empty() {
+            Validated::Good(())
+        } else {
+            Validated::Fail(NEVec::from_vec(errors).unwrap())
+        }
     }
 }
 
@@ -122,4 +142,101 @@ pub struct IssueRef<'a> {
 
 pub trait BoardStateView {
     fn issues_with_state(&self) -> HashMap<State, Vec<IssueRef>>;
+}
+
+
+#[cfg(test)]
+mod tests {
+    use validated::Validated::Fail;
+    use crate::application::issue::Description;
+    use super::*;
+
+    #[test]
+    fn test_verify_indices_valid() {
+        let board = given_board_with_2_tasks();
+        let indices = given_indices_within_bounds();
+
+        let result = board.validate_indices(&indices);
+
+        assert!(result.is_fail(), "Expected validation to fail");
+    }
+
+    fn given_board_with_2_tasks() -> Board {
+        Board {
+            issues: vec![
+                Issue {
+                    description: Description::from("First task"),
+                    state: State::Open,
+                    time_created: 1698397489,
+
+                },
+                Issue {
+                    description: Description::from("Second task"),
+                    state: State::Review,
+                    time_created: 1698397490,
+
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn test_verify_indices_invalid() {
+        let board = given_board_with_2_tasks();
+        let indices = given_some_indices_are_out_of_range();
+
+        let validated = board.validate_indices(&indices);
+
+
+        assert!(validated.is_fail(), "Expected validation to fail");
+        let Fail(errors) = validated else { panic!() };
+        assert_eq!(errors.len(), 2, "Expected 2 errors, but found different number");
+        assert_eq!(
+            errors[0].description(),
+            "Index out of range: 2",
+            "Expected specific error message"
+        );
+        assert_eq!(
+            errors[1].description(),
+            "Index out of range: 3",
+            "Expected specific error message"
+        );
+    }
+
+    #[test]
+    fn test_verify_indices_empty_indices() {
+        let board = given_board_with_2_tasks();
+        let indices = given_no_indices();
+
+        let validated = board.validate_indices(&indices);
+
+        assert!(validated.is_good(), "Expected validated indices to be good");
+    }
+
+    #[test]
+    fn test_verify_indices_empty_board() {
+        let board = given_empty_board();
+        let indices = given_some_indices_are_out_of_range();
+        let validated = board.validate_indices(&indices);
+
+        assert!(validated.is_fail(), "Expected validation of indices to fail");
+        let Fail(errors) = validated else { panic!() };
+        assert_eq!(errors.len(), 2, "Expected 2 errors for empty board");
+    }
+
+    fn given_empty_board() -> Board {
+        Board { issues: vec![] }
+    }
+
+    fn given_indices_within_bounds() -> Vec<usize> {
+        vec![0, 1]
+    }
+
+    fn given_some_indices_are_out_of_range() -> Vec<usize> {
+        vec![0, 1, 2, 3]
+    }
+
+    fn given_no_indices() -> Vec<usize> {
+        vec![]
+    }
 }
