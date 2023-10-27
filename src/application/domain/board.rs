@@ -15,6 +15,10 @@ pub struct Board {
 }
 
 impl Board {
+    pub fn get_issue(&self, index: usize) -> DomainResult<&Issue> {
+        self.issues.get(index).ok_or(DomainError::new("Index out of range"))
+    }
+
     pub fn get_issue_mut(&mut self, index: usize) -> DomainResult<&mut Issue> {
         self.issues.get_mut(index).ok_or(DomainError::new("Index out of range"))
     }

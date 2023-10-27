@@ -1,3 +1,4 @@
+use validated::Validated::Fail;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::State;
@@ -14,13 +15,13 @@ impl MoveUseCase {
     pub(crate) fn execute(&self, indices: &[usize], state: &State) {
         let mut board = self.storage.load();
 
-        // Check if all indices are valid
-        if !indices.iter().all(|i|*i < board.issues.len()) {
-            if indices.len() > 1 {
-                panic!("at least one of the indices specified are out of range")
-            } else {
-                panic!("index out of range")
-            }
+        let validated = board.validate_indices(indices);
+
+        if let Fail(errors) = validated {
+            errors.into_iter()
+                .for_each(|e| self.presenter.render_error(&e));
+            return
+
         }
 
         for index in indices {

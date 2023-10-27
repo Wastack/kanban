@@ -13,9 +13,12 @@ impl PrioUseCase {
     pub(crate) fn execute(&self, index: usize, command: PrioCommand) {
         let mut board = self.storage.load();
 
-        // TODO Out Of Range
-        // TODO move back here storing stuff
-        // TODO prio up render is broken
+        if let Err(err) = board.get_issue(index) {
+            self.presenter.render_error(&err);
+            return
+        }
+
+        // TODO move back here storing stuff from domain?
         match command {
             PrioCommand::Top => board.prio_top_in_category(index),
             PrioCommand::Bottom => board.prio_bottom_in_category(index),
