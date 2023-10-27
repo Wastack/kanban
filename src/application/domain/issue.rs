@@ -63,6 +63,16 @@ pub struct Issue {
     pub(crate) time_created: u64,
 }
 
+impl Issue {
+    pub fn new(description: Description, state: State) -> Self {
+        Self {
+            description,
+            state,
+            time_created: elapsed_time_since_epoch(),
+        }
+    }
+}
+
 impl Stateful for Issue {
     fn state(&self) -> &State {
         &self.state

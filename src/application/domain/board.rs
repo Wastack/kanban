@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use nonempty_collections::NEVec;
-use crate::application::issue::Issue;
+use crate::application::issue::{Issue};
 use serde::{Serialize, Deserialize};
 use validated::Validated;
 use crate::application::domain::error::{DomainError, DomainResult};
@@ -28,17 +28,30 @@ impl Board {
     }
 
     pub fn validate_indices(&self, indices: &[usize]) -> Validated<(), DomainError> {
-        let errors: Vec<DomainError> = indices
+        let mut errors = indices
             .iter()
             .filter(|&&i| !self.contains(i))
-            .map(|i|DomainError::new(&format!("Index out of range: {}", i)))
-            .collect();
+            .map(|i|DomainError::new(&format!("Index out of range: {}", i)));
 
-        if errors.is_empty() {
-            Validated::Good(())
-        } else {
-            Validated::Fail(NEVec::from_vec(errors).unwrap())
+        match errors.next() {
+            None => Validated::Good(()),
+            Some(head) => Validated::Fail(NEVec::from((head, errors.collect())))
         }
+    }
+
+    pub fn delete_issues_with(&mut self, indices: &[usize]) {
+        // Sort the indices in descending order,
+        // so that each removal does not affect the next index.
+        let mut sorted_indices = indices.to_owned();
+        sorted_indices.sort_unstable_by(|a, b| b.cmp(a));
+
+        for &i in &sorted_indices {
+            self.issues.remove(i);
+        }
+    }
+
+    pub fn insert_issue(&mut self, issue: Issue) {
+        self.issues.insert(0, issue);
     }
 }
 

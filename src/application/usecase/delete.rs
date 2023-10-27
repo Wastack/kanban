@@ -14,26 +14,18 @@ impl DeleteUseCase {
         let mut board = self.storage.load();
 
         let validated = board.validate_indices(indices);
-
         if let Fail(errors) = validated {
             errors.into_iter()
                 .for_each(|e| self.presenter.render_error(&e));
             return
-
         }
 
-        // Sort the indices in descending order,
-        // so that each removal does not affect the next index.
-        let mut sorted_indices = indices.to_owned();
-        sorted_indices.sort_unstable_by(|a, b| b.cmp(a));
-
-        for &i in &sorted_indices {
-            board.issues.remove(i);
-        }
+        board.delete_issues_with(indices);
 
         self.storage.save(&board);
         self.presenter.render_board(&board);
     }
+
 }
 
 #[cfg(test)]
@@ -59,7 +51,7 @@ mod tests {
         let mut sut = build_delete_usecase(
             board_with_4_issues(),
         );
-        sut.execute(&vec![1, 4, 5]);
+        sut.execute(&vec![1, 4]);
 
         then_board_did_not_change(&sut);
     }

@@ -11,8 +11,6 @@ pub(crate) struct OsDefaultEditor {}
 
 impl Editor for OsDefaultEditor {
     fn open_editor_with(&self, text: &str) -> Result<String, Error> {
-        let editor = env::var("EDITOR").unwrap_or(String::from("vim"));
-
         let tempfile = tempfile::Builder::new()
             .suffix(".txt")
             .tempfile()?;
@@ -25,9 +23,8 @@ impl Editor for OsDefaultEditor {
             // File is closed when variable goes out of scope
         }
 
-
         let tempfile_path = tempfile_path.to_str().unwrap();
-
+        let editor = env::var("EDITOR").unwrap_or(String::from("vim"));
 
         let status = Command::new(editor)
             .arg(tempfile_path)
@@ -43,7 +40,6 @@ impl Editor for OsDefaultEditor {
         let mut file = File::open(tempfile_path)?;
         file.read_to_string(&mut contents)?;
 
-        // TODO do I allow multiline string?
         Ok(String::from(contents.replace("\n", " ").trim()))
     }
 }
