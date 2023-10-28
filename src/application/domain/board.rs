@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use nonempty_collections::{NEVec, NonEmptyIterator};
+use nonempty_collections::{NEVec};
 use crate::application::issue::{Issue};
 use serde::{Serialize, Deserialize};
 use validated::Validated;
