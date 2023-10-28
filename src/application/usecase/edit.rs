@@ -1,6 +1,7 @@
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
-use crate::{Editor, unwrap_or_return};
+use crate::{Editor};
+use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::domain::issue::Described;
 
 
@@ -12,66 +13,118 @@ pub(crate) struct EditUseCase {
 }
 
 impl EditUseCase {
-    pub(crate) fn execute(&mut self, index: usize) {
+    pub(crate) fn execute(&mut self, index: usize) -> DomainResult<()> {
         let mut board = self.storage.load();
 
-        let issue = unwrap_or_return!(board
+        let issue =(board
             .get_issue_mut(index)
             .inspect_err(|e| {
                 self.presenter.render_error(&e);
-            }));
+            }))?;
 
-        let edited_description = unwrap_or_return!(self.editor
+        let edited_description = self.editor
             .open_editor_with(
                 issue.description().as_str())
-            .inspect_err(|e| self.presenter.render_error(&e)));
+            .inspect_err(|e| self.presenter.render_error(&e))
+            .map_err(|e|DomainError::new(&e.to_string()))?;
 
         issue.description_mut().set(&edited_description);
 
         self.storage.save(&board);
         self.presenter.render_board(&board);
+
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::io::Error;
-    use crate::application::usecase::usecase_test::tests::board_with_4_issues;
+    use std::io::{Error, ErrorKind};
     use crate::{Editor, EditUseCase, IssueStorage, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::{Board, Issue};
+    use crate::application::domain::error::{DomainResult};
 
     #[test]
     fn test_execute_successful_editing() {
-        let mut edit_usecase = given_edit_usecase_with(
-            board_with_4_issues(),
+        let mut edit_use_case = given_edit_usecase_with(
+            Board::default().with_4_typical_issues(),
         );
 
-        edit_usecase.execute(1);
+        let result = edit_use_case.execute(1);
 
-        then_edited_issue(&edit_usecase)
+        then_stored_issue_of_the(&edit_use_case)
             .has_edited_description()
             .but_nothing_else_changed();
+        then_editing_result(&result)
+            .did_succeed();
     }
 
     #[test]
     fn test_editing_issue_with_index_out_of_range() {
-        let mut sut = given_edit_usecase_with(
-            board_with_4_issues(),
+        let mut edit_use_case = given_edit_usecase_with(
+            Board::default().with_4_typical_issues(),
         );
 
-        sut.execute(4);
+        let result = edit_use_case.execute(4);
 
-        then_edited_board(&mut sut)
+        then_edited_board(&edit_use_case)
             .did_not_change();
+        then_editing_result(&result)
+            .did_fail_with_index_of_reach();
     }
 
-    fn then_edited_board(sut: &mut EditUseCase) -> Board {
+    #[test]
+    fn test_editor_closes_abruptly() {
+        let mut edit_use_case = given_edit_usecase_with_editor(
+            Board::default().with_4_typical_issues(),
+            Box::new(CloseAbruptlyEditor::default()),
+        );
+
+        let result = edit_use_case.execute(4);
+
+        then_edited_board(&edit_use_case)
+            .did_not_change();
+        then_editing_result(&result)
+            .did_fail();
+    }
+
+    fn then_editing_result(result: &DomainResult<()>) -> EditUseCaseResult {
+        EditUseCaseResult {
+            result,
+        }
+    }
+
+    struct EditUseCaseResult<'a> {
+        result: &'a DomainResult<()>
+    }
+
+    impl EditUseCaseResult<'_> {
+        fn did_fail_with_index_of_reach(&self) -> &Self {
+            self.did_fail();
+            assert_eq!(self.result.as_ref().unwrap_err().description(), "Index out of range", "Expected specific error message");
+            self
+        }
+
+        fn did_fail(&self) -> &Self {
+            assert!(self.result.is_err(), "Expected editing to fail");
+            self
+        }
+
+        fn did_succeed(&self) -> &Self {
+            assert!(self.result.is_ok(), "Expected editing to succeed");
+            self
+        }
+
+
+    }
+
+    fn then_edited_board(sut: &EditUseCase) -> Board {
         sut.storage.load()
     }
 
-    fn then_edited_issue(sut: &EditUseCase) -> Issue {
+    fn then_stored_issue_of_the(sut: &EditUseCase) -> Issue {
         let board = sut.storage.load();
         let issue = board.get_issue(1);
         assert!(issue.is_ok());
@@ -100,14 +153,30 @@ mod tests {
         }
     }
 
+    #[derive(Default)]
+    struct CloseAbruptlyEditor {}
+
+    impl Editor for CloseAbruptlyEditor {
+        fn open_editor_with(&self, _text: &str) -> Result<String, Error> {
+            Err(Error::new(ErrorKind::Other, "Bamm. I'm dead"))
+        }
+    }
+
     fn given_edit_usecase_with(board: Board) -> EditUseCase {
+        given_edit_usecase_with_editor(
+            board,
+            Box::new(TestEditor::default()),
+        )
+    }
+
+    fn given_edit_usecase_with_editor(board: Board, editor: Box<dyn Editor>) -> EditUseCase {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         EditUseCase {
             storage: Box::new(storage),
             presenter: Box::new(NilPresenter::default()),
-            editor: Box::new(TestEditor::default())
+            editor,
         }
     }
 }

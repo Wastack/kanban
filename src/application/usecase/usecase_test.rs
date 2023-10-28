@@ -5,9 +5,14 @@ pub(crate) mod tests {
     use crate::application::issue::{Description};
     use crate::{State};
 
-    pub(crate) fn board_with_4_issues() -> Board {
-        Board {
-            issues: vec![
+    impl Board {
+        pub(crate) fn did_not_change(&self) -> &Self {
+            assert_eq!(self, &Board::default().with_4_typical_issues(), "Expected board not to change");
+            self
+        }
+
+        pub(crate) fn with_4_typical_issues(mut self) -> Self {
+            self.issues = vec![
                 Issue {
                     description: Description::from("First task"),
                     state: State::Open,
@@ -29,13 +34,8 @@ pub(crate) mod tests {
                     state: State::Open,
                     time_created: 1698397492,
                 },
-            ],
-        }
-    }
+            ];
 
-    impl Board {
-        pub(crate) fn did_not_change(&self) -> &Self {
-            assert_eq!(self, &board_with_4_issues(), "Expected board not to change");
             self
         }
     }

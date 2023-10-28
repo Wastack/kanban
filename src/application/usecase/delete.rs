@@ -42,12 +42,11 @@ mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::domain::error::DomainError;
-    use crate::application::usecase::usecase_test::tests::board_with_4_issues;
 
     #[test]
     fn test_execute_successful_deletion() {
         let mut sut = given_delete_use_case_with(
-            board_with_4_issues(),
+            Board::default().with_4_typical_issues(),
         );
         sut.execute(&vec![1, 3, 0]);
 
@@ -57,7 +56,7 @@ mod tests {
     #[test]
     fn test_deletion_index_out_of_range() {
         let mut delete_use_case = given_delete_use_case_with(
-            board_with_4_issues(),
+            Board::default().with_4_typical_issues(),
         );
 
         let result = delete_use_case.execute(&vec![1, 4, 5]);

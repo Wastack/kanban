@@ -3,7 +3,6 @@
 mod controllers;
 mod application;
 mod adapters;
-mod utils;
 
 use clap::Parser;
 use application::ports::issue_storage::IssueStorage;
