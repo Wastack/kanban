@@ -40,3 +40,50 @@ impl MoveUseCase {
         self.presenter.render_board(&board);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::application::{Board, Issue};
+    use crate::{IssueStorage, MoveUseCase, State};
+    use crate::adapters::presenters::nil_presenter::test::NilPresenter;
+    use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
+
+    #[test]
+    fn test_successful_add_use_case() {
+        let mut move_use_case = given_move_use_case_with(
+            Board::default().with_4_typical_issues(),
+        );
+
+        move_use_case.execute(&vec![1, 0], &State::Done);
+
+        then_issue_with_index(0, &move_use_case)
+            .has_done_state();
+
+        then_issue_with_index(1, &move_use_case)
+            .has_done_state();
+    }
+
+    fn given_move_use_case_with(board: Board) -> MoveUseCase {
+        let mut storage = MemoryIssueStorage::default();
+        storage.save(&board);
+
+        MoveUseCase {
+            storage: Box::new(storage),
+            presenter: Box::new(NilPresenter::default()),
+        }
+    }
+
+    fn then_issue_with_index(index: usize, sut: &MoveUseCase) -> Issue {
+        let board = sut.storage.load();
+
+        board.get_issue(index).unwrap().clone()
+    }
+
+    impl Issue {
+        fn has_done_state(&self) -> &Self {
+            assert_eq!(self.state, State::Done, "Expected moved issue to be in done state");
+            self
+        }
+    }
+
+}

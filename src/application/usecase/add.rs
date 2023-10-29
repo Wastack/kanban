@@ -20,10 +20,8 @@ impl AddUseCase {
         ));
 
         self.storage.save(&board);
-
         self.presenter.render_board(&board)
     }
-
 }
 
 #[cfg(test)]
@@ -42,7 +40,7 @@ mod tests {
 
         add_use_case.execute("New task", State::Review);
 
-        then_edited_board(&add_use_case)
+        then_extended_board(&add_use_case)
             .has_5_issues()
             .has_first_issue_with_proper_content();
     }
@@ -57,7 +55,7 @@ mod tests {
         }
     }
 
-    fn then_edited_board(sut: &AddUseCase) -> Board {
+    fn then_extended_board(sut: &AddUseCase) -> Board {
         sut.storage.load()
     }
 
