@@ -72,7 +72,7 @@ mod tests {
         then_edited_board(&edit_use_case)
             .did_not_change();
         then_editing_result(&result)
-            .did_fail_with_index_of_reach();
+            .did_fail_with_index_out_of_reach();
     }
 
     #[test]
@@ -101,7 +101,7 @@ mod tests {
     }
 
     impl EditUseCaseResult<'_> {
-        fn did_fail_with_index_of_reach(&self) -> &Self {
+        fn did_fail_with_index_out_of_reach(&self) -> &Self {
             self.did_fail();
             assert_eq!(self.result.as_ref().unwrap_err().description(), "Index out of range", "Expected specific error message");
             self
