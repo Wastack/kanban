@@ -54,6 +54,7 @@ mod tests {
 
         then_stored_board(&sut)
             .only_third_issue_remains()
+            .has_three_deleted_issues();
     }
 
     #[test]
@@ -98,13 +99,22 @@ mod tests {
 
 
     impl Board {
-        fn only_third_issue_remains(&self) {
+        fn only_third_issue_remains(&self) -> &Self {
             assert_eq!(self.issues_count(), 1, "Expected to contain only 1 issue after deletion");
 
             let Ok(remaining_issue) = self.get_issue(0) else { panic!("Expected to have an issue with index 0") };
-            assert_eq!(remaining_issue.description(), &Description::from("Task inserted second"), "Expected the third task to remain with index 0")
+            assert_eq!(remaining_issue.description(), &Description::from("Task inserted second"), "Expected the third task to remain with index 0");
+
+            self
         }
 
+        fn has_three_deleted_issues(&self) -> &Self {
+            let deleted_issues = self.get_deleted_issues();
+            assert_eq!(deleted_issues.len(), 3, "Expected 3 deleted issues in board");
+
+            // TODO: content of the deleted items?
+            self
+        }
     }
 
     fn then_stored_board(u: &DeleteUseCase) -> Board {

@@ -8,6 +8,7 @@ pub(crate) mod tests {
     impl Board {
         pub(crate) fn did_not_change(&self) -> &Self {
             assert_eq!(self, &Board::default().with_4_typical_issues(), "Expected board not to change");
+            assert!(self.get_deleted_issues().is_empty(), "Expected not to have deleted issues");
             self
         }
 

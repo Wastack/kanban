@@ -52,12 +52,17 @@ impl Board {
         sorted_indices.sort_unstable_by(|a, b| b.cmp(a));
 
         for &i in &sorted_indices {
-            self.issues.remove(i);
+            let removed = self.issues.remove(i);
+            self.deleted_issues.push(removed)
         }
     }
 
     pub fn insert_issue(&mut self, issue: Issue) {
         self.issues.insert(0, issue);
+    }
+
+    pub fn get_deleted_issues(&self) -> &[Issue] {
+        &self.deleted_issues
     }
 }
 
