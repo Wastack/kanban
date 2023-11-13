@@ -112,7 +112,10 @@ mod tests {
             let deleted_issues = self.get_deleted_issues();
             assert_eq!(deleted_issues.len(), 3, "Expected 3 deleted issues in board");
 
-            // TODO: content of the deleted items?
+            assert_eq!(deleted_issues[0].description, "Task inserted fourth".into());
+            assert_eq!(deleted_issues[1].description, "Task inserted third".into());
+            assert_eq!(deleted_issues[2].description, "Task inserted first".into());
+
             self
         }
     }

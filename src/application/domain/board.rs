@@ -11,7 +11,9 @@ use crate::application::issue::State;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Board {
+    #[serde(default)]
     issues: Vec<Issue>,
+    #[serde(default)]
     deleted_issues: Vec<Issue>,
 }
 
@@ -45,6 +47,12 @@ impl Board {
         }
     }
 
+    /// Delete issues with the given indices, in the same order.
+    ///
+    /// Deleted issues are still accessible with `get_deleted_issues`.
+    /// Order of the deleted issues is relevant.
+    ///
+    /// If indices are [2, 0, 1], then the most recently deleted issue is with index `1`.
     pub fn delete_issues_with(&mut self, indices: &[usize]) {
         // Sort the indices in descending order,
         // so that each removal does not affect the next index.
@@ -53,7 +61,8 @@ impl Board {
 
         for &i in &sorted_indices {
             let removed = self.issues.remove(i);
-            self.deleted_issues.push(removed)
+
+            self.deleted_issues.insert(0, removed);
         }
     }
 
@@ -61,6 +70,7 @@ impl Board {
         self.issues.insert(0, issue);
     }
 
+    /// Returns a list of the deleted issues. The first element of the list is the one most recently deleted.
     pub fn get_deleted_issues(&self) -> &[Issue] {
         &self.deleted_issues
     }
