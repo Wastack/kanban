@@ -6,16 +6,9 @@ todo list, then this is your tool.
 
 ```bash
 > ka
-Analysis
-3: Add labels to kanban-cli
-4: Support Jira integration with kanban-cli
-
 Open
 7: Move issues up or down with kanban-cli
 8: Buy a new backpack
-
-In Progress
-10: Write a REAMDE.md for kanban-cli
 
 Review
 2: Implement kanban-cli edit functionality
@@ -34,12 +27,11 @@ Done
 > ka move done 3
 > ka move done 3 4 5
 > ka edit 3  # Interactive editing of the issue with $EDITOR (defaults to vim)
-> ka prio up 3 # Move the issue in it's category. up/down/top/bottom
-> ka delete 3
-> ka show done # Show all done issues (`ka` only shows the 4 most recently closed issues)
+> ka prio up 3 # Move the issue up 1 in its category. up/down/top/bottom
+> ka delete 3 2
 ```
 
 ### Other highlights
 
 - Issues in Open that lasts more then 2 weeks are marked as overdue, and highlighted with red color (do not sit on your tasks).
-- Issues are stored in `$HOME/.kanban`, so that you can transfer your kanban to another machine.
+- Issues are stored in `$HOME/.kanban`. This allows you to transfer your kanban to another machine.
