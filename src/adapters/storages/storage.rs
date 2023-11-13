@@ -24,9 +24,7 @@ impl IssueStorage for FileStorage {
             .unwrap_or(String::from(""));
 
         if file_contents == "" {
-            return Board{
-                issues: vec![]
-            }
+            return Board::default()
         }
 
         serde_yaml::from_str(&file_contents).expect("unexpected file format")

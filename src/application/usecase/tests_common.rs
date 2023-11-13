@@ -12,29 +12,29 @@ pub(crate) mod tests {
         }
 
         pub(crate) fn with_4_typical_issues(mut self) -> Self {
-            self.issues = vec![
+            [
                 Issue {
-                    description: Description::from("First task"),
+                    description: Description::from("Task inserted first"),
                     state: State::Open,
                     time_created: 1698397489,
 
                 },
                 Issue {
-                    description: Description::from("Second task"),
+                    description: Description::from("Task inserted second"),
                     state: State::Review,
                     time_created: 1698397490,
                 },
                 Issue {
-                    description: Description::from("Third task"),
+                    description: Description::from("Task inserted third"),
                     state: State::Done,
                     time_created: 1698397491,
                 },
                 Issue {
-                    description: Description::from("Forth task"),
+                    description: Description::from("Task inserted fourth"),
                     state: State::Open,
                     time_created: 1698397492,
                 },
-            ];
+            ].into_iter().for_each(|i|self.insert_issue(i));
 
             self
         }

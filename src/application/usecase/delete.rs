@@ -48,9 +48,12 @@ mod tests {
         let mut sut = given_delete_use_case_with(
             Board::default().with_4_typical_issues(),
         );
+
+        // When second, fourth and first issue are deleted
         sut.execute(&vec![1, 3, 0]);
 
-        then_only_the_third_issue_remains(&sut);
+        then_stored_board(&sut)
+            .only_third_issue_remains()
     }
 
     #[test]
@@ -93,12 +96,15 @@ mod tests {
         }
     }
 
-    fn then_only_the_third_issue_remains(use_case: &DeleteUseCase) {
-        let saved_board = use_case.storage.load();
-        assert_eq!(saved_board.issues.len(), 1, "Expected to contain only 1 issue after deletion");
 
-        let Ok(remaining_issue) = saved_board.get_issue(0) else { panic!("Expected to have an issue with index 0") };
-        assert_eq!(remaining_issue.description(), &Description::from("Third task"), "Expected the third task to remain with index 0")
+    impl Board {
+        fn only_third_issue_remains(&self) {
+            assert_eq!(self.issues_count(), 1, "Expected to contain only 1 issue after deletion");
+
+            let Ok(remaining_issue) = self.get_issue(0) else { panic!("Expected to have an issue with index 0") };
+            assert_eq!(remaining_issue.description(), &Description::from("Task inserted second"), "Expected the third task to remain with index 0")
+        }
+
     }
 
     fn then_stored_board(u: &DeleteUseCase) -> Board {

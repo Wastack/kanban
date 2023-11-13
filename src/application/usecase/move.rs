@@ -26,14 +26,14 @@ impl MoveUseCase {
             return validated;
         }
 
-        for index in indices {
-            let current_state = board.issues[*index].state_mut();
+        for &index in indices {
+            let current_state = board.get_issue_mut(index).unwrap().state_mut();
 
             if current_state != state{
                 *current_state = *state;
 
                 if *state == State::Done {
-                    board.prio_top_in_category(*index);
+                    board.prio_top_in_category(index);
                 }
             }
         }

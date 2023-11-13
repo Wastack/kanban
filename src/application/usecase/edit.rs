@@ -52,7 +52,7 @@ mod tests {
             Board::default().with_4_typical_issues(),
         );
 
-        let result = edit_use_case.execute(1);
+        let result = edit_use_case.execute(2);
 
         then_stored_issue_of_the(&edit_use_case)
             .has_edited_description()
@@ -126,14 +126,14 @@ mod tests {
 
     fn then_stored_issue_of_the(sut: &EditUseCase) -> Issue {
         let board = sut.storage.load();
-        let issue = board.get_issue(1);
+        let issue = board.get_issue(2);
         assert!(issue.is_ok());
         issue.unwrap().clone()
     }
 
     impl Issue {
         fn has_edited_description(&self) -> &Self {
-            assert_eq!(self.description.as_str(), "Edited: Second task");
+            assert_eq!(self.description.as_str(), "Edited: Task inserted second");
             self
         }
 

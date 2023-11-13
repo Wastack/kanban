@@ -11,12 +11,18 @@ use crate::application::issue::State;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Board {
-    pub issues: Vec<Issue>,
+    issues: Vec<Issue>,
+    deleted_issues: Vec<Issue>,
 }
 
 impl Board {
     pub fn get_issue(&self, index: usize) -> DomainResult<&Issue> {
         self.issues.get(index).ok_or(DomainError::new("Index out of range"))
+    }
+
+    /// Returns the number of (not deleted) issues in Board
+    pub fn issues_count(&self) -> usize {
+        self.issues.len()
     }
 
     pub fn get_issue_mut(&mut self, index: usize) -> DomainResult<&mut Issue> {
@@ -194,6 +200,7 @@ mod tests {
 
                 },
             ],
+            deleted_issues: Vec::default(),
         }
     }
 
@@ -242,7 +249,7 @@ mod tests {
     }
 
     fn given_empty_board() -> Board {
-        Board { issues: vec![] }
+        Board::default()
     }
 
     fn given_indices_within_bounds() -> Vec<usize> {

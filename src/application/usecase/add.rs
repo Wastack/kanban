@@ -61,7 +61,7 @@ mod tests {
 
     impl Board {
         fn has_5_issues(&self) -> &Self {
-            assert_eq!(self.issues.len(), 5, "Expected board to have 5 issues");
+            assert_eq!(self.issues_count(), 5, "Expected board to have 5 issues");
             self
         }
 
