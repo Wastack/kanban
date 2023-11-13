@@ -30,3 +30,12 @@ impl PrioUseCase {
         self.presenter.render_board(&board);
     }
 }
+
+/*
+
+TODO: tests
+
+- Top, Bottom, Up, Down successful cases
+- Successful, but didn't change order (e.g. when calling top on an issue already there)
+- index out of range
+ */
