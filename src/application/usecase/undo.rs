@@ -1,0 +1,202 @@
+use crate::{IssueStorage, Presenter};
+use crate::application::domain::error::{DomainError, DomainResult};
+use crate::application::domain::history::{UndoableHistoryElement};
+
+#[derive(Default)]
+pub(crate) struct UndoUseCase {
+    storage: Box<dyn IssueStorage>,
+    presenter: Box<dyn Presenter>,
+}
+
+impl UndoUseCase {
+    pub(crate) fn execute(&mut self) -> DomainResult<()> {
+        let mut board = self.storage.load();
+
+        let history = board.history();
+
+        let event_to_undo = history
+            .peek()
+            .ok_or(DomainError::new("History is empty"))?;
+
+        match event_to_undo {
+            UndoableHistoryElement::Add => {
+                // TODO too much intimacy with the field
+                // Board delete method puts field to deleted, which is not correct in this case
+
+                let issues = board.issues_mut();
+                issues.remove(0);
+            },
+            UndoableHistoryElement::Delete(_) => {
+                // TODO: missing information on where the issue was located in the vector
+                //let deleted_issues = board.get_deleted_issues_mut();
+
+                //deleted_issues.drain(0..number_of_issues_deleted).into_iter();
+                return Err(DomainError::new("Not implemented"))
+            },
+            UndoableHistoryElement::Prio(_) => {
+                // TODO
+                return Err(DomainError::new("Not implemented"))
+            },
+            UndoableHistoryElement::Edit(_) => {
+                // TODO
+                return Err(DomainError::new("Not implemented"))
+            },
+            UndoableHistoryElement::Move(_) => {
+                // TODO
+                return Err(DomainError::new("Not implemented"))
+            },
+        }
+
+        board.history_mut().pop();
+
+        self.storage.save(&board);
+        self.presenter.render_board(&board);
+
+        Ok(())
+    }
+}
+
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use crate::application::{Board, Issue};
+    use crate::{IssueStorage, State};
+    use crate::adapters::presenters::nil_presenter::test::NilPresenter;
+    use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
+    use crate::application::domain::history::{DeleteHistoryElement, UndoableHistoryElement};
+    use crate::application::issue::{Described, Description};
+    use crate::application::usecase::undo::UndoUseCase;
+
+    #[test]
+    fn test_undo_add() {
+        let mut undo_use_case = given_undo_usecase_with(
+            Board::default()
+                .with_4_typical_issues()
+                .with_an_issue_added_additionally(),
+        );
+
+        let result = undo_use_case.execute();
+        assert!(result.is_ok(), "{}", result.unwrap_err().description());
+
+        then_board_for(&undo_use_case)
+            .has_number_of_issues(4)
+            .has_the_original_4_issues()
+            .has_original_history();
+    }
+
+    #[ignore]
+    #[test]
+    fn test_undo_delete() {
+        let mut undo_use_case = given_undo_usecase_with(
+            Board::default()
+                .with_4_typical_issues()
+                .with_third_and_first_issues_deleted_at_once(),
+        );
+
+        let result = undo_use_case.execute();
+        assert!(result.is_ok(), "{}", result.unwrap_err().description());
+
+        then_board_for(&undo_use_case)
+            .has_number_of_issues(4)
+            .has_the_original_4_issues()
+            .has_original_history();
+    }
+
+    #[test]
+    fn test_undo_on_empty_board() {
+        let mut undo_use_case = given_undo_usecase_with( Board::default() );
+        let result =undo_use_case.execute();
+        assert!(result.is_err())
+    }
+
+    #[ignore]
+    #[test]
+    fn test_2_undos_in_sequence() {
+        let mut undo_use_case = given_undo_usecase_with(
+            Board::default()
+                .with_4_typical_issues()
+                .with_an_issue_added_additionally()
+                .with_most_priority_issue_moved_to_review(),
+        );
+
+        // When undoing move
+        let result = undo_use_case.execute();
+        assert!(result.is_ok(), "{}", result.unwrap_err().description());
+
+        then_board_for(&undo_use_case)
+            .has_the_original_4_issues()
+            .has_additional_issue_added_with_state_open()
+            .has_the_addition_in_history();
+
+        // When undoing addition
+        let result = undo_use_case.execute();
+        assert!(result.is_ok(), "{}", result.unwrap_err().description());
+
+        then_board_for(&undo_use_case)
+            .has_the_original_4_issues()
+            .has_original_history();
+    }
+
+
+    impl Board {
+        fn with_an_issue_added_additionally(mut self) -> Self {
+            self.add_issue(
+                Issue::new( Description::from("Additional Issue"), State::Open)
+            );
+            self.history_mut().push(UndoableHistoryElement::Add);
+
+            self
+        }
+
+        fn with_third_and_first_issues_deleted_at_once(mut self) -> Self {
+            self.delete_issues_with(&[2, 0]);
+            self.history_mut().push(UndoableHistoryElement::Delete(
+                DeleteHistoryElement{
+                    number_of_issues_deleted: 2
+                }));
+
+            self
+        }
+
+        fn with_most_priority_issue_moved_to_review(mut self) -> Self {
+            self.move_issue(0, State::Review).unwrap();
+
+            self
+        }
+
+        fn has_original_history(&self) -> &Self {
+            assert!(self.history().peek().is_none(), "Expected history to be empty, got: {:?}", self.history());
+            self
+        }
+        fn has_additional_issue_added_with_state_open(&self) -> &Self {
+            let Ok(issue ) = self.get_issue(0) else {panic!("Expected to have an issue")};
+            assert_eq!(issue.description(), &Description::from("Additional Issue"), "Expected Additional Issue in first place");
+            assert_eq!(issue.state, State::Open, "Expected issue to be in Open state");
+
+            self
+        }
+
+        fn has_the_addition_in_history(&self) -> &Self {
+            assert_eq!(self.history().peek(), Some(&UndoableHistoryElement::Add), "Expected addition to be present in history as last event");
+
+            self
+        }
+
+    }
+
+    fn then_board_for(undo: &UndoUseCase) -> Board {
+        undo.storage.load()
+    }
+
+    fn given_undo_usecase_with(board: Board) -> UndoUseCase {
+        let mut storage = MemoryIssueStorage::default();
+        storage.save(&board);
+
+        UndoUseCase {
+            storage: Box::new(storage),
+            presenter: Box::new(NilPresenter::default()),
+        }
+    }
+
+}
+

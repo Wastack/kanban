@@ -1,5 +1,7 @@
 #![feature(result_option_inspect)]
 
+extern crate core;
+
 mod controllers;
 mod application;
 mod adapters;
@@ -51,7 +53,7 @@ fn main() {
             DeleteUseCase::default().execute(&index);
         },
         Some(Command::Move{indices, state}) => {
-            MoveUseCase::default().execute(&indices, &state);
+            MoveUseCase::default().execute(&indices, state);
         },
         Some(Command::Edit{index}) => {
             let _ = EditUseCase::default().execute(index);

@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use nonempty_collections::{NEVec};
-use crate::application::issue::{Issue};
+use crate::application::issue::{Issue, Stateful};
 use serde::{Serialize, Deserialize};
 use validated::Validated;
 use crate::application::domain::error::{DomainError, DomainResult};
+use crate::application::domain::history::History;
 use crate::application::issue::State;
 
 
@@ -13,11 +14,23 @@ use crate::application::issue::State;
 pub struct Board {
     #[serde(default)]
     issues: Vec<Issue>,
+
     #[serde(default)]
     deleted_issues: Vec<Issue>,
+
+    #[serde(default)]
+    history: History,
 }
 
 impl Board {
+    pub fn issues(&self) -> &[Issue] {
+        &self.issues
+    }
+
+    pub fn issues_mut(&mut self) -> &mut Vec<Issue> {
+        &mut self.issues
+    }
+
     pub fn get_issue(&self, index: usize) -> DomainResult<&Issue> {
         self.issues.get(index).ok_or(DomainError::new("Index out of range"))
     }
@@ -60,19 +73,52 @@ impl Board {
         sorted_indices.sort_unstable_by(|a, b| b.cmp(a));
 
         for &i in &sorted_indices {
+            // TODO error instead of panic?
             let removed = self.issues.remove(i);
 
             self.deleted_issues.insert(0, removed);
         }
     }
 
-    pub fn insert_issue(&mut self, issue: Issue) {
+    /// Adds a new issue to the board. This is an undoable action.
+    pub fn add_issue(&mut self, issue: Issue) {
         self.issues.insert(0, issue);
+    }
+
+    /// Move an issue from one state to another
+    pub fn move_issue(&mut self, index: usize, new_state: State) -> DomainResult<()> {
+        let state = self.get_issue_mut(index)?.state_mut();
+
+        if *state == new_state {
+            return Ok(());
+        }
+
+        *state = new_state;
+
+        // If issue is moved to done, I'd like to see it on the top
+        if *state == State::Done {
+            // TODO watch out, this should not be and undoable event
+            self.prio_top_in_category(index);
+        }
+
+        Ok(())
     }
 
     /// Returns a list of the deleted issues. The first element of the list is the one most recently deleted.
     pub fn get_deleted_issues(&self) -> &[Issue] {
         &self.deleted_issues
+    }
+
+    pub fn get_deleted_issues_mut(&mut self) -> &mut Vec<Issue> {
+        &mut self.deleted_issues
+    }
+
+    pub fn history(&self) -> &History {
+        &self.history
+    }
+
+    pub fn history_mut(&mut self) -> &mut History {
+        &mut self.history
     }
 }
 
@@ -216,6 +262,7 @@ mod tests {
                 },
             ],
             deleted_issues: Vec::default(),
+            history: History::default(),
         }
     }
 

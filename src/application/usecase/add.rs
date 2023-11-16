@@ -1,4 +1,5 @@
 use crate::application::{Issue, State};
+use crate::application::domain::history::UndoableHistoryElement;
 use crate::application::issue::Description;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
@@ -14,10 +15,11 @@ impl AddUseCase {
     pub(crate) fn execute(&mut self, description: &str, state: State) {
         let mut board = self.storage.load();
 
-        board.insert_issue(Issue::new(
+        board.add_issue(Issue::new(
             Description::from(description),
             state,
         ));
+        board.history_mut().push(UndoableHistoryElement::Add);
 
         self.storage.save(&board);
         self.presenter.render_board(&board)
@@ -30,6 +32,7 @@ mod tests {
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::{AddUseCase, IssueStorage, State};
     use crate::application::Board;
+    use crate::application::domain::history::UndoableHistoryElement;
     use crate::application::issue::Description;
 
     #[test]
@@ -42,7 +45,8 @@ mod tests {
 
         then_extended_board(&add_use_case)
             .has_5_issues()
-            .has_first_issue_with_proper_content();
+            .has_first_issue_with_proper_content()
+            .has_addition_in_history();
     }
 
     fn given_add_use_case_with(board: Board) -> AddUseCase {
@@ -69,6 +73,14 @@ mod tests {
             let issue = self.get_issue(0).unwrap();
             assert_eq!(issue.description, Description::from("New task"), "Expected specific description of added issue");
             assert_eq!(issue.state, State::Review, "Expected specific state of added issue");
+
+            self
+        }
+
+        fn has_addition_in_history(&self) -> &Self {
+            let history = self.history();
+            assert_eq!(history.len(), 1, "Expected to have an item in history");
+            assert_eq!(history.peek().unwrap(), &UndoableHistoryElement::Add, "Expected item in history to represent and addition of an issue");
 
             self
         }

@@ -6,6 +6,8 @@ todo list, then this is your tool.
 
 ```bash
 > ka
+```
+```
 Open
 7: Move issues up or down with kanban-cli
 8: Buy a new backpack
@@ -18,7 +20,6 @@ Done
 1: Design kanban-cli subcommands
 5: Implement kanban-cli edit
 6: Support moving issues for kanban-cli
-...
 ```
 
 ```bash

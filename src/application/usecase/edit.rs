@@ -2,6 +2,7 @@ use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::{Editor};
 use crate::application::domain::error::{DomainError, DomainResult};
+use crate::application::domain::history::{EditHistoryElement, UndoableHistoryElement};
 use crate::application::domain::issue::Described;
 
 
@@ -17,10 +18,12 @@ impl EditUseCase {
         let mut board = self.storage.load();
 
         let issue =(board
-            .get_issue_mut(index)
+            .get_issue(index)
             .inspect_err(|e| {
                 self.presenter.render_error(&e);
             }))?;
+
+        let original_description = String::from(issue.description.as_str());
 
         let edited_description = self.editor
             .open_editor_with(
@@ -28,7 +31,16 @@ impl EditUseCase {
             .inspect_err(|e| self.presenter.render_error(&e))
             .map_err(|e|DomainError::new(&e.to_string()))?;
 
+        let issue = board.get_issue_mut(index)?;
         issue.description_mut().set(&edited_description);
+
+        board.history_mut().push(UndoableHistoryElement::Edit(
+            EditHistoryElement {
+                original_description,
+            }
+        ));
+
+
 
         self.storage.save(&board);
         self.presenter.render_board(&board);
@@ -70,7 +82,7 @@ mod tests {
         let result = edit_use_case.execute(4);
 
         then_edited_board(&edit_use_case)
-            .did_not_change();
+            .has_the_original_4_issues();
         then_editing_result(&result)
             .did_fail_with_index_out_of_reach();
     }
@@ -85,7 +97,8 @@ mod tests {
         let result = edit_use_case.execute(4);
 
         then_edited_board(&edit_use_case)
-            .did_not_change();
+            .has_number_of_issues(4)
+            .has_the_original_4_issues();
         then_editing_result(&result)
             .did_fail();
     }

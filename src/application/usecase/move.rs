@@ -4,7 +4,6 @@ use crate::application::domain::error::DomainError;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::State;
-use crate::application::domain::issue::Stateful;
 
 
 #[derive(Default)]
@@ -14,7 +13,7 @@ pub(crate) struct MoveUseCase {
 }
 
 impl MoveUseCase {
-    pub(crate) fn execute(&mut self, indices: &[usize], state: &State) -> Validated<(), DomainError> {
+    pub(crate) fn execute(&mut self, indices: &[usize], state: State) -> Validated<(), DomainError> {
         let mut board = self.storage.load();
 
         let validated = board.validate_indices(indices);
@@ -26,17 +25,12 @@ impl MoveUseCase {
             return validated;
         }
 
+        // TODO implement history
+
         for &index in indices {
-            let current_state = board.get_issue_mut(index).unwrap().state_mut();
-
-            if current_state != state{
-                *current_state = *state;
-
-                if *state == State::Done {
-                    board.prio_top_in_category(index);
-                }
-            }
+            board.move_issue(index, state).unwrap();
         }
+
 
         self.storage.save(&board);
         self.presenter.render_board(&board);
@@ -61,7 +55,7 @@ mod tests {
             Board::default().with_4_typical_issues(),
         );
 
-        move_use_case.execute(&vec![1, 0], &State::Done);
+        move_use_case.execute(&vec![1, 0], State::Done);
 
         then_issue_with_index(0, &move_use_case)
             .has_done_state();
@@ -76,14 +70,15 @@ mod tests {
             Board::default().with_4_typical_issues(),
         );
 
-        let result = move_use_case.execute(&vec![1, 4, 5], &State::Done);
+        let result = move_use_case.execute(&vec![1, 4, 5], State::Done);
 
         then_moving(&result)
             .did_fail()
             .did_produce_two_errors();
 
         then_stored_board(&move_use_case)
-            .did_not_change();
+            .has_number_of_issues(4)
+            .has_the_original_4_issues();
     }
 
     fn given_move_use_case_with(board: Board) -> MoveUseCase {
