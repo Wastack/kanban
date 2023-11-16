@@ -31,6 +31,7 @@ impl History {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct MoveHistoryElement {
+    // TODO this is not enough to undo deletion
     pub original_state: State,
 }
 
@@ -45,14 +46,23 @@ pub struct EditHistoryElement {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct DeleteHistoryElement {
+pub struct DeleteHistoryElements {
+    // TODO this is not enough to undo deletion. Original position in array is needed for each
     pub number_of_issues_deleted: usize,
+
+    pub deletions: Vec<DeleteHistoryElement>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct DeleteHistoryElement {
+    /// The position in which the issue had been located just before it was deleted.
+    original_position_in_issues: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum UndoableHistoryElement {
     Add,
-    Delete(DeleteHistoryElement),
+    Delete(DeleteHistoryElements),
     Move(MoveHistoryElement),
     Prio(PrioHistoryElement),
     Edit(EditHistoryElement)

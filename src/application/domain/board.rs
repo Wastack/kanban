@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap};
 use nonempty_collections::{NEVec};
 use crate::application::issue::{Issue, Stateful};
 use serde::{Serialize, Deserialize};
@@ -65,22 +65,25 @@ impl Board {
     /// Deleted issues are still accessible with `get_deleted_issues`.
     /// Order of the deleted issues is relevant.
     ///
-    /// If indices are [2, 0, 1], then the most recently deleted issue is with index `1`.
+    /// If indices are [2, 0, 1], then the most recently deleted issue is with index `1`, because
+    /// it first deletes `2`, then `0` and then `1`.
     pub fn delete_issues_with(&mut self, indices: &[usize]) {
         // Sort the indices in descending order,
         // so that each removal does not affect the next index.
-        let mut sorted_indices = indices.to_owned();
-        sorted_indices.sort_unstable_by(|a, b| b.cmp(a));
+        let mut sorted_descending_indices = indices.to_owned();
+        sorted_descending_indices.sort_unstable_by(|a, b| b.cmp(a));
 
-        for &i in &sorted_indices {
-            // TODO error instead of panic?
-            let removed = self.issues.remove(i);
+        let mut removed_issues: HashMap<usize, Issue> = sorted_descending_indices
+            .into_iter()
+            .map(|index|(index, self.issues.remove(index)))
+            .collect();
 
-            self.deleted_issues.insert(0, removed);
+        for i in indices {
+            self.deleted_issues.insert(0, removed_issues.remove(i).unwrap());
         }
     }
 
-    /// Adds a new issue to the board. This is an undoable action.
+    /// Adds a new issue to the board.
     pub fn add_issue(&mut self, issue: Issue) {
         self.issues.insert(0, issue);
     }

@@ -63,7 +63,7 @@ pub(crate) mod tests {
     use crate::{IssueStorage, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::application::domain::history::{DeleteHistoryElement, UndoableHistoryElement};
+    use crate::application::domain::history::{DeleteHistoryElements, UndoableHistoryElement};
     use crate::application::issue::{Described, Description};
     use crate::application::usecase::undo::UndoUseCase;
 
@@ -150,10 +150,11 @@ pub(crate) mod tests {
 
         fn with_third_and_first_issues_deleted_at_once(mut self) -> Self {
             self.delete_issues_with(&[2, 0]);
-            self.history_mut().push(UndoableHistoryElement::Delete(
-                DeleteHistoryElement{
-                    number_of_issues_deleted: 2
-                }));
+            // TODO
+            //self.history_mut().push(UndoableHistoryElement::Delete(
+            //    DeleteHistoryElements {
+            //        number_of_issues_deleted: 2
+            //    }));
 
             self
         }

@@ -1,7 +1,7 @@
 use validated::Validated;
 use validated::Validated::Fail;
 use crate::application::domain::error::{DomainError};
-use crate::application::domain::history::{DeleteHistoryElement, UndoableHistoryElement};
+use crate::application::domain::history::{DeleteHistoryElements, UndoableHistoryElement};
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 
@@ -25,10 +25,11 @@ impl DeleteUseCase {
 
         board.delete_issues_with(indices);
 
-        board.history_mut().push(UndoableHistoryElement::Delete(
-            DeleteHistoryElement {
-                number_of_issues_deleted: indices.len(),
-            }));
+        // TODO
+        //board.history_mut().push(UndoableHistoryElement::Delete(
+        //    DeleteHistoryElements {
+        //        number_of_issues_deleted: indices.len(),
+        //    }));
 
         self.storage.save(&board);
         self.presenter.render_board(&board);
@@ -117,11 +118,12 @@ mod tests {
 
         fn has_three_deleted_issues(&self) -> &Self {
             let deleted_issues = self.get_deleted_issues();
+            println!("{:?}", deleted_issues);
             assert_eq!(deleted_issues.len(), 3, "Expected 3 deleted issues in board");
 
             assert_eq!(deleted_issues[0].description, "Task inserted fourth".into());
-            assert_eq!(deleted_issues[1].description, "Task inserted third".into());
-            assert_eq!(deleted_issues[2].description, "Task inserted first".into());
+            assert_eq!(deleted_issues[1].description, "Task inserted first".into());
+            assert_eq!(deleted_issues[2].description, "Task inserted third".into());
 
             self
         }
