@@ -31,7 +31,6 @@ impl History {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct MoveHistoryElements {
-    // TODO this is not enough to undo deletion
     pub moves: MoveHistoryElement,
 }
 

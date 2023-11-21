@@ -107,7 +107,24 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn test_undo_delete() {
+    fn test_undo_delete_one_issue() {
+        let mut undo_use_case = given_undo_usecase_with(
+            Board::default()
+                .with_4_typical_issues()
+                .with_an_issue_deleted(),
+        );
+
+        let result = undo_use_case.execute();
+        assert!(result.is_ok(), "{}", result.unwrap_err().description());
+
+        then_board_for(&undo_use_case)
+            .has_number_of_issues(4)
+            .has_the_original_4_issues_in_order()
+            .has_original_history();
+    }
+
+    #[test]
+    fn test_undo_delete_multiple_issue() {
         let mut undo_use_case = given_undo_usecase_with(
             Board::default()
                 .with_4_typical_issues()
@@ -167,6 +184,20 @@ pub(crate) mod tests {
             self.history_mut().push(UndoableHistoryElement::Add);
 
             self
+        }
+        fn with_an_issue_deleted(mut self) -> Self {
+            self.delete_issues_with(&[2]);
+            self.history_mut().push(UndoableHistoryElement::Delete(
+                DeleteHistoryElements {
+                    deletions: vec![
+                        DeleteHistoryElement{
+                            original_position_in_issues: 2,
+                        },
+                    ]
+                }));
+
+            self
+
         }
 
         fn with_1_0_2_issues_deleted(mut self) -> Self {

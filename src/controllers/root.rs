@@ -45,7 +45,9 @@ pub(crate) enum Command {
 
         /// Index of the issue to be moved
         index: usize,
-    }
+    },
+    /// Undo last action that changed the state
+    Undo,
 }
 
 #[derive(Clone)]

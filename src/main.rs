@@ -21,6 +21,7 @@ use crate::application::usecase::edit::EditUseCase;
 use crate::application::usecase::get::GetUseCase;
 use crate::application::usecase::prio::PrioUseCase;
 use crate::application::usecase::r#move::MoveUseCase;
+use crate::application::usecase::undo::UndoUseCase;
 
 impl Default for Box<dyn IssueStorage> {
     fn default() -> Self {
@@ -60,6 +61,9 @@ fn main() {
         },
         Some(Command::Prio{command, index}) => {
             PrioUseCase::default().execute(index, command);
+        },
+        Some(Command::Undo) => {
+            let _ = UndoUseCase::default().execute();
         },
         None => {
             GetUseCase::default().execute()
