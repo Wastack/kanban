@@ -29,33 +29,46 @@ pub(crate) mod tests {
             self
         }
 
-        pub(crate) fn with_4_typical_issues(mut self) -> Self {
-            [
-                Issue {
-                    description: Description::from("Task inserted first"),
-                    state: State::Open,
-                    time_created: 1698397489,
-
-                },
-                Issue {
-                    description: Description::from("Task inserted second"),
-                    state: State::Review,
-                    time_created: 1698397490,
-                },
-                Issue {
-                    description: Description::from("Task inserted third"),
-                    state: State::Done,
-                    time_created: 1698397491,
-                },
-                Issue {
-                    description: Description::from("Task inserted fourth"),
-                    state: State::Open,
-                    time_created: 1698397492,
-                },
-            ].into_iter().for_each(|i|self.add_issue(i));
+        pub(crate) fn has_the_original_4_issues_in_order(&self) -> &Self {
+            let issues = typical_4_issues();
+            issues.into_iter().rev().zip(self.issues().iter()).for_each(|(expected, actual)|{
+                assert_eq!(actual, &expected, "Expected Issue to be the original one");
+            });
 
             self
         }
+
+        pub(crate) fn with_4_typical_issues(mut self) -> Self {
+            typical_4_issues().into_iter().for_each(|i|self.add_issue(i));
+            self
+        }
+
+    }
+
+    fn typical_4_issues() -> [Issue; 4] {
+        [
+            Issue {
+                description: Description::from("Task inserted first"),
+                state: State::Open,
+                time_created: 1698397489,
+
+            },
+            Issue {
+                description: Description::from("Task inserted second"),
+                state: State::Review,
+                time_created: 1698397490,
+            },
+            Issue {
+                description: Description::from("Task inserted third"),
+                state: State::Done,
+                time_created: 1698397491,
+            },
+            Issue {
+                description: Description::from("Task inserted fourth"),
+                state: State::Open,
+                time_created: 1698397492,
+            },
+        ]
     }
 }
 

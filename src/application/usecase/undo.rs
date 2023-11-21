@@ -26,12 +26,34 @@ impl UndoUseCase {
                 let issues = board.issues_mut();
                 issues.remove(0);
             },
-            UndoableHistoryElement::Delete(_) => {
-                // TODO: missing information on where the issue was located in the vector
-                //let deleted_issues = board.get_deleted_issues_mut();
+            UndoableHistoryElement::Delete(info) => {
+                // First, sort by index backwards, so that undo does not change any indices
 
-                //deleted_issues.drain(0..number_of_issues_deleted).into_iter();
-                return Err(DomainError::new("Not implemented"))
+                // The first number is the index that identifies the element to be restored from
+                // the list of deleted issues
+
+                // The second number is the original position of the issue before deletion
+                let mut indices_to_restore = info.deletions
+                    .to_owned()
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, d)| (info.deletions.len() - index - 1, d.original_position_in_issues) )
+                    .collect::<Vec<_>>();
+                indices_to_restore.sort_unstable_by(|a, b| a.1.cmp(&b.1));
+
+                for &(deleted_index, orignial_index) in &indices_to_restore {
+                    // remove from deleted
+                    let deleted_issues = board.get_deleted_issues_mut();
+                    let issue = deleted_issues[deleted_index].clone();
+
+                    // restore
+                    let issues = board.issues_mut();
+                    issues.insert(orignial_index, issue);
+                }
+
+                // clear deleted issues
+                let deleted_issues = board.get_deleted_issues_mut();
+                deleted_issues.drain(0..indices_to_restore.len());
             },
             UndoableHistoryElement::Prio(_) => {
                 // TODO
@@ -63,7 +85,7 @@ pub(crate) mod tests {
     use crate::{IssueStorage, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::application::domain::history::{DeleteHistoryElements, UndoableHistoryElement};
+    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, UndoableHistoryElement};
     use crate::application::issue::{Described, Description};
     use crate::application::usecase::undo::UndoUseCase;
 
@@ -80,17 +102,16 @@ pub(crate) mod tests {
 
         then_board_for(&undo_use_case)
             .has_number_of_issues(4)
-            .has_the_original_4_issues()
+            .has_the_original_4_issues_in_order()
             .has_original_history();
     }
 
-    #[ignore]
     #[test]
     fn test_undo_delete() {
         let mut undo_use_case = given_undo_usecase_with(
             Board::default()
                 .with_4_typical_issues()
-                .with_third_and_first_issues_deleted_at_once(),
+                .with_1_0_2_issues_deleted(),
         );
 
         let result = undo_use_case.execute();
@@ -98,7 +119,7 @@ pub(crate) mod tests {
 
         then_board_for(&undo_use_case)
             .has_number_of_issues(4)
-            .has_the_original_4_issues()
+            .has_the_original_4_issues_in_order()
             .has_original_history();
     }
 
@@ -148,13 +169,22 @@ pub(crate) mod tests {
             self
         }
 
-        fn with_third_and_first_issues_deleted_at_once(mut self) -> Self {
-            self.delete_issues_with(&[2, 0]);
-            // TODO
-            //self.history_mut().push(UndoableHistoryElement::Delete(
-            //    DeleteHistoryElements {
-            //        number_of_issues_deleted: 2
-            //    }));
+        fn with_1_0_2_issues_deleted(mut self) -> Self {
+            self.delete_issues_with(&[1, 0, 2]);
+            self.history_mut().push(UndoableHistoryElement::Delete(
+                DeleteHistoryElements {
+                    deletions: vec![
+                        DeleteHistoryElement{
+                            original_position_in_issues: 1,
+                        },
+                        DeleteHistoryElement{
+                            original_position_in_issues: 0,
+                        },
+                        DeleteHistoryElement{
+                            original_position_in_issues: 2,
+                        },
+                    ]
+                }));
 
             self
         }

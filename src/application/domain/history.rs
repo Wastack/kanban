@@ -30,9 +30,21 @@ impl History {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct MoveHistoryElement {
+pub struct MoveHistoryElements {
     // TODO this is not enough to undo deletion
+    pub moves: MoveHistoryElement,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct MoveHistoryElement {
+    /// Index of the issues that was moved
+    pub original_index: usize,
+
     pub original_state: State,
+
+    /// It can happen that moving changes priorities.
+    /// If it does, then new_index is different than original_index.
+    pub new_index: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -45,25 +57,22 @@ pub struct EditHistoryElement {
     pub original_description: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 pub struct DeleteHistoryElements {
-    // TODO this is not enough to undo deletion. Original position in array is needed for each
-    pub number_of_issues_deleted: usize,
-
     pub deletions: Vec<DeleteHistoryElement>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct DeleteHistoryElement {
     /// The position in which the issue had been located just before it was deleted.
-    original_position_in_issues: usize,
+    pub(crate) original_position_in_issues: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum UndoableHistoryElement {
     Add,
     Delete(DeleteHistoryElements),
-    Move(MoveHistoryElement),
+    Move(MoveHistoryElements),
     Prio(PrioHistoryElement),
     Edit(EditHistoryElement)
 }

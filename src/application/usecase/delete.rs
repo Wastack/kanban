@@ -1,7 +1,7 @@
 use validated::Validated;
 use validated::Validated::Fail;
 use crate::application::domain::error::{DomainError};
-use crate::application::domain::history::{DeleteHistoryElements, UndoableHistoryElement};
+use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, UndoableHistoryElement};
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 
@@ -25,18 +25,18 @@ impl DeleteUseCase {
 
         board.delete_issues_with(indices);
 
-        // TODO
-        //board.history_mut().push(UndoableHistoryElement::Delete(
-        //    DeleteHistoryElements {
-        //        number_of_issues_deleted: indices.len(),
-        //    }));
+        board.history_mut().push(UndoableHistoryElement::Delete(
+            DeleteHistoryElements {
+                deletions: indices.iter().map(|&i|DeleteHistoryElement {
+                    original_position_in_issues: i,
+                }).collect(),
+            }));
 
         self.storage.save(&board);
         self.presenter.render_board(&board);
 
         Validated::Good(())
     }
-
 }
 
 #[cfg(test)]
