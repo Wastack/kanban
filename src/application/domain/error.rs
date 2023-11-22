@@ -1,6 +1,6 @@
 use std::{error, fmt};
 
-pub(crate) type DomainResult<T> = Result<T, DomainError>;
+pub type DomainResult<T> = Result<T, DomainError>;
 
 #[derive(Debug, Clone)]
 pub struct DomainError {

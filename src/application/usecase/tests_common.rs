@@ -1,7 +1,7 @@
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::application::{Board, Issue};
+    use crate::application::{Board, DomainResult, Issue};
     use crate::application::issue::{Description};
     use crate::{State};
 
@@ -70,5 +70,67 @@ pub(crate) mod tests {
             },
         ]
     }
+
+    pub(crate) fn then_result<T>(result: &DomainResult<T>) -> DomainResultMatcher<T> {
+        DomainResultMatcher {
+            result,
+        }
+    }
+
+    pub(crate) struct DomainResultMatcher<'a, T> {
+        result: &'a DomainResult<T>
+    }
+
+    impl<T: std::fmt::Debug> DomainResultMatcher<'_, T> {
+        pub(crate) fn did_fail_with_index_out_of_reach(&self) -> &Self {
+
+            fn then_result<T>(result: &DomainResult<T>) -> DomainResultMatcher<T> {
+                DomainResultMatcher {
+                    result,
+                }
+            }
+
+            struct DomainResultMatcher<'a, T> {
+                result: &'a DomainResult<T>
+            }
+
+            impl<T: std::fmt::Debug> DomainResultMatcher<'_, T> {
+                fn did_fail_with_index_out_of_reach(&self) -> &Self {
+                    self.did_fail();
+                    assert_eq!(self.result.as_ref().unwrap_err().description(), "Index out of range", "Expected specific error message");
+                    self
+                }
+
+                fn did_fail(&self) -> &Self {
+                    assert!(self.result.is_err(), "Expected editing to fail");
+                    self
+                }
+
+                fn did_succeed(&self) -> &Self {
+                    assert!(self.result.is_ok(), "Expected editing to succeed");
+                    self
+                }
+
+
+            }
+
+            self.did_fail();
+            assert_eq!(self.result.as_ref().unwrap_err().description(), "Index out of range", "Expected specific error message");
+            self
+        }
+
+        pub(crate) fn did_fail(&self) -> &Self {
+            assert!(self.result.is_err(), "Expected editing to fail");
+            self
+        }
+
+        pub(crate) fn did_succeed(&self) -> &Self {
+            assert!(self.result.is_ok(), "Expected editing to succeed");
+            self
+        }
+
+
+    }
+
 }
 

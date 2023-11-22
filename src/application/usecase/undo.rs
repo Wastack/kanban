@@ -27,7 +27,11 @@ impl UndoUseCase {
                 issues.remove(0);
             },
             UndoableHistoryElement::Delete(info) => {
-                // First, sort by index backwards, so that undo does not change any indices
+                if board.get_deleted_issues().len() < info.deletions.len() {
+                    return Err(DomainError::new(&format!("The Board is in an inconsistent state: has {} deleted issues, and history suggests to restore {} deleted issues",
+                                                board.get_deleted_issues().len(),
+                                                info.deletions.len())));
+                }
 
                 // The first number is the index that identifies the element to be restored from
                 // the list of deleted issues
@@ -39,6 +43,8 @@ impl UndoUseCase {
                     .enumerate()
                     .map(|(index, d)| (info.deletions.len() - index - 1, d.original_position_in_issues) )
                     .collect::<Vec<_>>();
+
+                // Sort it, so that insertions happen at the right place
                 indices_to_restore.sort_unstable_by(|a, b| a.1.cmp(&b.1));
 
                 for &(deleted_index, orignial_index) in &indices_to_restore {
@@ -175,6 +181,23 @@ pub(crate) mod tests {
             .has_original_history();
     }
 
+    #[test]
+    fn test_undo_delete_inconsistent_board() {
+        let mut undo_use_case = given_undo_usecase_with(
+            Board::default()
+                .with_4_typical_issues()
+                .with_inconsistent_delete_history()
+        );
+        let result = undo_use_case.execute();
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().description(), "The Board is in an inconsistent state: has 2 deleted issues, and history suggests to restore 3 deleted issues", "Expect proper error message");
+    }
+
+
+    /*
+        Test implementation comes here
+    */
+
 
     impl Board {
         fn with_an_issue_added_additionally(mut self) -> Self {
@@ -222,6 +245,27 @@ pub(crate) mod tests {
 
         fn with_most_priority_issue_moved_to_review(mut self) -> Self {
             self.move_issue(0, State::Review).unwrap();
+
+            self
+        }
+
+        fn with_inconsistent_delete_history(mut self) -> Self {
+            // There is one less issue actually deleted compared to what history suggests
+            self.delete_issues_with(&[1, 0]);
+            self.history_mut().push(UndoableHistoryElement::Delete(
+                DeleteHistoryElements {
+                    deletions: vec![
+                        DeleteHistoryElement{
+                            original_position_in_issues: 1,
+                        },
+                        DeleteHistoryElement{
+                            original_position_in_issues: 0,
+                        },
+                        DeleteHistoryElement{
+                            original_position_in_issues: 2,
+                        },
+                    ]
+                }));
 
             self
         }

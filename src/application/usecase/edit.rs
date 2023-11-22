@@ -57,6 +57,7 @@ mod tests {
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::{Board, Issue};
     use crate::application::domain::error::{DomainResult};
+    use crate::application::usecase::tests_common::tests::then_result;
 
     #[test]
     fn test_execute_successful_editing() {
@@ -69,7 +70,7 @@ mod tests {
         then_stored_issue_of_the(&edit_use_case)
             .has_edited_description()
             .but_nothing_else_changed();
-        then_editing_result(&result)
+        then_result(&result)
             .did_succeed();
     }
 
@@ -83,7 +84,7 @@ mod tests {
 
         then_edited_board(&edit_use_case)
             .has_the_original_4_issues();
-        then_editing_result(&result)
+        then_result(&result)
             .did_fail_with_index_out_of_reach();
     }
 
@@ -99,38 +100,8 @@ mod tests {
         then_edited_board(&edit_use_case)
             .has_number_of_issues(4)
             .has_the_original_4_issues();
-        then_editing_result(&result)
+        then_result(&result)
             .did_fail();
-    }
-
-    fn then_editing_result(result: &DomainResult<()>) -> EditUseCaseResult {
-        EditUseCaseResult {
-            result,
-        }
-    }
-
-    struct EditUseCaseResult<'a> {
-        result: &'a DomainResult<()>
-    }
-
-    impl EditUseCaseResult<'_> {
-        fn did_fail_with_index_out_of_reach(&self) -> &Self {
-            self.did_fail();
-            assert_eq!(self.result.as_ref().unwrap_err().description(), "Index out of range", "Expected specific error message");
-            self
-        }
-
-        fn did_fail(&self) -> &Self {
-            assert!(self.result.is_err(), "Expected editing to fail");
-            self
-        }
-
-        fn did_succeed(&self) -> &Self {
-            assert!(self.result.is_ok(), "Expected editing to succeed");
-            self
-        }
-
-
     }
 
     fn then_edited_board(sut: &EditUseCase) -> Board {
