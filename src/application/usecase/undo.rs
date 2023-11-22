@@ -93,6 +93,7 @@ pub(crate) mod tests {
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, UndoableHistoryElement};
     use crate::application::issue::{Described, Description};
+    use crate::application::usecase::tests_common::tests::then_result;
     use crate::application::usecase::undo::UndoUseCase;
 
     #[test]
@@ -150,7 +151,9 @@ pub(crate) mod tests {
     fn test_undo_on_empty_board() {
         let mut undo_use_case = given_undo_usecase_with( Board::default() );
         let result =undo_use_case.execute();
-        assert!(result.is_err())
+
+        then_result(&result)
+            .did_fail_with_error_message("History is empty");
     }
 
     #[ignore]
@@ -189,8 +192,9 @@ pub(crate) mod tests {
                 .with_inconsistent_delete_history()
         );
         let result = undo_use_case.execute();
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().description(), "The Board is in an inconsistent state: has 2 deleted issues, and history suggests to restore 3 deleted issues", "Expect proper error message");
+
+        then_result(&result)
+            .did_fail_with_error_message("The Board is in an inconsistent state: has 2 deleted issues, and history suggests to restore 3 deleted issues");
     }
 
 

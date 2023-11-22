@@ -56,7 +56,6 @@ mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::{Board, Issue};
-    use crate::application::domain::error::{DomainResult};
     use crate::application::usecase::tests_common::tests::then_result;
 
     #[test]
@@ -85,7 +84,7 @@ mod tests {
         then_edited_board(&edit_use_case)
             .has_the_original_4_issues();
         then_result(&result)
-            .did_fail_with_index_out_of_reach();
+            .did_fail_with_error_message("Index out of range");
     }
 
     #[test]
