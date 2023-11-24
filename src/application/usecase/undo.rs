@@ -69,9 +69,23 @@ impl UndoUseCase {
                 // TODO
                 return Err(DomainError::new("Not implemented"))
             },
-            UndoableHistoryElement::Move(_) => {
-                // TODO
-                return Err(DomainError::new("Not implemented"))
+            UndoableHistoryElement::Move(info) => {
+                // TODO let us not clone history
+                let info = info.clone();
+                for h in info.moves.iter().rev() {
+                    if h.original_index != h.new_index {
+                        // TODO too much intimicy?
+                        let issues = board.issues_mut();
+                        let issue = issues.remove(h.new_index);
+                        issues.insert(h.original_index, issue);
+                    }
+
+                    let result = board.move_issue(h.original_index, h.original_state);
+                    if result.is_err() {
+                        return Err(DomainError::new(
+                            &format!("Inconsistent board: {}", result.unwrap_err().description())))
+                    }
+                }
             },
         }
 
@@ -91,7 +105,7 @@ pub(crate) mod tests {
     use crate::{IssueStorage, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, UndoableHistoryElement};
+    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
     use crate::application::issue::{Described, Description};
     use crate::application::usecase::tests_common::tests::then_result;
     use crate::application::usecase::undo::UndoUseCase;
@@ -139,7 +153,9 @@ pub(crate) mod tests {
         );
 
         let result = undo_use_case.execute();
-        assert!(result.is_ok(), "{}", result.unwrap_err().description());
+
+        then_result(&result)
+            .did_succeed();
 
         then_board_for(&undo_use_case)
             .has_number_of_issues(4)
@@ -156,7 +172,44 @@ pub(crate) mod tests {
             .did_fail_with_error_message("History is empty");
     }
 
-    #[ignore]
+    #[test]
+    fn test_undo_move_simple() {
+        let mut undo_use_case = given_undo_usecase_with(
+            Board::default()
+                .with_4_typical_issues()
+                .with_1_moved_from_done_to_open()
+        );
+
+        let result = undo_use_case.execute();
+
+        then_result(&result)
+            .did_succeed();
+
+        then_board_for(&undo_use_case)
+            .has_number_of_issues(4)
+            .has_the_original_4_issues_in_order()
+            .has_original_history();
+    }
+
+    #[test]
+    fn test_undo_move_with_prio_change() {
+        let mut undo_use_case = given_undo_usecase_with(
+            Board::default()
+                .with_4_typical_issues()
+                .with_issue_moved_to_done()
+        );
+
+        let result = undo_use_case.execute();
+
+        then_result(&result)
+            .did_succeed();
+
+        then_board_for(&undo_use_case)
+            .has_number_of_issues(4)
+            .has_the_original_4_issues_in_order()
+            .has_original_history();
+    }
+
     #[test]
     fn test_2_undos_in_sequence() {
         let mut undo_use_case = given_undo_usecase_with(
@@ -247,8 +300,33 @@ pub(crate) mod tests {
             self
         }
 
+        fn with_1_moved_from_done_to_open(mut self) -> Self {
+            self.move_issue(1, State::Open).unwrap();
+            self.history_mut().push(UndoableHistoryElement::Move(MoveHistoryElements{
+                moves: vec![
+                    MoveHistoryElement {
+                        new_index: 1,
+                        original_index: 1,
+                        original_state: State::Done,
+                    }
+                ]
+            }));
+
+            self
+        }
+
         fn with_most_priority_issue_moved_to_review(mut self) -> Self {
             self.move_issue(0, State::Review).unwrap();
+
+            self.history_mut().push(UndoableHistoryElement::Move(MoveHistoryElements{
+                moves: vec![
+                    MoveHistoryElement {
+                        original_state: State::Open,
+                        new_index: 0,
+                        original_index: 0,
+                    }
+                ]
+            }));
 
             self
         }
@@ -274,10 +352,28 @@ pub(crate) mod tests {
             self
         }
 
+        fn with_issue_moved_to_done(mut self) -> Self {
+            // TODO too much logic in test
+            self.move_issue(2, State::Done).unwrap();
+            self.prio_top_in_category(2);
+            self.history_mut().push(UndoableHistoryElement::Move(MoveHistoryElements{
+                moves: vec![
+                    MoveHistoryElement{
+                        original_index: 2,
+                        new_index: 1,
+                        original_state: State::Review,
+                    }
+                ]
+            }));
+
+            self
+        }
+
         fn has_original_history(&self) -> &Self {
             assert!(self.history().peek().is_none(), "Expected history to be empty, got: {:?}", self.history());
             self
         }
+
         fn has_additional_issue_added_with_state_open(&self) -> &Self {
             let Ok(issue ) = self.get_issue(0) else {panic!("Expected to have an issue")};
             assert_eq!(issue.description(), &Description::from("Additional Issue"), "Expected Additional Issue in first place");

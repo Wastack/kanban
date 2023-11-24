@@ -121,8 +121,9 @@ impl Board {
 
 impl Board {
     /// Changes the priority (order) of the issues, so that it becomes the most priority in
-    /// its category (amongst issues with similar state)
-    pub fn prio_top_in_category(&mut self, index: usize) {
+    /// its category (amongst issues with similar state).
+    /// Returns the new position of the issue
+    pub fn prio_top_in_category(&mut self, index: usize) -> usize {
         let state = self.issues[index].state;
         let most_prio_position = self.issues
             .iter()
@@ -131,6 +132,8 @@ impl Board {
 
         let issue = self.issues.remove(index);
         self.issues.insert(most_prio_position, issue);
+
+        most_prio_position
     }
 
     /// Changes the priority (order) of the issues, so that it becomes the least priority in

@@ -1,6 +1,8 @@
 use validated::Validated;
 use validated::Validated::Fail;
 use crate::application::domain::error::DomainError;
+use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
+use crate::application::issue::Stateful;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::State;
@@ -25,19 +27,38 @@ impl MoveUseCase {
             return validated;
         }
 
-        // TODO implement history
+        // TODO: could handling of history be handled in a more concise way?
+        let mut history_elements = Vec::default();
 
         for &index in indices {
+            let original_state = board.get_issue(index).unwrap().state().clone();
+
+            if original_state == state {
+                continue;
+            }
+
             board.move_issue(index, state).unwrap();
 
             // If issue is moved to done, I'd like to see it on the top
-            if state == State::Done {
+            let new_index = if state == State::Done {
                 // TODO watch out, this should not be and undoable event
-                board.prio_top_in_category(index);
-            }
+                board.prio_top_in_category(index)
+            } else {
+                index
+            };
 
+            history_elements.push(MoveHistoryElement {
+                new_index,
+                original_index: index,
+                original_state,
+            })
         }
 
+        if !history_elements.is_empty() {
+            board.history_mut().push(UndoableHistoryElement::Move(MoveHistoryElements{
+                moves: history_elements,
+            }));
+        }
 
         self.storage.save(&board);
         self.presenter.render_board(&board);
@@ -55,6 +76,7 @@ mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::domain::error::{DomainError};
+    use crate::application::domain::history::{History, MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
     use crate::application::issue::Description;
 
     #[test]
@@ -70,6 +92,10 @@ mod tests {
 
         then_issue_with_index(1, &move_use_case)
             .has_done_state();
+
+        then_stored_board(&move_use_case)
+            .history()
+            .should_contain_1_move();
     }
 
     /// Tests whether the issue goes on the top of the done list, when being moved there.
@@ -89,6 +115,9 @@ mod tests {
             .has_description("Task inserted third")
             .has_done_state();
 
+        then_stored_board(&move_use_case)
+            .history()
+            .should_contain_1_move_with_changing_index();
     }
 
     #[test]
@@ -126,6 +155,38 @@ mod tests {
 
     fn then_stored_board(u: &MoveUseCase) -> Board {
         u.storage.load()
+    }
+
+    impl History {
+        fn should_contain_1_move(&self) -> &Self {
+            assert!(self.len() >= 1, "Expected an entry in history");
+            assert_eq!(self.peek().unwrap(), &UndoableHistoryElement::Move(MoveHistoryElements{
+                moves: vec![
+                    MoveHistoryElement {
+                        original_state: State::Open,
+                        original_index: 0,
+                        new_index: 0,
+                    },
+                ]
+            }), "Expected a history element with specific content");
+
+            self
+        }
+
+        fn should_contain_1_move_with_changing_index(&self) -> &Self {
+            assert!(self.len() >= 1, "Expected an entry in history");
+            assert_eq!(self.peek().unwrap(), &UndoableHistoryElement::Move(MoveHistoryElements{
+                moves: vec![
+                    MoveHistoryElement {
+                        original_state: State::Open,
+                        original_index: 3,
+                        new_index: 1,
+                    },
+                ]
+            }), "Expected a history element with specific content");
+
+            self
+        }
     }
 
     fn then_moving(result: &Validated<(), DomainError>) -> MovingResult {

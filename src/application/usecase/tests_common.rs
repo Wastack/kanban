@@ -98,7 +98,7 @@ pub(crate) mod tests {
         }
 
         pub(crate) fn did_succeed(&self) -> &Self {
-            assert!(self.result.is_ok(), "Expected editing to succeed");
+            assert!(self.result.is_ok(), "Result failed: {}", self.result.as_ref().unwrap_err().description());
             self
         }
     }

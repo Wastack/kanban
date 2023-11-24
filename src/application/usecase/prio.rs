@@ -20,7 +20,7 @@ impl PrioUseCase {
 
         // TODO move back here storing stuff from domain?
         match command {
-            PrioCommand::Top => board.prio_top_in_category(index),
+            PrioCommand::Top => { board.prio_top_in_category(index); },
             PrioCommand::Bottom => board.prio_bottom_in_category(index),
             PrioCommand::Up => board.prio_up_in_category(index),
             PrioCommand::Down => board.prio_down_in_category(index),
