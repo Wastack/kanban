@@ -31,7 +31,8 @@ impl History {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct MoveHistoryElements {
-    pub moves: MoveHistoryElement,
+    #[serde(default)]
+    pub moves: Vec<MoveHistoryElement>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -58,6 +59,7 @@ pub struct EditHistoryElement {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 pub struct DeleteHistoryElements {
+    #[serde(default)]
     pub deletions: Vec<DeleteHistoryElement>,
 }
 

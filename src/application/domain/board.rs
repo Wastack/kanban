@@ -98,12 +98,6 @@ impl Board {
 
         *state = new_state;
 
-        // If issue is moved to done, I'd like to see it on the top
-        if *state == State::Done {
-            // TODO watch out, this should not be and undoable event
-            self.prio_top_in_category(index);
-        }
-
         Ok(())
     }
 

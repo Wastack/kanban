@@ -47,22 +47,26 @@ pub(crate) mod tests {
 
     fn typical_4_issues() -> [Issue; 4] {
         [
+            // index 3
             Issue {
                 description: Description::from("Task inserted first"),
                 state: State::Open,
                 time_created: 1698397489,
 
             },
+            // index 2
             Issue {
                 description: Description::from("Task inserted second"),
                 state: State::Review,
                 time_created: 1698397490,
             },
+            // index 1
             Issue {
                 description: Description::from("Task inserted third"),
                 state: State::Done,
                 time_created: 1698397491,
             },
+            // index 0
             Issue {
                 description: Description::from("Task inserted fourth"),
                 state: State::Open,

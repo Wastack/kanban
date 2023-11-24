@@ -29,6 +29,13 @@ impl MoveUseCase {
 
         for &index in indices {
             board.move_issue(index, state).unwrap();
+
+            // If issue is moved to done, I'd like to see it on the top
+            if state == State::Done {
+                // TODO watch out, this should not be and undoable event
+                board.prio_top_in_category(index);
+            }
+
         }
 
 
@@ -48,6 +55,7 @@ mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::domain::error::{DomainError};
+    use crate::application::issue::Description;
 
     #[test]
     fn test_successful_add_use_case() {
@@ -62,6 +70,25 @@ mod tests {
 
         then_issue_with_index(1, &move_use_case)
             .has_done_state();
+    }
+
+    /// Tests whether the issue goes on the top of the done list, when being moved there.
+    #[test]
+    fn test_move_done_results_in_prio_top() {
+        let mut move_use_case = given_move_use_case_with(
+            Board::default().with_4_typical_issues(),
+        );
+
+        move_use_case.execute(&vec![3], State::Done);
+
+        then_issue_with_index(1, &move_use_case)
+            .has_description("Task inserted first")
+            .has_done_state();
+
+        then_issue_with_index(2, &move_use_case)
+            .has_description("Task inserted third")
+            .has_done_state();
+
     }
 
     #[test]
@@ -129,6 +156,11 @@ mod tests {
     impl Issue {
         fn has_done_state(&self) -> &Self {
             assert_eq!(self.state, State::Done, "Expected moved issue to be in done state");
+            self
+        }
+
+        fn has_description(&self, description: &str) -> &Self {
+            assert_eq!(self.description, Description::from(description));
             self
         }
     }
