@@ -60,8 +60,8 @@ mod tests {
         sut.execute(&vec![1, 3, 0]);
 
         then_stored_board(&sut)
-            .only_third_issue_remains()
-            .has_three_deleted_issues();
+            .assert_third_issue_is_the_only_one_left()
+            .assert_deleted_issues_consists_of_three_deletions();
     }
 
     #[test]
@@ -73,11 +73,11 @@ mod tests {
         let result = delete_use_case.execute(&vec![1, 4, 5]);
 
         then_deletion(&result)
-            .did_fail()
-            .did_produce_two_errors();
+            .assert_failed()
+            .assert_two_errors_indicated_out_of_range();
         then_stored_board(&delete_use_case)
-            .has_number_of_issues(4)
-            .has_the_original_4_issues();
+            .assert_issue_count(4)
+            .assert_has_original_issues();
     }
 
     fn then_deletion(result: &Validated<(), DomainError>) -> DeletionResult {
@@ -91,12 +91,12 @@ mod tests {
     }
 
     impl DeletionResult<'_> {
-        fn did_fail(&self) -> &Self {
+        fn assert_failed(&self) -> &Self {
             assert!(self.result.is_fail(), "Expected deletion to fail");
             self
         }
 
-        fn did_produce_two_errors(&self) -> &Self {
+        fn assert_two_errors_indicated_out_of_range(&self) -> &Self {
             let Fail(errors) = self.result else { panic!("Expected deletion to fail") };
             assert_eq!(errors.len(), 2, "Expected to produce 2 errors");
             assert_eq!(errors[0].description(), "Index out of range: 4", "Expected specific error message");
@@ -107,7 +107,7 @@ mod tests {
 
 
     impl Board {
-        fn only_third_issue_remains(&self) -> &Self {
+        fn assert_third_issue_is_the_only_one_left(&self) -> &Self {
             assert_eq!(self.issues_count(), 1, "Expected to contain only 1 issue after deletion");
 
             let Ok(remaining_issue) = self.get_issue(0) else { panic!("Expected to have an issue with index 0") };
@@ -116,7 +116,7 @@ mod tests {
             self
         }
 
-        fn has_three_deleted_issues(&self) -> &Self {
+        fn assert_deleted_issues_consists_of_three_deletions(&self) -> &Self {
             let deleted_issues = self.get_deleted_issues();
             println!("{:?}", deleted_issues);
             assert_eq!(deleted_issues.len(), 3, "Expected 3 deleted issues in board");

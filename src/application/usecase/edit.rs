@@ -67,10 +67,10 @@ mod tests {
         let result = edit_use_case.execute(2);
 
         then_stored_issue_of_the(&edit_use_case)
-            .has_edited_description()
-            .but_nothing_else_changed();
+            .assert_description_edited()
+            .assert_other_issues_did_not_change();
         then_result(&result)
-            .did_succeed();
+            .assert_succeeded();
     }
 
     #[test]
@@ -82,9 +82,9 @@ mod tests {
         let result = edit_use_case.execute(4);
 
         then_edited_board(&edit_use_case)
-            .has_the_original_4_issues();
+            .assert_has_original_issues();
         then_result(&result)
-            .did_fail_with_error_message("Index out of range");
+            .assert_failed_with("Index out of range");
     }
 
     #[test]
@@ -97,10 +97,10 @@ mod tests {
         let result = edit_use_case.execute(4);
 
         then_edited_board(&edit_use_case)
-            .has_number_of_issues(4)
-            .has_the_original_4_issues();
+            .assert_issue_count(4)
+            .assert_has_original_issues();
         then_result(&result)
-            .did_fail();
+            .assert_failed();
     }
 
     fn then_edited_board(sut: &EditUseCase) -> Board {
@@ -115,12 +115,12 @@ mod tests {
     }
 
     impl Issue {
-        fn has_edited_description(&self) -> &Self {
+        fn assert_description_edited(&self) -> &Self {
             assert_eq!(self.description.as_str(), "Edited: Task inserted second");
             self
         }
 
-        fn but_nothing_else_changed(&self) -> &Self {
+        fn assert_other_issues_did_not_change(&self) -> &Self {
             assert_eq!(self.state, State::Review);
             assert_eq!(self.time_created, 1698397490);
             self

@@ -6,13 +6,13 @@ pub(crate) mod tests {
     use crate::{State};
 
     impl Board {
-        pub(crate) fn has_number_of_issues(&self, num: usize) -> &Self {
+        pub(crate) fn assert_issue_count(&self, num: usize) -> &Self {
             assert_eq!(self.issues_count(), num, "Expected board to have {} issues", num);
 
             self
         }
 
-        pub(crate) fn has_the_original_4_issues(&self) -> &Self {
+        pub(crate) fn assert_has_original_issues(&self) -> &Self {
             let original_board = Board::default().with_4_typical_issues();
             assert!(self.issues_count() >= original_board.issues_count(), "Expected board to have the 4 original issues");
 
@@ -86,18 +86,18 @@ pub(crate) mod tests {
     }
 
     impl<T: std::fmt::Debug> DomainResultMatcher<'_, T> {
-        pub(crate) fn did_fail(&self) -> &Self {
+        pub(crate) fn assert_failed(&self) -> &Self {
             assert!(self.result.is_err(), "Expected editing to fail");
             self
         }
 
-        pub(crate) fn did_fail_with_error_message(&self, message: &str) -> &Self {
+        pub(crate) fn assert_failed_with(&self, message: &str) -> &Self {
             assert!(self.result.is_err(), "Expected it to fail");
             assert_eq!(self.result.as_ref().unwrap_err().description(), message, "Expect proper error message");
             self
         }
 
-        pub(crate) fn did_succeed(&self) -> &Self {
+        pub(crate) fn assert_succeeded(&self) -> &Self {
             assert!(self.result.is_ok(), "Result failed: {}", self.result.as_ref().unwrap_err().description());
             self
         }

@@ -27,6 +27,8 @@ impl MoveUseCase {
             return validated;
         }
 
+        // TODO there is a bug: if first move changes prio, second index might be invalid
+
         // TODO: could handling of history be handled in a more concise way?
         let mut history_elements = Vec::default();
 
@@ -88,14 +90,14 @@ mod tests {
         move_use_case.execute(&vec![1, 0], State::Done);
 
         then_issue_with_index(0, &move_use_case)
-            .has_done_state();
+            .assert_state_is_done();
 
         then_issue_with_index(1, &move_use_case)
-            .has_done_state();
+            .assert_state_is_done();
 
         then_stored_board(&move_use_case)
             .history()
-            .should_contain_1_move();
+            .assert_contains_1_moving();
     }
 
     /// Tests whether the issue goes on the top of the done list, when being moved there.
@@ -108,16 +110,16 @@ mod tests {
         move_use_case.execute(&vec![3], State::Done);
 
         then_issue_with_index(1, &move_use_case)
-            .has_description("Task inserted first")
-            .has_done_state();
+            .assert_description("Task inserted first")
+            .assert_state_is_done();
 
         then_issue_with_index(2, &move_use_case)
-            .has_description("Task inserted third")
-            .has_done_state();
+            .assert_description("Task inserted third")
+            .assert_state_is_done();
 
         then_stored_board(&move_use_case)
             .history()
-            .should_contain_1_move_with_changing_index();
+            .assert_consist_of_1_move_with_index_changed();
     }
 
     #[test]
@@ -129,12 +131,12 @@ mod tests {
         let result = move_use_case.execute(&vec![1, 4, 5], State::Done);
 
         then_moving(&result)
-            .did_fail()
-            .did_produce_two_errors();
+            .assert_failed()
+            .assert_has_two_errors();
 
         then_stored_board(&move_use_case)
-            .has_number_of_issues(4)
-            .has_the_original_4_issues();
+            .assert_issue_count(4)
+            .assert_has_original_issues();
     }
 
     fn given_move_use_case_with(board: Board) -> MoveUseCase {
@@ -158,7 +160,7 @@ mod tests {
     }
 
     impl History {
-        fn should_contain_1_move(&self) -> &Self {
+        fn assert_contains_1_moving(&self) -> &Self {
             assert!(self.len() >= 1, "Expected an entry in history");
             assert_eq!(self.peek().unwrap(), &UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![
@@ -173,7 +175,7 @@ mod tests {
             self
         }
 
-        fn should_contain_1_move_with_changing_index(&self) -> &Self {
+        fn assert_consist_of_1_move_with_index_changed(&self) -> &Self {
             assert!(self.len() >= 1, "Expected an entry in history");
             assert_eq!(self.peek().unwrap(), &UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![
@@ -200,12 +202,12 @@ mod tests {
     }
 
     impl MovingResult<'_> {
-        fn did_fail(&self) -> &Self {
+        fn assert_failed(&self) -> &Self {
             assert!(self.result.is_fail(), "Expected deletion to fail");
             self
         }
 
-        fn did_produce_two_errors(&self) -> &Self {
+        fn assert_has_two_errors(&self) -> &Self {
             let Fail(errors) = self.result else { panic!("Expected moving to fail") };
             assert_eq!(errors.len(), 2, "Expected to produce 2 errors");
             assert_eq!(errors[0].description(), "Index out of range: 4", "Expected specific error message");
@@ -215,12 +217,12 @@ mod tests {
     }
 
     impl Issue {
-        fn has_done_state(&self) -> &Self {
+        fn assert_state_is_done(&self) -> &Self {
             assert_eq!(self.state, State::Done, "Expected moved issue to be in done state");
             self
         }
 
-        fn has_description(&self, description: &str) -> &Self {
+        fn assert_description(&self, description: &str) -> &Self {
             assert_eq!(self.description, Description::from(description));
             self
         }

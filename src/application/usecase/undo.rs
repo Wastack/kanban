@@ -122,7 +122,7 @@ pub(crate) mod tests {
         assert!(result.is_ok(), "{}", result.unwrap_err().description());
 
         then_board_for(&undo_use_case)
-            .has_number_of_issues(4)
+            .assert_issue_count(4)
             .has_the_original_4_issues_in_order()
             .has_original_history();
     }
@@ -139,7 +139,7 @@ pub(crate) mod tests {
         assert!(result.is_ok(), "{}", result.unwrap_err().description());
 
         then_board_for(&undo_use_case)
-            .has_number_of_issues(4)
+            .assert_issue_count(4)
             .has_the_original_4_issues_in_order()
             .has_original_history();
     }
@@ -155,10 +155,10 @@ pub(crate) mod tests {
         let result = undo_use_case.execute();
 
         then_result(&result)
-            .did_succeed();
+            .assert_succeeded();
 
         then_board_for(&undo_use_case)
-            .has_number_of_issues(4)
+            .assert_issue_count(4)
             .has_the_original_4_issues_in_order()
             .has_original_history();
     }
@@ -169,7 +169,7 @@ pub(crate) mod tests {
         let result =undo_use_case.execute();
 
         then_result(&result)
-            .did_fail_with_error_message("History is empty");
+            .assert_failed_with("History is empty");
     }
 
     #[test]
@@ -183,10 +183,10 @@ pub(crate) mod tests {
         let result = undo_use_case.execute();
 
         then_result(&result)
-            .did_succeed();
+            .assert_succeeded();
 
         then_board_for(&undo_use_case)
-            .has_number_of_issues(4)
+            .assert_issue_count(4)
             .has_the_original_4_issues_in_order()
             .has_original_history();
     }
@@ -202,10 +202,10 @@ pub(crate) mod tests {
         let result = undo_use_case.execute();
 
         then_result(&result)
-            .did_succeed();
+            .assert_succeeded();
 
         then_board_for(&undo_use_case)
-            .has_number_of_issues(4)
+            .assert_issue_count(4)
             .has_the_original_4_issues_in_order()
             .has_original_history();
     }
@@ -224,7 +224,7 @@ pub(crate) mod tests {
         assert!(result.is_ok(), "{}", result.unwrap_err().description());
 
         then_board_for(&undo_use_case)
-            .has_the_original_4_issues()
+            .assert_has_original_issues()
             .has_additional_issue_added_with_state_open()
             .has_the_addition_in_history();
 
@@ -233,7 +233,7 @@ pub(crate) mod tests {
         assert!(result.is_ok(), "{}", result.unwrap_err().description());
 
         then_board_for(&undo_use_case)
-            .has_the_original_4_issues()
+            .assert_has_original_issues()
             .has_original_history();
     }
 
@@ -247,7 +247,7 @@ pub(crate) mod tests {
         let result = undo_use_case.execute();
 
         then_result(&result)
-            .did_fail_with_error_message("The Board is in an inconsistent state: has 2 deleted issues, and history suggests to restore 3 deleted issues");
+            .assert_failed_with("The Board is in an inconsistent state: has 2 deleted issues, and history suggests to restore 3 deleted issues");
     }
 
 

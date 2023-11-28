@@ -44,9 +44,9 @@ mod tests {
         add_use_case.execute("New task", State::Review);
 
         then_extended_board(&add_use_case)
-            .has_5_issues()
-            .has_first_issue_with_proper_content()
-            .has_addition_in_history();
+            .assert_issue_count(5)
+            .assert_first_issue_content()
+            .assert_history_consists_of_one_addition();
     }
 
     fn given_add_use_case_with(board: Board) -> AddUseCase {
@@ -64,12 +64,7 @@ mod tests {
     }
 
     impl Board {
-        fn has_5_issues(&self) -> &Self {
-            assert_eq!(self.issues_count(), 5, "Expected board to have 5 issues");
-            self
-        }
-
-        fn has_first_issue_with_proper_content(&self) -> &Self {
+        fn assert_first_issue_content(&self) -> &Self {
             let issue = self.get_issue(0).unwrap();
             assert_eq!(issue.description, Description::from("New task"), "Expected specific description of added issue");
             assert_eq!(issue.state, State::Review, "Expected specific state of added issue");
@@ -77,7 +72,7 @@ mod tests {
             self
         }
 
-        fn has_addition_in_history(&self) -> &Self {
+        fn assert_history_consists_of_one_addition(&self) -> &Self {
             let history = self.history();
             assert_eq!(history.len(), 1, "Expected to have an item in history");
             assert_eq!(history.peek().unwrap(), &UndoableHistoryElement::Add, "Expected item in history to represent and addition of an issue");
