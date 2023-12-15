@@ -2,17 +2,17 @@
 
 extern crate core;
 
-mod controllers;
 mod application;
 mod adapters;
 
 use clap::Parser;
+use adapters::controllers;
 use application::ports::issue_storage::IssueStorage;
-use crate::controllers::{Command, PrioCommand};
-use crate::application::issue::{State};
+use adapters::controllers::{Command, PrioCommand};
+use crate::application::issue::State;
 use crate::application::ports::presenter::Presenter;
-use crate::adapters::presenters::stdoutrenderer::{TabularTextRenderer};
-use application::usecase::add::{AddUseCase};
+use crate::adapters::presenters::stdoutrenderer::TabularTextRenderer;
+use application::usecase::add::AddUseCase;
 use crate::adapters::editors::os_default_editor::OsDefaultEditor;
 use crate::adapters::storages::FileStorage;
 use crate::application::ports::editor::Editor;
