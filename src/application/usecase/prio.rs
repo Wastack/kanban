@@ -4,12 +4,12 @@ use crate::{PrioCommand};
 
 
 #[derive(Default)]
-pub(crate) struct PrioUseCase {
-    storage: Box<dyn IssueStorage>,
-    presenter: Box<dyn Presenter>,
+pub(crate) struct PrioUseCase<I: IssueStorage, P: Presenter> {
+    storage: I,
+    presenter: P,
 }
 
-impl PrioUseCase {
+impl<I: IssueStorage, P: Presenter> PrioUseCase<I, P> {
     pub(crate) fn execute(&mut self, index: usize, command: PrioCommand) {
         let mut board = self.storage.load();
 

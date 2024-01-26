@@ -12,10 +12,6 @@ impl History {
         self.elements.len()
     }
 
-    pub fn all(&self) -> &[UndoableHistoryElement] {
-        &self.elements
-    }
-
     pub fn push(&mut self, element: UndoableHistoryElement) {
         self.elements.push(element);
     }

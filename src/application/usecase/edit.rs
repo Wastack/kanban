@@ -7,13 +7,13 @@ use crate::application::domain::issue::Described;
 
 
 #[derive(Default)]
-pub(crate) struct EditUseCase {
-    storage: Box<dyn IssueStorage>,
-    presenter: Box<dyn Presenter>,
-    editor: Box<dyn Editor>,
+pub(crate) struct EditUseCase<I: IssueStorage, P: Presenter, E: Editor> {
+    storage: I,
+    presenter: P,
+    editor: E,
 }
 
-impl EditUseCase {
+impl<I: IssueStorage, P: Presenter, E: Editor> EditUseCase<I, P, E> {
     pub(crate) fn execute(&mut self, index: usize) -> DomainResult<()> {
         let mut board = self.storage.load();
 
@@ -60,7 +60,7 @@ mod tests {
 
     #[test]
     fn test_execute_successful_editing() {
-        let mut edit_use_case = given_edit_usecase_with(
+        let mut edit_use_case = given_edit_usecase_with::<TestEditor>(
             Board::default().with_4_typical_issues(),
         );
 
@@ -75,7 +75,7 @@ mod tests {
 
     #[test]
     fn test_editing_issue_with_index_out_of_range() {
-        let mut edit_use_case = given_edit_usecase_with(
+        let mut edit_use_case = given_edit_usecase_with::<TestEditor>(
             Board::default().with_4_typical_issues(),
         );
 
@@ -89,9 +89,8 @@ mod tests {
 
     #[test]
     fn test_editor_closes_abruptly() {
-        let mut edit_use_case = given_edit_usecase_with_editor(
+        let mut edit_use_case = given_edit_usecase_with::<CloseAbruptlyEditor>(
             Board::default().with_4_typical_issues(),
-            Box::new(CloseAbruptlyEditor::default()),
         );
 
         let result = edit_use_case.execute(4);
@@ -103,11 +102,11 @@ mod tests {
             .assert_failed();
     }
 
-    fn then_edited_board(sut: &EditUseCase) -> Board {
+    fn then_edited_board<E: Editor>(sut: &EditUseCase<MemoryIssueStorage, NilPresenter, E>) -> Board {
         sut.storage.load()
     }
 
-    fn then_stored_issue_of_the(sut: &EditUseCase) -> Issue {
+    fn then_stored_issue_of_the<E: Editor>(sut: &EditUseCase<MemoryIssueStorage, NilPresenter, E>) -> Issue {
         let board = sut.storage.load();
         let issue = board.get_issue(2);
         assert!(issue.is_ok());
@@ -145,21 +144,13 @@ mod tests {
         }
     }
 
-    fn given_edit_usecase_with(board: Board) -> EditUseCase {
-        given_edit_usecase_with_editor(
-            board,
-            Box::new(TestEditor::default()),
-        )
-    }
-
-    fn given_edit_usecase_with_editor(board: Board, editor: Box<dyn Editor>) -> EditUseCase {
+    fn given_edit_usecase_with<E: Editor + Default>(board: Board) -> EditUseCase<MemoryIssueStorage, NilPresenter, E> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         EditUseCase {
-            storage: Box::new(storage),
-            presenter: Box::new(NilPresenter::default()),
-            editor,
+            storage,
+            ..Default::default()
         }
     }
 }

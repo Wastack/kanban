@@ -7,12 +7,12 @@ use crate::application::ports::presenter::Presenter;
 
 
 #[derive(Default)]
-pub(crate) struct DeleteUseCase {
-    storage: Box<dyn IssueStorage>,
-    presenter: Box<dyn Presenter>
+pub(crate) struct DeleteUseCase<I: IssueStorage, P: Presenter> {
+    storage: I,
+    presenter: P
 }
 
-impl DeleteUseCase {
+impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
     pub(crate) fn execute(&mut self, indices: &[usize]) -> Validated<(), DomainError> {
         let mut board = self.storage.load();
 
@@ -129,17 +129,17 @@ mod tests {
         }
     }
 
-    fn then_stored_board(u: &DeleteUseCase) -> Board {
+    fn then_stored_board(u: &DeleteUseCase<MemoryIssueStorage, NilPresenter>) -> Board {
         u.storage.load()
     }
 
-    fn given_delete_use_case_with(board: Board) -> DeleteUseCase {
+    fn given_delete_use_case_with(board: Board) -> DeleteUseCase<MemoryIssueStorage, NilPresenter> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         DeleteUseCase {
-            storage: Box::new(storage),
-            presenter: Box::new(NilPresenter::default()),
+            storage,
+            ..Default::default()
         }
     }
 }

@@ -3,12 +3,12 @@ use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::domain::history::{UndoableHistoryElement};
 
 #[derive(Default)]
-pub(crate) struct UndoUseCase {
-    storage: Box<dyn IssueStorage>,
-    presenter: Box<dyn Presenter>,
+pub(crate) struct UndoUseCase<I, P> {
+    storage: I,
+    presenter: P,
 }
 
-impl UndoUseCase {
+impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
     pub(crate) fn execute(&mut self) -> DomainResult<()> {
         let mut board = self.storage.load();
 
@@ -390,17 +390,17 @@ pub(crate) mod tests {
 
     }
 
-    fn then_board_for(undo: &UndoUseCase) -> Board {
+    fn then_board_for(undo: &UndoUseCase<MemoryIssueStorage, NilPresenter>) -> Board {
         undo.storage.load()
     }
 
-    fn given_undo_usecase_with(board: Board) -> UndoUseCase {
+    fn given_undo_usecase_with(board: Board) -> UndoUseCase<MemoryIssueStorage, NilPresenter> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         UndoUseCase {
-            storage: Box::new(storage),
-            presenter: Box::new(NilPresenter::default()),
+            storage,
+            ..Default::default()
         }
     }
 

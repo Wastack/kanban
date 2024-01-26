@@ -9,12 +9,12 @@ use crate::State;
 
 
 #[derive(Default)]
-pub(crate) struct MoveUseCase {
-    storage: Box<dyn IssueStorage>,
-    presenter: Box<dyn Presenter>
+pub(crate) struct MoveUseCase<I: IssueStorage, P: Presenter> {
+    storage: I,
+    presenter: P,
 }
 
-impl MoveUseCase {
+impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
     pub(crate) fn execute(&mut self, indices: &[usize], state: State) -> Validated<(), DomainError> {
         let mut board = self.storage.load();
 
@@ -139,23 +139,23 @@ mod tests {
             .assert_has_original_issues();
     }
 
-    fn given_move_use_case_with(board: Board) -> MoveUseCase {
+    fn given_move_use_case_with(board: Board) -> MoveUseCase<MemoryIssueStorage, NilPresenter> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         MoveUseCase {
-            storage: Box::new(storage),
-            presenter: Box::new(NilPresenter::default()),
+            storage,
+            ..Default::default()
         }
     }
 
-    fn then_issue_with_index(index: usize, sut: &MoveUseCase) -> Issue {
+    fn then_issue_with_index(index: usize, sut: &MoveUseCase<MemoryIssueStorage, NilPresenter>) -> Issue {
         let board = sut.storage.load();
 
         board.get_issue(index).unwrap().clone()
     }
 
-    fn then_stored_board(u: &MoveUseCase) -> Board {
+    fn then_stored_board(u: &MoveUseCase<MemoryIssueStorage, NilPresenter>) -> Board {
         u.storage.load()
     }
 
