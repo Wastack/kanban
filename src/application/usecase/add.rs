@@ -6,12 +6,12 @@ use crate::application::ports::presenter::Presenter;
 
 
 #[derive(Default)]
-pub(crate) struct AddUseCase {
-    storage: Box<dyn IssueStorage>,
+pub(crate) struct AddUseCase<IS: IssueStorage> {
+    storage: IS,
     presenter: Box<dyn Presenter>
 }
 
-impl AddUseCase {
+impl<IS: IssueStorage> AddUseCase<IS> {
     pub(crate) fn execute(&mut self, description: &str, state: State) {
         let mut board = self.storage.load();
 
@@ -49,17 +49,17 @@ mod tests {
             .assert_history_consists_of_one_addition();
     }
 
-    fn given_add_use_case_with(board: Board) -> AddUseCase {
+    fn given_add_use_case_with(board: Board) -> AddUseCase<MemoryIssueStorage> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         AddUseCase {
-            storage: Box::new(storage),
+            storage,
             presenter: Box::new(NilPresenter::default()),
         }
     }
 
-    fn then_extended_board(sut: &AddUseCase) -> Board {
+    fn then_extended_board(sut: &AddUseCase<MemoryIssueStorage>) -> Board {
         sut.storage.load()
     }
 

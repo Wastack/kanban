@@ -46,7 +46,7 @@ fn main() {
 
     match root.command {
         Some(Command::Add{description, state}) => {
-            AddUseCase::default().execute(
+            AddUseCase::<FileStorage>::default().execute(
                 &description,
                 state.unwrap_or(State::Open));
         },

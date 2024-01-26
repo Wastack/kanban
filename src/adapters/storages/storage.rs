@@ -20,11 +20,11 @@ impl Default for FileStorage {
 
 impl IssueStorage for FileStorage {
     fn load(&self) -> Board {
-        let file_contents = fs::read_to_string(&self.source)
-            .unwrap_or(String::from(""));
+        let file_contents= fs::read_to_string(&self.source)
+            .unwrap_or_default();
 
-        if file_contents == "" {
-            return Board::default()
+        if file_contents.is_empty() {
+            return Board::default();
         }
 
         serde_yaml::from_str(&file_contents).expect("unexpected file format")
@@ -36,5 +36,51 @@ impl IssueStorage for FileStorage {
 
         let mut file = fs::File::create(&self.source).expect("cannot open file to write board");
         file.write_all(content.as_bytes()).expect("cannot write to file");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+    use crate::application::Board;
+    use crate::{FileStorage, IssueStorage};
+    
+    struct FileCleanUp {
+        path: PathBuf
+    }
+    
+    impl Drop for FileCleanUp {
+        fn drop(&mut self) {
+            todo!()
+        }
+    }
+
+    #[test]
+    fn test_file_storage_load_non_existent_file_failed_no_permission() {
+        // TODO
+    }
+
+    #[test]
+    fn test_file_storage_load_non_existent_file_successful() {
+        let storage = given_file_storage_with_non_existent_file();
+
+        // When
+        let board = storage.load();
+
+        board.assert_default();
+    }
+
+    fn given_file_storage_with_non_existent_file() -> FileStorage {
+        FileStorage {
+            source: "/tmp/non_existent".into()
+        }
+    }
+
+    impl Board {
+        fn assert_default(&self) -> &Self {
+            assert_eq!(self, &Board::default());
+
+            self
+        }
     }
 }
