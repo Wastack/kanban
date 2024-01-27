@@ -7,7 +7,7 @@ use crate::application::ports::presenter::Presenter;
 
 #[derive(Default)]
 pub(crate) struct AddUseCase<I: IssueStorage, P: Presenter> {
-    storage: I,
+    pub(crate) storage: I,
     presenter: P,
 }
 
@@ -50,9 +50,8 @@ mod tests {
             .assert_first_issue_content()
             .assert_history_consists_of_one_addition();
 
-        // TODO assert presented board
-        //let presented_board = add_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
-        //assert_eq!(presented_board, &stored_board, "Expected stored and presented board to be equal");
+        let presented_board = add_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
+        assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
     }
 
     fn given_add_use_case_with(board: Board) -> AddUseCase<MemoryIssueStorage, NilPresenter> {

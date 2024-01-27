@@ -30,7 +30,7 @@ fn categorize(issue: &Issue) -> DisplayCategory {
 impl Presenter for TabularTextRenderer {
 
 
-    fn render_board(&self, board: &Board) {
+    fn render_board(&mut self, board: &Board) {
         let mut issues = board.issues_with_state();
 
         let mut done_issues_truncated = false;

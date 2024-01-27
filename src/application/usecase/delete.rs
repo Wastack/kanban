@@ -59,9 +59,15 @@ mod tests {
         // When second, fourth and first issue are deleted
         sut.execute(&vec![1, 3, 0]);
 
-        then_stored_board(&sut)
+        // Then
+        let stored_board = sut.storage.load();
+
+        stored_board
             .assert_third_issue_is_the_only_one_left()
             .assert_deleted_issues_consists_of_three_deletions();
+
+        let presented_board = sut.presenter.last_board_rendered.expect("Expected a board to be presented");
+        assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
     }
 
     #[test]
@@ -75,7 +81,13 @@ mod tests {
         then_deletion(&result)
             .assert_failed()
             .assert_two_errors_indicated_out_of_range();
-        then_stored_board(&delete_use_case)
+
+        let presented_errors = delete_use_case.presenter
+            .errors_presented;
+        assert!(matches!(presented_errors.as_slice(), [DomainError::IndexOutOfRange(4), DomainError::IndexOutOfRange(5)]),
+            "Expected two index out of range errors to be presented");
+
+        delete_use_case.storage.load()
             .assert_issue_count(4)
             .assert_has_original_issues();
     }
@@ -128,10 +140,6 @@ mod tests {
 
             self
         }
-    }
-
-    fn then_stored_board(u: &DeleteUseCase<MemoryIssueStorage, NilPresenter>) -> Board {
-        u.storage.load()
     }
 
     fn given_delete_use_case_with(board: Board) -> DeleteUseCase<MemoryIssueStorage, NilPresenter> {

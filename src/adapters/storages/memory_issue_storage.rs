@@ -6,7 +6,7 @@ pub mod test {
 
     #[derive(Default)]
     pub(crate) struct MemoryIssueStorage {
-        board: Board
+        pub(crate) board: Board
     }
 
 

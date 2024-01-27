@@ -65,9 +65,13 @@ mod tests {
 
         let result = edit_use_case.execute(2);
 
-        then_stored_issue_of_the(&edit_use_case)
+        let stored_board = edit_use_case.storage.load();
+        then_stored_issue_of_the(&stored_board)
             .assert_description_edited()
             .assert_other_issues_did_not_change();
+
+        let presented_board = edit_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
+        assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
 
         assert!(matches!(result, Ok(_)))
     }
@@ -83,6 +87,7 @@ mod tests {
         then_edited_board(&edit_use_case)
             .assert_has_original_issues();
 
+        assert!(matches!(edit_use_case.presenter.errors_presented.as_slice(), [DomainError::IndexOutOfRange(4)]));
         assert!(matches!(result, Err(DomainError::IndexOutOfRange(4))))
     }
 
@@ -98,6 +103,7 @@ mod tests {
             .assert_issue_count(4)
             .assert_has_original_issues();
 
+        assert!(matches!(edit_use_case.presenter.errors_presented.as_slice(), [DomainError::EditorError{..}]));
         assert!(matches!(result, Err(DomainError::EditorError{ .. })), "Expected EditorError, got: {:?}", result)
     }
 
@@ -105,8 +111,7 @@ mod tests {
         sut.storage.load()
     }
 
-    fn then_stored_issue_of_the<E: Editor>(sut: &EditUseCase<MemoryIssueStorage, NilPresenter, E>) -> Issue {
-        let board = sut.storage.load();
+    fn then_stored_issue_of_the(board: &Board) -> Issue {
         let issue = board.get_issue(2);
         assert!(issue.is_ok());
         issue.unwrap().clone()

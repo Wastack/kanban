@@ -7,14 +7,18 @@ pub(crate) mod test {
 
     #[derive(Default)]
     pub(crate) struct NilPresenter {
-        //pub(crate) last_error_rendered: Option<&'a DomainError>,
-        //pub(crate) last_board_rendered: Option<&'a Board>,
+        pub(crate) errors_presented: Vec<DomainError>,
+        pub(crate) last_board_rendered: Option<Board>,
     }
 
     impl Presenter for NilPresenter {
-        fn render_board(&self, _board: &Board) { }
+        fn render_board(&mut self, board: &Board) {
+            self.last_board_rendered = Some(board.clone());
+        }
 
-        fn render_error(&mut self, _err: &DomainError) { }
+        fn render_error(&mut self, err: &DomainError) {
+            self.errors_presented.push(err.clone_for_testing());
+        }
     }
 
 }

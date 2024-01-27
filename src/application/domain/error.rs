@@ -22,3 +22,24 @@ pub enum DomainError {
     #[error("Not implemented")]
     NotImplemented
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Error};
+    use crate::application::domain::error::DomainError;
+
+    impl DomainError {
+        pub(crate) fn clone_for_testing(&self) -> DomainError {
+            match self {
+                DomainError::IndexOutOfRange(e) => DomainError::IndexOutOfRange(*e),
+                DomainError::EditorError { source} => DomainError::EditorError {
+                    // Here we lose the error message
+                    source: Error::from(source.kind().clone()),
+                },
+                DomainError::InvalidBoard(e) => DomainError::InvalidBoard(e.clone()),
+                DomainError::EmptyHistory => DomainError::EmptyHistory,
+                DomainError::NotImplemented => DomainError::NotImplemented,
+            }
+        }
+    }
+}
