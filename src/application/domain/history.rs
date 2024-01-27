@@ -39,7 +39,7 @@ pub struct MoveHistoryElement {
     pub original_state: State,
 
     /// It can happen that moving changes priorities.
-    /// If it does, then new_index is different than original_index.
+    /// If it does, then new_index is different from original_index.
     pub new_index: usize,
 }
 

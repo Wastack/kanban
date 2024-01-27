@@ -16,7 +16,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
 
         let event_to_undo = history
             .peek()
-            .ok_or(DomainError::new("History is empty"))?;
+            .ok_or(DomainError::EmptyHistory)?;
 
         match event_to_undo {
             UndoableHistoryElement::Add => {
@@ -28,9 +28,9 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
             },
             UndoableHistoryElement::Delete(info) => {
                 if board.get_deleted_issues().len() < info.deletions.len() {
-                    return Err(DomainError::new(&format!("The Board is in an inconsistent state: has {} deleted issues, and history suggests to restore {} deleted issues",
-                                                board.get_deleted_issues().len(),
-                                                info.deletions.len())));
+                    return Err(DomainError::InvalidBoard(format!("has {} deleted issues, and history suggests to restore {} deleted issues",
+                                                                 board.get_deleted_issues().len(),
+                                                                 info.deletions.len())));
                 }
 
                 // The first number is the index that identifies the element to be restored from
@@ -62,12 +62,10 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                 deleted_issues.drain(0..indices_to_restore.len());
             },
             UndoableHistoryElement::Prio(_) => {
-                // TODO
-                return Err(DomainError::new("Not implemented"))
+                return Err(DomainError::NotImplemented)
             },
             UndoableHistoryElement::Edit(_) => {
-                // TODO
-                return Err(DomainError::new("Not implemented"))
+                return Err(DomainError::NotImplemented)
             },
             UndoableHistoryElement::Move(info) => {
                 // TODO let us not clone history
@@ -81,9 +79,8 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                     }
 
                     let result = board.move_issue(h.original_index, h.original_state);
-                    if result.is_err() {
-                        return Err(DomainError::new(
-                            &format!("Inconsistent board: {}", result.unwrap_err().description())))
+                    if let Err(err) = result {
+                        return Err(DomainError::InvalidBoard(err.to_string()));
                     }
                 }
             },
@@ -105,9 +102,9 @@ pub(crate) mod tests {
     use crate::{IssueStorage, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
+    use crate::application::domain::error::DomainError;
     use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
     use crate::application::issue::{Described, Description};
-    use crate::application::usecase::tests_common::tests::then_result;
     use crate::application::usecase::undo::UndoUseCase;
 
     #[test]
@@ -119,7 +116,7 @@ pub(crate) mod tests {
         );
 
         let result = undo_use_case.execute();
-        assert!(result.is_ok(), "{}", result.unwrap_err().description());
+        assert!(matches!(result, Ok(())), "Expected undo usecase to succeed");
 
         then_board_for(&undo_use_case)
             .assert_issue_count(4)
@@ -136,7 +133,7 @@ pub(crate) mod tests {
         );
 
         let result = undo_use_case.execute();
-        assert!(result.is_ok(), "{}", result.unwrap_err().description());
+        assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
 
         then_board_for(&undo_use_case)
             .assert_issue_count(4)
@@ -154,8 +151,7 @@ pub(crate) mod tests {
 
         let result = undo_use_case.execute();
 
-        then_result(&result)
-            .assert_succeeded();
+        assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
 
         then_board_for(&undo_use_case)
             .assert_issue_count(4)
@@ -168,8 +164,7 @@ pub(crate) mod tests {
         let mut undo_use_case = given_undo_usecase_with( Board::default() );
         let result =undo_use_case.execute();
 
-        then_result(&result)
-            .assert_failed_with("History is empty");
+        assert!(matches!(result, Err(DomainError::EmptyHistory)));
     }
 
     #[test]
@@ -182,8 +177,7 @@ pub(crate) mod tests {
 
         let result = undo_use_case.execute();
 
-        then_result(&result)
-            .assert_succeeded();
+        assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
 
         then_board_for(&undo_use_case)
             .assert_issue_count(4)
@@ -201,8 +195,7 @@ pub(crate) mod tests {
 
         let result = undo_use_case.execute();
 
-        then_result(&result)
-            .assert_succeeded();
+        assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
 
         then_board_for(&undo_use_case)
             .assert_issue_count(4)
@@ -221,7 +214,7 @@ pub(crate) mod tests {
 
         // When undoing move
         let result = undo_use_case.execute();
-        assert!(result.is_ok(), "{}", result.unwrap_err().description());
+        assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
 
         then_board_for(&undo_use_case)
             .assert_has_original_issues()
@@ -230,7 +223,7 @@ pub(crate) mod tests {
 
         // When undoing addition
         let result = undo_use_case.execute();
-        assert!(result.is_ok(), "{}", result.unwrap_err().description());
+        assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
 
         then_board_for(&undo_use_case)
             .assert_has_original_issues()
@@ -246,8 +239,9 @@ pub(crate) mod tests {
         );
         let result = undo_use_case.execute();
 
-        then_result(&result)
-            .assert_failed_with("The Board is in an inconsistent state: has 2 deleted issues, and history suggests to restore 3 deleted issues");
+        let Err(DomainError::InvalidBoard(error_reason)) = result else { panic!("Expected InvalidBoard error") };
+        assert_eq!(error_reason, "has 2 deleted issues, and history suggests to restore 3 deleted issues", "expected specific reason for InvalidBoard error")
+
     }
 
 
@@ -375,7 +369,7 @@ pub(crate) mod tests {
         }
 
         fn has_additional_issue_added_with_state_open(&self) -> &Self {
-            let Ok(issue ) = self.get_issue(0) else {panic!("Expected to have an issue")};
+            let issue = self.get_issue(0).expect("Expected to have an issue");
             assert_eq!(issue.description(), &Description::from("Additional Issue"), "Expected Additional Issue in first place");
             assert_eq!(issue.state, State::Open, "Expected issue to be in Open state");
 

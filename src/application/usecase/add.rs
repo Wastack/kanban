@@ -43,10 +43,16 @@ mod tests {
 
         add_use_case.execute("New task", State::Review);
 
-        then_extended_board(&add_use_case)
+        let stored_board = add_use_case.storage.load();
+
+        stored_board
             .assert_issue_count(5)
             .assert_first_issue_content()
             .assert_history_consists_of_one_addition();
+
+        // TODO assert presented board
+        //let presented_board = add_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
+        //assert_eq!(presented_board, &stored_board, "Expected stored and presented board to be equal");
     }
 
     fn given_add_use_case_with(board: Board) -> AddUseCase<MemoryIssueStorage, NilPresenter> {
@@ -57,10 +63,6 @@ mod tests {
             storage,
             ..Default::default()
         }
-    }
-
-    fn then_extended_board(sut: &AddUseCase<MemoryIssueStorage, NilPresenter>) -> Board {
-        sut.storage.load()
     }
 
     impl Board {

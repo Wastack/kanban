@@ -1,20 +1,20 @@
 #[cfg(test)]
 pub(crate) mod test {
-    use std::error::Error;
     use crate::application::Board;
+    use crate::application::domain::error::DomainError;
     use crate::Presenter;
 
 
     #[derive(Default)]
     pub(crate) struct NilPresenter {
-        past_errors: Vec<String>
+        //pub(crate) last_error_rendered: Option<&'a DomainError>,
+        //pub(crate) last_board_rendered: Option<&'a Board>,
     }
 
     impl Presenter for NilPresenter {
-        fn render_board(&self, _: &Board) {}
+        fn render_board(&self, _board: &Board) { }
 
-        fn render_error(&mut self, err: &dyn Error) {
-            self.past_errors.push(err.to_string());
-        }
+        fn render_error(&mut self, _err: &DomainError) { }
     }
+
 }

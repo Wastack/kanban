@@ -32,7 +32,7 @@ impl Board {
     }
 
     pub fn get_issue(&self, index: usize) -> DomainResult<&Issue> {
-        self.issues.get(index).ok_or(DomainError::new("Index out of range"))
+        self.issues.get(index).ok_or(DomainError::IndexOutOfRange(index))
     }
 
     /// Returns the number of (not deleted) issues in Board
@@ -41,7 +41,7 @@ impl Board {
     }
 
     pub fn get_issue_mut(&mut self, index: usize) -> DomainResult<&mut Issue> {
-        self.issues.get_mut(index).ok_or(DomainError::new("Index out of range"))
+        self.issues.get_mut(index).ok_or(DomainError::IndexOutOfRange(index))
     }
 
     pub fn contains(&self, index: usize) -> bool {
@@ -52,7 +52,7 @@ impl Board {
         let mut errors = indices
             .iter()
             .filter(|&&i| !self.contains(i))
-            .map(|i|DomainError::new(&format!("Index out of range: {}", i)));
+            .map(|&i|DomainError::IndexOutOfRange(i));
 
         match errors.next() {
             None => Validated::Good(()),
@@ -275,18 +275,10 @@ mod tests {
 
 
         assert!(validated.is_fail(), "Expected validation to fail");
-        let Fail(errors) = validated else { panic!() };
-        assert_eq!(errors.len(), 2, "Expected 2 errors, but found different number");
-        assert_eq!(
-            errors[0].description(),
-            "Index out of range: 2",
-            "Expected specific error message"
-        );
-        assert_eq!(
-            errors[1].description(),
-            "Index out of range: 3",
-            "Expected specific error message"
-        );
+        let Fail(errors) = validated else { panic!("expected error when validating indices of board") };
+        assert_eq!(errors.len(), 2, "Expected 2 errors");
+        assert!(matches!(errors[0], DomainError::IndexOutOfRange(2)));
+        assert!(matches!(errors[1], DomainError::IndexOutOfRange(3)));
     }
 
     #[test]

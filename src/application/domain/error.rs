@@ -1,32 +1,24 @@
-use std::{error, fmt};
+use std::{io};
+use thiserror::Error;
 
 pub type DomainResult<T> = Result<T, DomainError>;
 
-#[derive(Debug, Clone)]
-pub struct DomainError {
-    description: String,
-}
+#[derive(Debug, Error)]
+pub enum DomainError {
+    #[error("Index `{0}` is out of range")]
+    IndexOutOfRange(usize),
+    #[error("Editor failed with error: {source}")]
+    EditorError {
+        #[from]
+        source: io::Error
+    },
 
-impl DomainError {
-    pub fn new(description: &str) -> DomainError {
-        DomainError {
-            description: description.to_string(),
-        }
-    }
+    #[error("Invalid board: {0}")]
+    InvalidBoard(String),
 
-    pub fn description(&self) -> &str {
-        &self.description
-    }
-}
+    #[error("History is empty")]
+    EmptyHistory,
 
-impl fmt::Display for DomainError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "DomainError: {}", self.description)
-    }
-}
-
-impl error::Error for DomainError {
-    fn description(&self) -> &str {
-        &self.description
-    }
+    #[error("Not implemented")]
+    NotImplemented
 }

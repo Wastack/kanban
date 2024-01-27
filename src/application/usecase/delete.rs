@@ -98,9 +98,10 @@ mod tests {
 
         fn assert_two_errors_indicated_out_of_range(&self) -> &Self {
             let Fail(errors) = self.result else { panic!("Expected deletion to fail") };
-            assert_eq!(errors.len(), 2, "Expected to produce 2 errors");
-            assert_eq!(errors[0].description(), "Index out of range: 4", "Expected specific error message");
-            assert_eq!(errors[1].description(), "Index out of range: 5", "Expected specific error message");
+            assert_eq!(errors.len(), 2, "Expected 2 errors");
+            assert!(matches!(errors[0], DomainError::IndexOutOfRange(4)));
+            assert!(matches!(errors[1], DomainError::IndexOutOfRange(5)));
+
             self
         }
     }
@@ -110,7 +111,7 @@ mod tests {
         fn assert_third_issue_is_the_only_one_left(&self) -> &Self {
             assert_eq!(self.issues_count(), 1, "Expected to contain only 1 issue after deletion");
 
-            let Ok(remaining_issue) = self.get_issue(0) else { panic!("Expected to have an issue with index 0") };
+            let remaining_issue = self.get_issue(0).expect("Expected to have an issue with index 0");
             assert_eq!(remaining_issue.description(), &Description::from("Task inserted second"), "Expected the third task to remain with index 0");
 
             self

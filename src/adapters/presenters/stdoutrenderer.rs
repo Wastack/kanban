@@ -1,8 +1,8 @@
-use std::error::Error;
 use crate::application::board::{Board, BoardStateView, IssueRef};
 use crate::application::issue::{Described, State, Issue};
 use crate::application::ports::presenter::Presenter;
 use colored::Colorize;
+use crate::application::domain::error::DomainError;
 use crate::application::elapsed_time_since_epoch;
 
 
@@ -94,7 +94,7 @@ impl Presenter for TabularTextRenderer {
         println!("{}", result)
     }
 
-    fn render_error(&mut self, err: &dyn Error) {
+    fn render_error(&mut self, err: &DomainError) {
         println!("{}", err)
     }
 }

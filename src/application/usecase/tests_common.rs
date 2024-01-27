@@ -1,7 +1,7 @@
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::application::{Board, DomainResult, Issue};
+    use crate::application::{Board, Issue};
     use crate::application::issue::{Description};
     use crate::{State};
 
@@ -73,34 +73,6 @@ pub(crate) mod tests {
                 time_created: 1698397492,
             },
         ]
-    }
-
-    pub(crate) fn then_result<T>(result: &DomainResult<T>) -> DomainResultMatcher<T> {
-        DomainResultMatcher {
-            result,
-        }
-    }
-
-    pub(crate) struct DomainResultMatcher<'a, T> {
-        result: &'a DomainResult<T>
-    }
-
-    impl<T: std::fmt::Debug> DomainResultMatcher<'_, T> {
-        pub(crate) fn assert_failed(&self) -> &Self {
-            assert!(self.result.is_err(), "Expected editing to fail");
-            self
-        }
-
-        pub(crate) fn assert_failed_with(&self, message: &str) -> &Self {
-            assert!(self.result.is_err(), "Expected it to fail");
-            assert_eq!(self.result.as_ref().unwrap_err().description(), message, "Expect proper error message");
-            self
-        }
-
-        pub(crate) fn assert_succeeded(&self) -> &Self {
-            assert!(self.result.is_ok(), "Result failed: {}", self.result.as_ref().unwrap_err().description());
-            self
-        }
     }
 
 }

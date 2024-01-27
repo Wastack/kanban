@@ -209,9 +209,10 @@ mod tests {
 
         fn assert_has_two_errors(&self) -> &Self {
             let Fail(errors) = self.result else { panic!("Expected moving to fail") };
-            assert_eq!(errors.len(), 2, "Expected to produce 2 errors");
-            assert_eq!(errors[0].description(), "Index out of range: 4", "Expected specific error message");
-            assert_eq!(errors[1].description(), "Index out of range: 5", "Expected specific error message");
+            assert_eq!(errors.len(), 2, "Expected 2 errors");
+            assert!(matches!(errors[0], DomainError::IndexOutOfRange(4)));
+            assert!(matches!(errors[1], DomainError::IndexOutOfRange(5)));
+
             self
         }
     }
