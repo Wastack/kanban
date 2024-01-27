@@ -95,9 +95,14 @@ mod tests {
         then_issue_with_index(1, &move_use_case)
             .assert_state_is_done();
 
-        then_stored_board(&move_use_case)
+        let stored_board = move_use_case.storage.load();
+
+        stored_board
             .history()
             .assert_contains_1_moving();
+
+        let presented_board = move_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
+        assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
     }
 
     /// Tests whether the issue goes on the top of the done list, when being moved there.
@@ -117,9 +122,14 @@ mod tests {
             .assert_description("Task inserted third")
             .assert_state_is_done();
 
-        then_stored_board(&move_use_case)
+        let stored_board = move_use_case.storage.load();
+
+        stored_board
             .history()
             .assert_consist_of_1_move_with_index_changed();
+
+        let presented_board = move_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
+        assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
     }
 
     #[test]
@@ -134,9 +144,14 @@ mod tests {
             .assert_failed()
             .assert_has_two_errors();
 
-        then_stored_board(&move_use_case)
+        move_use_case.storage.load()
             .assert_issue_count(4)
             .assert_has_original_issues();
+
+        assert!(matches!(move_use_case.presenter.errors_presented.as_slice(), [
+            DomainError::IndexOutOfRange(4),
+            DomainError::IndexOutOfRange(5),
+        ]))
     }
 
     fn given_move_use_case_with(board: Board) -> MoveUseCase<MemoryIssueStorage, NilPresenter> {
@@ -153,10 +168,6 @@ mod tests {
         let board = sut.storage.load();
 
         board.get_issue(index).unwrap().clone()
-    }
-
-    fn then_stored_board(u: &MoveUseCase<MemoryIssueStorage, NilPresenter>) -> Board {
-        u.storage.load()
     }
 
     impl History {
