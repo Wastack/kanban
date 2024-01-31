@@ -44,16 +44,6 @@ mod tests {
     use std::path::PathBuf;
     use crate::application::Board;
     use crate::{FileStorage, IssueStorage};
-    
-    struct FileCleanUp {
-        path: PathBuf
-    }
-    
-    impl Drop for FileCleanUp {
-        fn drop(&mut self) {
-            todo!()
-        }
-    }
 
     #[test]
     fn test_file_storage_load_non_existent_file_failed_no_permission() {
@@ -62,13 +52,22 @@ mod tests {
 
     #[test]
     fn test_file_storage_load_non_existent_file_successful() {
+        // Given
         let storage = given_file_storage_with_non_existent_file();
 
         // When
         let board = storage.load();
 
-        board.assert_default();
+        // Then
+        assert_eq!(board, Board::default());
     }
+
+    // TODO: validate dynamic aspects of Board after loading, like:
+    // - Whether undo entries are consistent with the rest of the board:
+    //   + undo add, but there is no issue in Board
+    //   + undo delete, but there is no history
+    //   + undo move, but there is no ticket in where the ticket was supposed to be moved
+    // ...
 
     fn given_file_storage_with_non_existent_file() -> FileStorage {
         FileStorage {
@@ -76,11 +75,13 @@ mod tests {
         }
     }
 
-    impl Board {
-        fn assert_default(&self) -> &Self {
-            assert_eq!(self, &Board::default());
+    struct FileCleanUp {
+        path: PathBuf
+    }
 
-            self
+    impl Drop for FileCleanUp {
+        fn drop(&mut self) {
+            todo!()
         }
     }
 }

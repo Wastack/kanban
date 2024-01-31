@@ -43,6 +43,11 @@ pub(crate) mod tests {
             self
         }
 
+        pub(crate) fn with_issue(mut self, issue: Issue) -> Self {
+            self.add_issue(issue);
+            self
+        }
+
     }
 
     fn typical_4_issues() -> [Issue; 4] {
