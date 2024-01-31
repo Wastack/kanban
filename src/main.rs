@@ -15,6 +15,8 @@ use application::usecase::add::AddUseCase;
 use crate::adapters::editors::os_default_editor::OsDefaultEditor;
 use crate::adapters::presenters::stdoutrenderer::TabularTextRenderer;
 use crate::adapters::storages::FileStorage;
+use crate::adapters::time_providers::fake::FakeTimeProvider;
+use crate::adapters::time_providers::simple::SimpleTimeProvider;
 use crate::application::ports::editor::Editor;
 use crate::application::usecase::delete::DeleteUseCase;
 use crate::application::usecase::edit::EditUseCase;
@@ -28,27 +30,27 @@ fn main() {
 
     match root.command {
         Some(Command::Add{description, state}) => {
-            AddUseCase::<FileStorage, TabularTextRenderer>::default().execute(
+            AddUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>, FakeTimeProvider>::default().execute(
                 &description,
                 state.unwrap_or(State::Open));
         },
         Some(Command::Delete{index}) => {
-            DeleteUseCase::<FileStorage, TabularTextRenderer>::default().execute(&index);
+            DeleteUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute(&index);
         },
         Some(Command::Move{indices, state}) => {
-            MoveUseCase::<FileStorage, TabularTextRenderer>::default().execute(&indices, state);
+            MoveUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute(&indices, state);
         },
         Some(Command::Edit{index}) => {
-            let _ = EditUseCase::<FileStorage, TabularTextRenderer, OsDefaultEditor>::default().execute(index);
+            let _ = EditUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>, OsDefaultEditor>::default().execute(index);
         },
         Some(Command::Prio{command, index}) => {
-            PrioUseCase::<FileStorage, TabularTextRenderer>::default().execute(index, command);
+            PrioUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute(index, command);
         },
         Some(Command::Undo) => {
-            let _ = UndoUseCase::<FileStorage, TabularTextRenderer>::default().execute();
+            let _ = UndoUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute();
         },
         None => {
-            GetUseCase::<FileStorage, TabularTextRenderer>::default().execute()
+            GetUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute()
         },
     }
 

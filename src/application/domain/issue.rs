@@ -1,5 +1,4 @@
 use std::fmt::{Display, Formatter};
-use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
@@ -59,17 +58,18 @@ pub struct Issue {
     ///
     /// For backwards compatibility, if the field is missing, we take it as if it was
     /// created just now.
-    #[serde(default = "elapsed_time_since_epoch")]
     pub(crate) time_created: u64,
 }
 
 impl Issue {
-    pub fn new(description: Description, state: State) -> Self {
-        Self {
-            description,
-            state,
-            time_created: elapsed_time_since_epoch(),
+    pub fn category(&self, time_since_epoch: u64) -> IssueCategory {
+        let two_weeks_in_secs = 60 * 60 * 24 * 14;
+
+        if time_since_epoch - self.time_created >= two_weeks_in_secs && self.state == State::Open {
+            return IssueCategory::Overdue;
         }
+
+        IssueCategory::Normal
     }
 }
 
@@ -93,25 +93,7 @@ impl Described for Issue {
     }
 }
 
-pub fn elapsed_time_since_epoch() -> u64 {
-    let now = SystemTime::now();
-    let since_epoch = now.duration_since(UNIX_EPOCH).expect("Time went backwards");
-    since_epoch.as_secs()
-}
-
-
-pub enum DisplayCategory {
+pub enum IssueCategory {
     Normal,
     Overdue,
-}
-
-pub fn categorize(issue: &Issue) -> DisplayCategory {
-    let now = elapsed_time_since_epoch();
-    let two_weeks_in_secs = 60 * 60 * 24 * 14;
-
-    if now - issue.time_created >= two_weeks_in_secs && issue.state == State::Open {
-        DisplayCategory::Overdue
-    } else {
-        DisplayCategory::Normal
-    }
 }

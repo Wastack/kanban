@@ -3,18 +3,20 @@ use crate::application::issue::{Described, State};
 use crate::application::ports::presenter::Presenter;
 use colored::Colorize;
 use crate::application::domain::error::DomainError;
-use crate::application::domain::issue;
-use crate::application::domain::issue::DisplayCategory;
+use crate::application::domain::issue::IssueCategory;
+use crate::application::ports::time::CurrentTimeProvider;
 
 #[derive(Default)]
-pub struct TabularTextRenderer {}
+pub(crate) struct TabularTextRenderer<T: CurrentTimeProvider> {
+    time_provider: T,
+}
 
 
-impl Presenter for TabularTextRenderer {
+impl<T: CurrentTimeProvider> Presenter for TabularTextRenderer<T> {
 
 
     fn render_board(&mut self, board: &Board) {
-        let result = Self::format_board(board);
+        let result = self.format_board(board);
 
         println!("{}", result)
     }
@@ -24,8 +26,8 @@ impl Presenter for TabularTextRenderer {
     }
 }
 
-impl TabularTextRenderer {
-    fn format_board(board: &Board) -> String {
+impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
+    fn format_board(&self, board: &Board) -> String {
         let mut issues = board.issues_with_state();
 
         let mut done_issues_truncated = false;
@@ -37,6 +39,8 @@ impl TabularTextRenderer {
             }
             done_issues.drain(4..);
         }
+
+        let current_time = self.time_provider.now();
 
         let result = vec![
             State::Open,
@@ -58,17 +62,19 @@ impl TabularTextRenderer {
 
                         // make it to a string with display category (e.g. overdue)
                         .map(|IssueRef { issue, order }|
-                            (
-                                format!("{}: {}", order, issue.description()),
-                                issue::categorize(issue)
-                            )
+                            {
+                                (
+                                    format!("{}: {}", order, issue.description()),
+                                    issue.category(current_time)
+                                )
+                            }
                         )
 
                         // apply display category
                         .map(|(text, category)|
                             match category {
-                                DisplayCategory::Overdue => text.red().to_string(),
-                                DisplayCategory::Normal => text,
+                                IssueCategory::Overdue => text.red().to_string(),
+                                IssueCategory::Normal => text,
                             }
                         )
 
@@ -102,6 +108,7 @@ fn state_to_text(state: &State) -> &'static str {
 mod test {
     use std::ops::Deref;
     use crate::adapters::presenters::stdoutrenderer::TabularTextRenderer;
+    use crate::adapters::time_providers::fake::FakeTimeProvider;
     use crate::application::{Board, Issue, State};
     use crate::application::issue::Description;
 
@@ -110,11 +117,16 @@ mod test {
         // Given a board with some additional done issues
         let board = (0..5).into_iter()
             .fold(Board::default().with_4_typical_issues(), | board, n| board.with_issue(
-                Issue::new(Description::from(format!("Done issue number {}", n).deref()), State::Done)
+                Issue {
+                    description: Description::from(format!("Done issue number {}", n).deref()),
+                    state: State::Done,
+                    time_created: 0,
+                }
+
             ));
 
         // When
-        let formatted_board = TabularTextRenderer::format_board(&board);
+        let formatted_board = TabularTextRenderer::<FakeTimeProvider>::default().format_board(&board);
 
         // Then
         assert_eq!(formatted_board, r#"Open

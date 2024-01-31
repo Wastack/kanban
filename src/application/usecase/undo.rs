@@ -253,7 +253,11 @@ pub(crate) mod tests {
     impl Board {
         fn with_an_issue_added_additionally(mut self) -> Self {
             self.add_issue(
-                Issue::new( Description::from("Additional Issue"), State::Open)
+                Issue{
+                    description: Description::from("Additional Issue"),
+                    state: State::Open,
+                    time_created: 0,
+                }
             );
             self.history_mut().push(UndoableHistoryElement::Add);
 

@@ -3,22 +3,25 @@ use crate::application::domain::history::UndoableHistoryElement;
 use crate::application::issue::Description;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
+use crate::application::ports::time::CurrentTimeProvider;
 
 
 #[derive(Default)]
-pub(crate) struct AddUseCase<I: IssueStorage, P: Presenter> {
+pub(crate) struct AddUseCase<I: IssueStorage, P: Presenter, T: CurrentTimeProvider> {
     pub(crate) storage: I,
     presenter: P,
+    time_provider: T,
 }
 
-impl<I: IssueStorage, P: Presenter> AddUseCase<I, P> {
+impl<I: IssueStorage, P: Presenter, T: CurrentTimeProvider> AddUseCase<I, P, T> {
     pub(crate) fn execute(&mut self, description: &str, state: State) {
         let mut board = self.storage.load();
 
-        board.add_issue(Issue::new(
-            Description::from(description),
+        board.add_issue(Issue{
+            description: Description::from(description),
             state,
-        ));
+            time_created: self.time_provider.now(),
+        });
         board.history_mut().push(UndoableHistoryElement::Add);
 
         self.storage.save(&board);
@@ -31,6 +34,7 @@ mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::{AddUseCase, IssueStorage, State};
+    use crate::adapters::time_providers::fake::FakeTimeProvider;
     use crate::application::Board;
     use crate::application::domain::history::UndoableHistoryElement;
     use crate::application::issue::Description;
@@ -54,7 +58,7 @@ mod tests {
         assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
     }
 
-    fn given_add_use_case_with(board: Board) -> AddUseCase<MemoryIssueStorage, NilPresenter> {
+    fn given_add_use_case_with(board: Board) -> AddUseCase<MemoryIssueStorage, NilPresenter, FakeTimeProvider> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
