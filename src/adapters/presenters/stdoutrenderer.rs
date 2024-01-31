@@ -1,30 +1,13 @@
 use crate::application::board::{Board, BoardStateView, IssueRef};
-use crate::application::issue::{Described, State, Issue};
+use crate::application::issue::{Described, State};
 use crate::application::ports::presenter::Presenter;
 use colored::Colorize;
 use crate::application::domain::error::DomainError;
-use crate::application::elapsed_time_since_epoch;
-
+use crate::application::domain::issue;
+use crate::application::domain::issue::DisplayCategory;
 
 #[derive(Default)]
 pub struct TabularTextRenderer {}
-
-
-enum DisplayCategory {
-    Normal,
-    Overdue,
-}
-
-fn categorize(issue: &Issue) -> DisplayCategory {
-    let now = elapsed_time_since_epoch();
-    let two_weeks_in_secs = 60 * 60 * 24 * 14;
-
-    if now - issue.time_created >= two_weeks_in_secs && issue.state == State::Open {
-        DisplayCategory::Overdue
-    } else {
-        DisplayCategory::Normal
-    }
-}
 
 
 impl Presenter for TabularTextRenderer {
@@ -77,7 +60,7 @@ impl TabularTextRenderer {
                         .map(|IssueRef { issue, order }|
                             (
                                 format!("{}: {}", order, issue.description()),
-                                categorize(issue)
+                                issue::categorize(issue)
                             )
                         )
 
@@ -133,7 +116,6 @@ mod test {
         // When
         let formatted_board = TabularTextRenderer::format_board(&board);
 
-        println!("{}", formatted_board);
         // Then
         assert_eq!(formatted_board, r#"Open
 5: Task inserted fourth
