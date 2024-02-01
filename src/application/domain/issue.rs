@@ -1,4 +1,7 @@
+use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Display, Formatter};
+use std::hash::{Hash, Hasher};
+use std::ops::{Deref, DerefMut};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
@@ -14,7 +17,7 @@ pub trait Stateful {
     fn state_mut(&mut self) -> &mut State;
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Description(pub String);
 
@@ -46,8 +49,46 @@ pub trait Described {
     fn description_mut(&mut self) -> &mut Description;
 }
 
-
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Entity<T: Serialize + Hash> {
+    /// Uniquely identifies an `Entity` in a `Board`
+    #[serde(skip)]
+    pub(crate) id: u64,
+
+    #[serde(flatten)]
+    pub(crate) entity: T,
+}
+
+impl<T: Serialize + Hash> From<T> for Entity<T> {
+    fn from(value: T) -> Self {
+        let mut s = DefaultHasher::new();
+        value.hash(&mut s);
+        let id = s.finish();
+        
+        Self {
+            id,
+            entity: value,
+        }
+    }
+}
+
+impl<T: Serialize + Hash> Deref for Entity<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entity
+    }
+}
+
+impl<T: Serialize + Hash> DerefMut for Entity<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.entity
+    }
+}
+
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Issue {
     /// Description (content) of the ticket

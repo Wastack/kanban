@@ -43,7 +43,6 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
 
             // If issue is moved to done, I'd like to see it on the top
             let new_index = if state == State::Done {
-                // TODO watch out, this should not be and undoable event
                 board.prio_top_in_category(index)
             } else {
                 index
@@ -79,10 +78,10 @@ mod tests {
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::domain::error::{DomainError};
     use crate::application::domain::history::{History, MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
-    use crate::application::issue::Description;
+    use crate::application::issue::{Description, Entity};
 
     #[test]
-    fn test_successful_add_use_case() {
+    fn test_successful_move_use_case() {
         let mut move_use_case = given_move_use_case_with(
             Board::default().with_4_typical_issues(),
         );
@@ -90,10 +89,10 @@ mod tests {
         move_use_case.execute(&vec![1, 0], State::Done);
 
         then_issue_with_index(0, &move_use_case)
-            .assert_state_is_done();
+            .assert_state_is(State::Done);
 
         then_issue_with_index(1, &move_use_case)
-            .assert_state_is_done();
+            .assert_state_is(State::Done);
 
         let stored_board = move_use_case.storage.load();
 
@@ -116,11 +115,11 @@ mod tests {
 
         then_issue_with_index(1, &move_use_case)
             .assert_description("Task inserted first")
-            .assert_state_is_done();
+            .assert_state_is(State::Done);
 
         then_issue_with_index(2, &move_use_case)
             .assert_description("Task inserted third")
-            .assert_state_is_done();
+            .assert_state_is(State::Done);
 
         let stored_board = move_use_case.storage.load();
 
@@ -131,6 +130,61 @@ mod tests {
         let presented_board = move_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
         assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
     }
+
+    // TODO: undo counterpart
+    /// Open
+    /// 1. Lazy to do
+    /// 2. I'm doing it now, A
+    /// 3. I'm doing it now, B
+    ///
+    /// Done
+    /// 0. I finished this first
+    ///
+    /// > ka move done 3 2
+    ///
+    /// Open
+    /// 3. Lazy to do
+    ///
+    /// Done
+    /// 0. I'm doing it now, B
+    /// 1. I'm doing it now, A
+    /// 2. I finished this first
+    ///
+    /// When index `2` moves to done, it becomes index `0` (so that it appears on the top of the list of DONE items).
+    /// Watch out, because during the change index `1` becomes to index `2` So you may end up moving 'Lazy to do' to
+    /// `DONE`.
+    #[test]
+    fn test_move_multiple_to_done_with_changing_priorities() {
+        // Given
+        let mut sut = given_move_use_case_with(
+            Board::default()
+                .with_issue(Issue{ description: Description::from("I'm doing it now, B"), state: State::Open, time_created: 0, })
+                .with_issue(Issue{ description: Description::from("I'm doing it now, A"), state: State::Open, time_created: 0, })
+                .with_issue(Issue{ description: Description::from("Lazy to do"), state: State::Open, time_created: 0, })
+                .with_issue(Issue{ description: Description::from("I finished this first"), state: State::Done, time_created: 0, })
+        );
+
+        // When
+        sut.execute(&[3, 2], State::Done).expect("Expected move to succeed");
+
+        // Then
+        [
+            (0, State::Done, "I'm doing it now, B"),
+            (1, State::Done, "I'm doing it now, A"),
+            (2, State::Done, "I finished this first"),
+            (3, State::Open, "Lazy to do"),
+        ].into_iter().for_each(|(expected_index, expected_state, expected_description)| {
+            then_issue_with_index(expected_index, &sut)
+                .assert_description(expected_description)
+                .assert_state_is(expected_state);
+        });
+
+        let stored_board= sut.storage.load();
+        let presented_board = sut.presenter.last_board_rendered.expect("Expected a board to be presented");
+        assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
+    }
+
+
 
     #[test]
     fn test_indices_out_of_range() {
@@ -164,7 +218,7 @@ mod tests {
         }
     }
 
-    fn then_issue_with_index(index: usize, sut: &MoveUseCase<MemoryIssueStorage, NilPresenter>) -> Issue {
+    fn then_issue_with_index(index: usize, sut: &MoveUseCase<MemoryIssueStorage, NilPresenter>) -> Entity<Issue> {
         let board = sut.storage.load();
 
         board.get_issue(index).unwrap().clone()
@@ -229,8 +283,8 @@ mod tests {
     }
 
     impl Issue {
-        fn assert_state_is_done(&self) -> &Self {
-            assert_eq!(self.state, State::Done, "Expected moved issue to be in done state");
+        fn assert_state_is(&self, s: State) -> &Self {
+            assert_eq!(self.state, s, "Expected moved issue to be in state: {:?}", s);
             self
         }
 

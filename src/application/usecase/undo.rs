@@ -20,11 +20,13 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
 
         match event_to_undo {
             UndoableHistoryElement::Add => {
-                // TODO too much intimacy with the field
-                // Board delete method puts field to deleted, which is not correct in this case
+                let id = board
+                    .find_entity_id_by_issue_order(0)
+                    // In this case, we fail because the board was invalid, not because the user specified a wrong range
+                    .map_err(|e| DomainError::InvalidBoard(e.to_string()))
+                    .inspect_err(|e|self.presenter.render_error(e))?;
 
-                let issues = board.issues_mut();
-                issues.remove(0);
+                board.remove_entity(id);
             },
             UndoableHistoryElement::Delete(info) => {
                 if board.get_deleted_issues().len() < info.deletions.len() {
@@ -53,8 +55,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                     let issue = deleted_issues[deleted_index].clone();
 
                     // restore
-                    let issues = board.issues_mut();
-                    issues.insert(orignial_index, issue);
+                    board.insert(orignial_index, issue);
                 }
 
                 // clear deleted issues
@@ -72,10 +73,8 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                 let info = info.clone();
                 for h in info.moves.iter().rev() {
                     if h.original_index != h.new_index {
-                        // TODO too much intimicy?
-                        let issues = board.issues_mut();
-                        let issue = issues.remove(h.new_index);
-                        issues.insert(h.original_index, issue);
+                        let issue = board.remove(h.new_index);
+                        board.insert(h.original_index, issue);
                     }
 
                     let result = board.move_issue(h.original_index, h.original_state);
@@ -252,7 +251,7 @@ pub(crate) mod tests {
 
     impl Board {
         fn with_an_issue_added_additionally(mut self) -> Self {
-            self.add_issue(
+            self.append_issue(
                 Issue{
                     description: Description::from("Additional Issue"),
                     state: State::Open,

@@ -1,7 +1,8 @@
 use std::collections::{HashMap};
+use std::ops::{Deref, DerefMut};
 use nonempty_collections::{NEVec};
-use crate::application::issue::{Issue, Stateful};
-use serde::{Serialize, Deserialize};
+use crate::application::issue::{Entity, Issue, Stateful};
+use serde::{Deserialize, Serialize};
 use validated::Validated;
 use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::domain::history::History;
@@ -13,25 +14,44 @@ use crate::application::issue::State;
 #[serde(rename_all = "camelCase")]
 pub struct Board {
     #[serde(default)]
-    issues: Vec<Issue>,
+    issues: Vec<Entity<Issue>>,
 
     #[serde(default)]
-    deleted_issues: Vec<Issue>,
+    deleted_issues: Vec<Entity<Issue>>,
 
     #[serde(default)]
     history: History,
 }
 
 impl Board {
-    pub fn issues(&self) -> &[Issue] {
+    pub(crate) fn entities(&self) -> &[Entity<Issue>] {
         &self.issues
     }
 
-    pub fn issues_mut(&mut self) -> &mut Vec<Issue> {
-        &mut self.issues
+    /// Gets entity with id. Panics if used with a non-existing id
+    pub(crate) fn get_entity(&self, id: u64) -> &Entity<Issue> {
+        self.issues.iter()
+            .find(|&entity| entity.id == id)
+            .unwrap()
     }
 
-    pub fn get_issue(&self, index: usize) -> DomainResult<&Issue> {
+    /// Removes entity with id. Panics if used with a non-existing id
+    pub(crate) fn remove_entity(&mut self, id: u64) -> Entity<Issue> {
+        let index = self.issues.iter().position(|entity| entity.id == id).unwrap();
+        self.issues.remove(index)
+    }
+
+    pub(crate) fn remove(&mut self, index: usize) -> Entity<Issue> {
+        self.issues.remove(index)
+    }
+
+    pub fn find_entity_id_by_issue_order(&self, order: usize) -> DomainResult<u64> {
+        self.issues.get(order)
+            .and_then(|e| Some(e.id))
+            .ok_or(DomainError::IndexOutOfRange(order))
+    }
+
+    pub fn get_issue(&self, index: usize) -> DomainResult<&Entity<Issue>> {
         self.issues.get(index).ok_or(DomainError::IndexOutOfRange(index))
     }
 
@@ -41,7 +61,9 @@ impl Board {
     }
 
     pub fn get_issue_mut(&mut self, index: usize) -> DomainResult<&mut Issue> {
-        self.issues.get_mut(index).ok_or(DomainError::IndexOutOfRange(index))
+        self.issues.get_mut(index)
+            .and_then(|x|Some(x.deref_mut()))
+                .ok_or(DomainError::IndexOutOfRange(index))
     }
 
     pub fn contains(&self, index: usize) -> bool {
@@ -73,7 +95,7 @@ impl Board {
         let mut sorted_descending_indices = indices.to_owned();
         sorted_descending_indices.sort_unstable_by(|a, b| b.cmp(a));
 
-        let mut removed_issues: HashMap<usize, Issue> = sorted_descending_indices
+        let mut removed_issues: HashMap<usize, Entity<Issue>> = sorted_descending_indices
             .into_iter()
             .map(|index|(index, self.issues.remove(index)))
             .collect();
@@ -83,9 +105,13 @@ impl Board {
         }
     }
 
-    /// Adds a new issue to the board.
-    pub fn add_issue(&mut self, issue: Issue) {
-        self.issues.insert(0, issue);
+    /// Adds a new issue to the board to first priority
+    pub fn append_issue(&mut self, issue: Issue) {
+        self.issues.insert( 0, issue.into() );
+    }
+
+    pub fn insert(&mut self, index: usize, entity: Entity<Issue>) {
+        self.issues.insert(index, entity)
     }
 
     /// Move an issue from one state to another
@@ -102,11 +128,11 @@ impl Board {
     }
 
     /// Returns a list of the deleted issues. The first element of the list is the one most recently deleted.
-    pub fn get_deleted_issues(&self) -> &[Issue] {
+    pub fn get_deleted_issues(&self) -> &[Entity<Issue>] {
         &self.deleted_issues
     }
 
-    pub fn get_deleted_issues_mut(&mut self) -> &mut Vec<Issue> {
+    pub fn get_deleted_issues_mut(&mut self) -> &mut Vec<Entity<Issue>> {
         &mut self.deleted_issues
     }
 
@@ -253,13 +279,13 @@ mod tests {
                     state: State::Open,
                     time_created: 1698397489,
 
-                },
+                }.into(),
                 Issue {
                     description: Description::from("Second task"),
                     state: State::Review,
                     time_created: 1698397490,
 
-                },
+                }.into(),
             ],
             deleted_issues: Vec::default(),
             history: History::default(),

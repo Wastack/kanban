@@ -112,6 +112,8 @@ mod test {
     use crate::application::{Board, Issue, State};
     use crate::application::issue::Description;
 
+    // TODO: bold text is not tested, as a response to IssueCategory: Overdue
+
     #[test]
     fn test_format_typical_board() {
         // Given a board with some additional done issues

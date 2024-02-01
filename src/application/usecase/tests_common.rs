@@ -1,6 +1,7 @@
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use std::ops::Deref;
     use crate::application::{Board, Issue};
     use crate::application::issue::{Description};
     use crate::{State};
@@ -16,8 +17,8 @@ pub(crate) mod tests {
             let original_board = Board::default().with_4_typical_issues();
             assert!(self.issues_count() >= original_board.issues_count(), "Expected board to have the 4 original issues");
 
-            for issue in original_board.issues() {
-                let found = self.issues().into_iter().find(
+            for issue in original_board.entities() {
+                let found = self.entities().into_iter().find(
                     |&i| issue.description == i.description
                 ).is_some();
 
@@ -30,8 +31,13 @@ pub(crate) mod tests {
         }
 
         pub(crate) fn has_the_original_4_issues_in_order(&self) -> &Self {
-            let issues = typical_4_issues();
-            issues.into_iter().rev().zip(self.issues().iter()).for_each(|(expected, actual)|{
+            typical_4_issues()
+                .into_iter()
+                .rev()
+                .zip(self.entities()
+                    .iter()
+                    .map(|x|x.deref()))
+                .for_each(|(expected, actual)|{
                 assert_eq!(actual, &expected, "Expected Issue to be the original one");
             });
 
@@ -39,12 +45,12 @@ pub(crate) mod tests {
         }
 
         pub(crate) fn with_4_typical_issues(mut self) -> Self {
-            typical_4_issues().into_iter().for_each(|i|self.add_issue(i));
+            typical_4_issues().into_iter().for_each(|i|self.append_issue(i));
             self
         }
 
         pub(crate) fn with_issue(mut self, issue: Issue) -> Self {
-            self.add_issue(issue);
+            self.append_issue(issue);
             self
         }
 

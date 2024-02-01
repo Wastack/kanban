@@ -131,7 +131,6 @@ mod tests {
 
         fn assert_deleted_issues_consists_of_three_deletions(&self) -> &Self {
             let deleted_issues = self.get_deleted_issues();
-            println!("{:?}", deleted_issues);
             assert_eq!(deleted_issues.len(), 3, "Expected 3 deleted issues in board");
 
             assert_eq!(deleted_issues[0].description, "Task inserted fourth".into());

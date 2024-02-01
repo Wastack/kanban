@@ -1,8 +1,6 @@
 use std::io;
 
 pub(crate) trait Editor {
-    /// Allows text to be edited, resulting text is returned.
-    ///
-    /// TODO Abstract IO::Error?
+    /// An editor opens to edit original `text`, resulting text is returned.
     fn open_editor_with(&self, text: &str) -> Result<String, io::Error>;
 }

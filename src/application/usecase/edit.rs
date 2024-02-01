@@ -56,6 +56,7 @@ mod tests {
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::{Board, Issue};
     use crate::application::domain::error::DomainError;
+    use crate::application::issue::Entity;
 
     #[test]
     fn test_execute_successful_editing() {
@@ -111,7 +112,7 @@ mod tests {
         sut.storage.load()
     }
 
-    fn then_stored_issue_of_the(board: &Board) -> Issue {
+    fn then_stored_issue_of_the(board: &Board) -> Entity<Issue> {
         let issue = board.get_issue(2);
         assert!(issue.is_ok());
         issue.unwrap().clone()
