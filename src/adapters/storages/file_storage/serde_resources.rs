@@ -261,6 +261,7 @@ impl Into<UndoableHistoryElement> for StoredUndoableHistoryElement {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Copy, Clone)]
+#[serde(rename_all = "camelCase")]
 pub enum StoredState {
     Open,
     Review,
