@@ -38,7 +38,7 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
             let issue = board.get_mut(id);
             let original_state = issue.state;
 
-            if issue.state() == state {
+            if issue.state == state {
                 continue;
             }
 

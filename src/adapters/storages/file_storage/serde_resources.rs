@@ -61,7 +61,7 @@ impl Into<Issue> for StoredIssue {
 impl From<&Issue> for StoredIssue {
     fn from(issue: &Issue) -> Self {
         Self {
-            description: issue.description().to_string(),
+            description: issue.description.to_string(),
             state: issue.state.into(),
             time_created: issue.time_created,
         }

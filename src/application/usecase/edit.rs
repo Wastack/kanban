@@ -27,12 +27,12 @@ impl<I: IssueStorage, P: Presenter, E: Editor> EditUseCase<I, P, E> {
         let original_description = String::from(entitiy.description.as_str());
 
         let edited_description = self.editor
-            .open_editor_with( entitiy.description().as_str())
+            .open_editor_with( entitiy.description.as_str())
             .map_err(|e|DomainError::from(e))
             .inspect_err(|e| self.presenter.render_error(e))?;
 
         let mut issue = board.get_mut(id);
-        issue.description_mut().set(&edited_description);
+        issue.description.set(&edited_description);
 
         board.history_mut().push(UndoableHistoryElement::Edit(
             EditHistoryElement {

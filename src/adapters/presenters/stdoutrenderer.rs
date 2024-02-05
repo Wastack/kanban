@@ -65,7 +65,7 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
                         .map(|IssueRef { issue, order }|
                             {
                                 (
-                                    format!("{}: {}", order, issue.description()),
+                                    format!("{}: {}", order, issue.description),
                                     issue.category(current_time)
                                 )
                             }

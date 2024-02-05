@@ -106,27 +106,6 @@ impl Issue {
     }
 }
 
-// TODO: Maybe this stateful trait is stupid?
-impl Stateful for Issue {
-    fn state(&self) -> State {
-        self.state
-    }
-
-    fn state_mut(&mut self) -> &mut State {
-        &mut self.state
-    }
-}
-
-impl Described for Issue {
-    fn description(&self) -> &Description {
-        &self.description
-    }
-
-    fn description_mut(&mut self) -> &mut Description {
-        &mut self.description
-    }
-}
-
 pub enum IssueCategory {
     Normal,
     Overdue,
