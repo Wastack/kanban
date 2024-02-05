@@ -1,0 +1,19 @@
+---
+issues:
+  - description: Get a coffee
+    state: open
+    timeCreated: 1706727855
+  - description: Take a break
+    state: done
+    timeCreated: 1702298969
+history:
+  elements:
+    - Add
+    - Add
+deletedIssues:
+  - description: deleted issue 1
+    state: open
+    timeCreated: 1701878209
+  - description: deleted issue 2
+    state: open
+    timeCreated: 1706284673

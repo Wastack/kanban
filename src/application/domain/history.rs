@@ -1,10 +1,8 @@
-use serde::{Serialize, Deserialize};
 use crate::State;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct History {
-    #[serde(default)]
-    elements: Vec<UndoableHistoryElement>,
+    pub(crate) elements: Vec<UndoableHistoryElement>,
 }
 
 impl History {
@@ -25,13 +23,12 @@ impl History {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MoveHistoryElements {
-    #[serde(default)]
     pub moves: Vec<MoveHistoryElement>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MoveHistoryElement {
     /// Index of the issues that was moved
     pub original_index: usize,
@@ -43,29 +40,28 @@ pub struct MoveHistoryElement {
     pub new_index: usize,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PrioHistoryElement {
     pub original_order: usize,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct EditHistoryElement {
     pub original_description: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DeleteHistoryElements {
-    #[serde(default)]
     pub deletions: Vec<DeleteHistoryElement>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DeleteHistoryElement {
     /// The position in which the issue had been located just before it was deleted.
     pub(crate) original_position_in_issues: usize,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum UndoableHistoryElement {
     Add,
     Delete(DeleteHistoryElements),
@@ -74,3 +70,15 @@ pub enum UndoableHistoryElement {
     Edit(EditHistoryElement)
 }
 
+
+#[cfg(test)]
+pub(crate) mod test {
+    use crate::application::domain::history::{History, UndoableHistoryElement};
+
+    impl History {
+        pub(crate) fn with_element(mut self, e: UndoableHistoryElement) -> Self {
+            self.elements.push(e);
+            self
+        }
+    }
+}

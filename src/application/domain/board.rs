@@ -1,8 +1,7 @@
 use std::collections::{HashMap};
-use std::ops::{Deref, DerefMut};
+use std::ops::{DerefMut};
 use nonempty_collections::{NEVec};
 use crate::application::issue::{Entity, Issue, Stateful};
-use serde::{Deserialize, Serialize};
 use validated::Validated;
 use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::domain::history::History;
@@ -10,64 +9,77 @@ use crate::application::issue::State;
 
 
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct Board {
-    #[serde(default)]
-    issues: Vec<Entity<Issue>>,
-
-    #[serde(default)]
-    deleted_issues: Vec<Entity<Issue>>,
-
-    #[serde(default)]
-    history: History,
+    pub(crate) entities: Vec<Entity<Issue>>,
+    pub(crate) deleted_issues: Vec<Entity<Issue>>,
+    pub(crate) history: History,
 }
 
 impl Board {
     pub(crate) fn entities(&self) -> &[Entity<Issue>] {
-        &self.issues
+        &self.entities
     }
 
     /// Gets entity with id. Panics if used with a non-existing id
-    pub(crate) fn get_entity(&self, id: u64) -> &Entity<Issue> {
-        self.issues.iter()
+    pub(crate) fn get(&self, id: u64) -> &Entity<Issue> {
+        self.entities.iter()
             .find(|&entity| entity.id == id)
             .unwrap()
     }
 
-    /// Removes entity with id. Panics if used with a non-existing id
-    pub(crate) fn remove_entity(&mut self, id: u64) -> Entity<Issue> {
-        let index = self.issues.iter().position(|entity| entity.id == id).unwrap();
-        self.issues.remove(index)
+    /// Removes entity with id. Panics if used with a non-existing id.
+    pub(crate) fn remove(&mut self, id: u64) -> Entity<Issue> {
+        let index = self.entities.iter().position(|entity| entity.id == id).unwrap();
+        self.entities.remove(index)
     }
 
-    pub(crate) fn remove(&mut self, index: usize) -> Entity<Issue> {
-        self.issues.remove(index)
+    pub(crate) fn mark_as_deleted(&mut self, id: u64) {
+        let index = self.entities.iter().position(|entity| entity.id == id).unwrap();
+        let entity = self.entities.remove(index);
+        self.deleted_issues.insert(0, entity);
+    }
+
+    pub(crate) fn remove_by_index(&mut self, index: usize) -> Entity<Issue> {
+        self.entities.remove(index)
     }
 
     pub fn find_entity_id_by_issue_order(&self, order: usize) -> DomainResult<u64> {
-        self.issues.get(order)
+        self.entities.get(order)
             .and_then(|e| Some(e.id))
             .ok_or(DomainError::IndexOutOfRange(order))
     }
 
+    pub fn find_entities_by_indices(&self, orders: &[usize]) -> Validated<Vec<u64>, DomainError> {
+        let mut errors = orders
+            .iter()
+            .filter(|&&i| !self.contains(i))
+            .map(|&i|DomainError::IndexOutOfRange(i));
+
+        if let Some(head) = errors.next() {
+            return Validated::Fail(NEVec::from((head, errors.collect())));
+        }
+
+        Validated::Good(orders.iter().map(|&order| self.entities[order].id).collect())
+    }
+
     pub fn get_issue(&self, index: usize) -> DomainResult<&Entity<Issue>> {
-        self.issues.get(index).ok_or(DomainError::IndexOutOfRange(index))
+        self.entities.get(index).ok_or(DomainError::IndexOutOfRange(index))
     }
 
     /// Returns the number of (not deleted) issues in Board
     pub fn issues_count(&self) -> usize {
-        self.issues.len()
+        self.entities.len()
     }
 
     pub fn get_issue_mut(&mut self, index: usize) -> DomainResult<&mut Issue> {
-        self.issues.get_mut(index)
+        self.entities.get_mut(index)
             .and_then(|x|Some(x.deref_mut()))
                 .ok_or(DomainError::IndexOutOfRange(index))
     }
 
     pub fn contains(&self, index: usize) -> bool {
-        self.issues.len() > index
+        self.entities.len() > index
     }
 
     pub fn validate_indices(&self, indices: &[usize]) -> Validated<(), DomainError> {
@@ -97,7 +109,7 @@ impl Board {
 
         let mut removed_issues: HashMap<usize, Entity<Issue>> = sorted_descending_indices
             .into_iter()
-            .map(|index|(index, self.issues.remove(index)))
+            .map(|index|(index, self.entities.remove(index)))
             .collect();
 
         for i in indices {
@@ -107,11 +119,11 @@ impl Board {
 
     /// Adds a new issue to the board to first priority
     pub fn append_issue(&mut self, issue: Issue) {
-        self.issues.insert( 0, issue.into() );
+        self.entities.insert(0, issue.into() );
     }
 
     pub fn insert(&mut self, index: usize, entity: Entity<Issue>) {
-        self.issues.insert(index, entity)
+        self.entities.insert(index, entity)
     }
 
     /// Move an issue from one state to another
@@ -150,14 +162,14 @@ impl Board {
     /// its category (amongst issues with similar state).
     /// Returns the new position of the issue
     pub fn prio_top_in_category(&mut self, index: usize) -> usize {
-        let state = self.issues[index].state;
-        let most_prio_position = self.issues
+        let state = self.entities[index].state;
+        let most_prio_position = self.entities
             .iter()
             .position(|i|i.state == state)
             .unwrap();
 
-        let issue = self.issues.remove(index);
-        self.issues.insert(most_prio_position, issue);
+        let issue = self.entities.remove(index);
+        self.entities.insert(most_prio_position, issue);
 
         most_prio_position
     }
@@ -165,21 +177,21 @@ impl Board {
     /// Changes the priority (order) of the issues, so that it becomes the least priority in
     /// its category (amongst issues with similar state)
     pub fn prio_bottom_in_category(&mut self, index: usize) {
-        let state = self.issues[index].state;
-        let least_prio_position = self.issues
+        let state = self.entities[index].state;
+        let least_prio_position = self.entities
             .iter()
             .rposition(|i|i.state == state)
             .unwrap();
 
-        let issue = self.issues.remove(index);
+        let issue = self.entities.remove(index);
         // the previous remove modified the positions, thus no +1 needed
-        self.issues.insert(least_prio_position, issue);
+        self.entities.insert(least_prio_position, issue);
     }
 
     /// Changes the priority (order) of the issues, so that it becomes one more priority in
     /// its category (amongst issues with similar state)
     pub fn prio_up_in_category(&mut self, index: usize) {
-        let state = self.issues[index].state;
+        let state = self.entities[index].state;
         let issues = self.issues_with_state();
         let category = issues.get(&state).unwrap();
         let position_in_category = category
@@ -197,14 +209,14 @@ impl Board {
             .unwrap()
             .order;
 
-        let issue = self.issues.remove(index);
-        self.issues.insert(position_of_issue_above, issue);
+        let issue = self.entities.remove(index);
+        self.entities.insert(position_of_issue_above, issue);
     }
 
     /// Changes the priority (order) of the issues, so that it one less priority in
     /// its category (amongst issues with similar state)
     pub fn prio_down_in_category(&mut self, index: usize) {
-        let state = self.issues[index].state;
+        let state = self.entities[index].state;
         let issues = self.issues_with_state();
         let category = issues.get(&state).unwrap();
         let position_in_category = category
@@ -222,10 +234,10 @@ impl Board {
             .unwrap()
             .order;
 
-        let issue = self.issues.remove(index);
+        let issue = self.entities.remove(index);
 
         // the previous remove modified the positions, thus no +1 needed
-        self.issues.insert(position_of_issue_below, issue);
+        self.entities.insert(position_of_issue_below, issue);
     }
 }
 
@@ -234,7 +246,7 @@ impl BoardStateView for Board {
     /// Returns the issues categorized by state, alongside their global order (priority). The
     /// returned Vectors are ordered by their priority.
     fn issues_with_state(&self) -> HashMap<State, Vec<IssueRef>> {
-        self.issues.iter()
+        self.entities.iter()
             .enumerate()
             .map(|(order, issue) | (issue.state, IssueRef{ order, issue }))
             .fold(HashMap::new(), |mut acc, (state, issue_ref) | {
@@ -273,7 +285,7 @@ mod tests {
 
     fn given_board_with_2_tasks() -> Board {
         Board {
-            issues: vec![
+            entities: vec![
                 Issue {
                     description: Description::from("First task"),
                     state: State::Open,

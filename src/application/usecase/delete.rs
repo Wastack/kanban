@@ -15,15 +15,20 @@ pub(crate) struct DeleteUseCase<I: IssueStorage, P: Presenter> {
 impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
     pub(crate) fn execute(&mut self, indices: &[usize]) -> Validated<(), DomainError> {
         let mut board = self.storage.load();
+        let ids = match board.find_entities_by_indices(indices) {
+            Validated::Good(ids) => ids,
+            Fail(errors) => {
+                for e in &errors {
+                    self.presenter.render_error(e);
+                }
 
-        let validated = board.validate_indices(indices);
-        if let Fail(errors) = &validated {
-            errors.into_iter()
-                .for_each(|e| self.presenter.render_error(&e));
-            return validated;
+                return Fail(errors)
+            },
+        };
+
+        for id in ids {
+            board.mark_as_deleted(id);
         }
-
-        board.delete_issues_with(indices);
 
         board.history_mut().push(UndoableHistoryElement::Delete(
             DeleteHistoryElements {
@@ -32,8 +37,8 @@ impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
                 }).collect(),
             }));
 
-        self.storage.save(&board);
         self.presenter.render_board(&board);
+        self.storage.save(&board);
 
         Validated::Good(())
     }

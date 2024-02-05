@@ -26,7 +26,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                     .map_err(|e| DomainError::InvalidBoard(e.to_string()))
                     .inspect_err(|e|self.presenter.render_error(e))?;
 
-                board.remove_entity(id);
+                board.remove(id);
             },
             UndoableHistoryElement::Delete(info) => {
                 if board.get_deleted_issues().len() < info.deletions.len() {
@@ -73,7 +73,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                 let info = info.clone();
                 for h in info.moves.iter().rev() {
                     if h.original_index != h.new_index {
-                        let issue = board.remove(h.new_index);
+                        let issue = board.remove_by_index(h.new_index);
                         board.insert(h.original_index, issue);
                     }
 
