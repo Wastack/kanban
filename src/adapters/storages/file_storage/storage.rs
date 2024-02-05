@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use home::home_dir;
 use serde::{Deserialize, Serialize};
 use crate::adapters::storages::file_storage::serde_resources::StoredBoard;
-use crate::application::Board;
+use crate::application::{Board, Issue};
 use crate::application::issue::Described;
 use crate::IssueStorage;
 
@@ -23,7 +23,7 @@ impl Default for FileStorage {
 }
 
 impl IssueStorage for FileStorage {
-    fn load(&self) -> Board {
+    fn load(&self) -> Board<Issue> {
         let file_contents = fs::read_to_string(&self.source)
             .unwrap_or_default();
 
@@ -37,7 +37,7 @@ impl IssueStorage for FileStorage {
         stored_board.into()
     }
 
-    fn save(&mut self, board: &Board) {
+    fn save(&mut self, board: &Board<Issue>) {
         let content = Self::board_to_string(board);
 
         let mut file = fs::File::create(&self.source).expect("cannot open file to write board");
@@ -46,7 +46,7 @@ impl IssueStorage for FileStorage {
 }
 
 impl FileStorage {
-    fn board_to_string(board: &Board) -> String {
+    fn board_to_string(board: &Board<Issue>) -> String {
         let storable_board = StoredBoard::from(board);
         let content = serde_yaml::to_string(&storable_board)
             .expect("Internal error: cannot serialize board");
@@ -73,7 +73,7 @@ mod tests {
         let board = storage.load();
         // Then
         assert_eq!(board.issues_count(), 2, "Expected board to have two issues");
-        assert_eq!(board.get_deleted_issues().len(), 2, "Expected board to have 2 deleted issues");
+        assert_eq!(board.get_deleted_entities().len(), 2, "Expected board to have 2 deleted issues");
         assert_eq!(board.history().len(), 2, "Expected board to have a history of 2 items");
         [
             Issue {

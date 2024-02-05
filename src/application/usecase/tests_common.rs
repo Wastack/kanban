@@ -6,7 +6,7 @@ pub(crate) mod tests {
     use crate::application::issue::{Description};
     use crate::{State};
 
-    impl Board {
+    impl Board<Issue> {
         pub(crate) fn assert_issue_count(&self, num: usize) -> &Self {
             assert_eq!(self.issues_count(), num, "Expected board to have {} issues", num);
 
@@ -26,7 +26,7 @@ pub(crate) mod tests {
             }
 
             // TODO: move this assertion to a separate then block
-            assert!(self.get_deleted_issues().is_empty(), "Expected not to have deleted issues");
+            assert!(self.get_deleted_entities().is_empty(), "Expected not to have deleted issues");
             self
         }
 
@@ -45,12 +45,12 @@ pub(crate) mod tests {
         }
 
         pub(crate) fn with_4_typical_issues(mut self) -> Self {
-            typical_4_issues().into_iter().for_each(|i|self.append_issue(i));
+            typical_4_issues().into_iter().for_each(|i|self.append_entity(i));
             self
         }
 
         pub(crate) fn with_issue(mut self, issue: Issue) -> Self {
-            self.append_issue(issue);
+            self.append_entity(issue);
             self
         }
 

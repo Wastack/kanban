@@ -17,18 +17,18 @@ pub struct StoredBoard {
     history: StoredHistory,
 }
 
-impl From<&Board> for StoredBoard {
-    fn from(b: &Board) -> Self {
+impl From<&Board<Issue>> for StoredBoard {
+    fn from(b: &Board<Issue>) -> Self {
         Self {
             issues: b.entities().into_iter().map(|e| StoredIssue::from(e.deref())).collect(),
-            deleted_issues: b.get_deleted_issues().into_iter().map(|e| StoredIssue::from(e.deref())).collect(),
+            deleted_issues: b.get_deleted_entities().into_iter().map(|e| StoredIssue::from(e.deref())).collect(),
             history: b.history().into(),
         }
     }
 }
 
-impl Into<Board> for StoredBoard {
-    fn into(self) -> Board {
+impl Into<Board<Issue>> for StoredBoard {
+    fn into(self) -> Board<Issue> {
         Board {
             entities: self.issues.into_iter().map(|x| Entity::<Issue>::from(Into::<Issue>::into(x))).collect(),
             deleted_issues: self.deleted_issues.into_iter().map(|x| Entity::<Issue>::from(Into::<Issue>::into(x))).collect(),

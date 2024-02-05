@@ -17,7 +17,7 @@ impl<I: IssueStorage, P: Presenter, T: CurrentTimeProvider> AddUseCase<I, P, T> 
     pub(crate) fn execute(&mut self, description: &str, state: State) {
         let mut board = self.storage.load();
 
-        board.append_issue(Issue{
+        board.append_entity(Issue{
             description: Description::from(description),
             state,
             time_created: self.time_provider.now(),
@@ -35,7 +35,7 @@ mod tests {
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::{AddUseCase, IssueStorage, State};
     use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TIME, FakeTimeProvider};
-    use crate::application::Board;
+    use crate::application::{Board, Issue};
     use crate::application::domain::history::UndoableHistoryElement;
     use crate::application::issue::Description;
 
@@ -58,7 +58,7 @@ mod tests {
         assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
     }
 
-    fn given_add_use_case_with(board: Board) -> AddUseCase<MemoryIssueStorage, NilPresenter, FakeTimeProvider> {
+    fn given_add_use_case_with(board: Board<Issue>) -> AddUseCase<MemoryIssueStorage, NilPresenter, FakeTimeProvider> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
@@ -68,9 +68,9 @@ mod tests {
         }
     }
 
-    impl Board {
+    impl Board<Issue> {
         fn assert_first_issue_content(&self) -> &Self {
-            let issue = self.get_issue(0).unwrap();
+            let issue = self.get_by_index(0).unwrap();
             assert_eq!(issue.description, Description::from("New task"), "Expected specific description of added issue");
             assert_eq!(issue.state, State::Review, "Expected specific state of added issue");
             assert_eq!(issue.time_created, DEFAULT_FAKE_TIME, "Expected creation time to have been set");

@@ -48,7 +48,7 @@ impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
 mod tests {
     use validated::Validated;
     use validated::Validated::Fail;
-    use crate::application::{Board};
+    use crate::application::{Board, Issue};
     use crate::application::issue::{Described, Description};
     use crate::{DeleteUseCase, IssueStorage};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
@@ -124,18 +124,18 @@ mod tests {
     }
 
 
-    impl Board {
+    impl Board<Issue> {
         fn assert_third_issue_is_the_only_one_left(&self) -> &Self {
             assert_eq!(self.issues_count(), 1, "Expected to contain only 1 issue after deletion");
 
-            let remaining_issue = self.get_issue(0).expect("Expected to have an issue with index 0");
+            let remaining_issue = self.get_by_index(0).expect("Expected to have an issue with index 0");
             assert_eq!(remaining_issue.description(), &Description::from("Task inserted second"), "Expected the third task to remain with index 0");
 
             self
         }
 
         fn assert_deleted_issues_consists_of_three_deletions(&self) -> &Self {
-            let deleted_issues = self.get_deleted_issues();
+            let deleted_issues = self.get_deleted_entities();
             assert_eq!(deleted_issues.len(), 3, "Expected 3 deleted issues in board");
 
             assert_eq!(deleted_issues[0].description, "Task inserted fourth".into());
@@ -146,7 +146,7 @@ mod tests {
         }
     }
 
-    fn given_delete_use_case_with(board: Board) -> DeleteUseCase<MemoryIssueStorage, NilPresenter> {
+    fn given_delete_use_case_with(board: Board<Issue>) -> DeleteUseCase<MemoryIssueStorage, NilPresenter> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 

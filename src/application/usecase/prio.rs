@@ -13,7 +13,7 @@ impl<I: IssueStorage, P: Presenter> PrioUseCase<I, P> {
     pub(crate) fn execute(&mut self, index: usize, command: PrioCommand) {
         let mut board = self.storage.load();
 
-        if let Err(err) = board.get_issue(index) {
+        if let Err(err) = board.get_by_index(index) {
             self.presenter.render_error(&err);
             return
         }

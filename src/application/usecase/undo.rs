@@ -21,7 +21,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
         match event_to_undo {
             UndoableHistoryElement::Add => {
                 let id = board
-                    .find_entity_id_by_issue_order(0)
+                    .find_entity_id_by_index(0)
                     // In this case, we fail because the board was invalid, not because the user specified a wrong range
                     .map_err(|e| DomainError::InvalidBoard(e.to_string()))
                     .inspect_err(|e|self.presenter.render_error(e))?;
@@ -29,9 +29,9 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                 board.remove(id);
             },
             UndoableHistoryElement::Delete(info) => {
-                if board.get_deleted_issues().len() < info.deletions.len() {
+                if board.get_deleted_entities().len() < info.deletions.len() {
                     return Err(DomainError::InvalidBoard(format!("has {} deleted issues, and history suggests to restore {} deleted issues",
-                                                                 board.get_deleted_issues().len(),
+                                                                 board.get_deleted_entities().len(),
                                                                  info.deletions.len())));
                 }
 
@@ -51,7 +51,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
 
                 for &(deleted_index, orignial_index) in &indices_to_restore {
                     // remove from deleted
-                    let deleted_issues = board.get_deleted_issues_mut();
+                    let deleted_issues = board.get_deleted_entities_mut();
                     let issue = deleted_issues[deleted_index].clone();
 
                     // restore
@@ -59,7 +59,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                 }
 
                 // clear deleted issues
-                let deleted_issues = board.get_deleted_issues_mut();
+                let deleted_issues = board.get_deleted_entities_mut();
                 deleted_issues.drain(0..indices_to_restore.len());
             },
             UndoableHistoryElement::Prio(_) => {
@@ -249,9 +249,9 @@ pub(crate) mod tests {
     */
 
 
-    impl Board {
+    impl Board<Issue> {
         fn with_an_issue_added_additionally(mut self) -> Self {
-            self.append_issue(
+            self.append_entity(
                 Issue{
                     description: Description::from("Additional Issue"),
                     state: State::Open,
@@ -263,7 +263,7 @@ pub(crate) mod tests {
             self
         }
         fn with_an_issue_deleted(mut self) -> Self {
-            self.delete_issues_with(&[2]);
+            self.delete_entities_by_indices(&[2]);
             self.history_mut().push(UndoableHistoryElement::Delete(
                 DeleteHistoryElements {
                     deletions: vec![
@@ -278,7 +278,7 @@ pub(crate) mod tests {
         }
 
         fn with_1_0_2_issues_deleted(mut self) -> Self {
-            self.delete_issues_with(&[1, 0, 2]);
+            self.delete_entities_by_indices(&[1, 0, 2]);
             self.history_mut().push(UndoableHistoryElement::Delete(
                 DeleteHistoryElements {
                     deletions: vec![
@@ -330,7 +330,7 @@ pub(crate) mod tests {
 
         fn with_inconsistent_delete_history(mut self) -> Self {
             // There is one less issue actually deleted compared to what history suggests
-            self.delete_issues_with(&[1, 0]);
+            self.delete_entities_by_indices(&[1, 0]);
             self.history_mut().push(UndoableHistoryElement::Delete(
                 DeleteHistoryElements {
                     deletions: vec![
@@ -372,7 +372,7 @@ pub(crate) mod tests {
         }
 
         fn has_additional_issue_added_with_state_open(&self) -> &Self {
-            let issue = self.get_issue(0).expect("Expected to have an issue");
+            let issue = self.get_by_index(0).expect("Expected to have an issue");
             assert_eq!(issue.description(), &Description::from("Additional Issue"), "Expected Additional Issue in first place");
             assert_eq!(issue.state, State::Open, "Expected issue to be in Open state");
 
@@ -387,11 +387,11 @@ pub(crate) mod tests {
 
     }
 
-    fn then_board_for(undo: &UndoUseCase<MemoryIssueStorage, NilPresenter>) -> Board {
+    fn then_board_for(undo: &UndoUseCase<MemoryIssueStorage, NilPresenter>) -> Board<Issue> {
         undo.storage.load()
     }
 
-    fn given_undo_usecase_with(board: Board) -> UndoUseCase<MemoryIssueStorage, NilPresenter> {
+    fn given_undo_usecase_with(board: Board<Issue>) -> UndoUseCase<MemoryIssueStorage, NilPresenter> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 

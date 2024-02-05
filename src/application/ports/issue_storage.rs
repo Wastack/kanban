@@ -1,6 +1,6 @@
-use crate::application::Board;
+use crate::application::{Board, Issue};
 
 pub trait IssueStorage {
-    fn load(&self) -> Board;
-    fn save(&mut self, board: &Board);
+    fn load(&self) -> Board<Issue>;
+    fn save(&mut self, board: &Board<Issue>);
 }

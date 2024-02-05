@@ -1,6 +1,6 @@
 #[cfg(test)]
 pub(crate) mod test {
-    use crate::application::Board;
+    use crate::application::{Board, Issue};
     use crate::application::domain::error::DomainError;
     use crate::Presenter;
 
@@ -8,11 +8,11 @@ pub(crate) mod test {
     #[derive(Default)]
     pub(crate) struct NilPresenter {
         pub(crate) errors_presented: Vec<DomainError>,
-        pub(crate) last_board_rendered: Option<Board>,
+        pub(crate) last_board_rendered: Option<Board<Issue>>,
     }
 
     impl Presenter for NilPresenter {
-        fn render_board(&mut self, board: &Board) {
+        fn render_board(&mut self, board: &Board<Issue>) {
             self.last_board_rendered = Some(board.clone());
         }
 

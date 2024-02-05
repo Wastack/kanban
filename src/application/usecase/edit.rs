@@ -18,7 +18,7 @@ impl<I: IssueStorage, P: Presenter, E: Editor> EditUseCase<I, P, E> {
         let mut board = self.storage.load();
 
         let issue =(board
-            .get_issue(index)
+            .get_by_index(index)
             .inspect_err(|e| {
                 self.presenter.render_error(&e);
             }))?;
@@ -108,12 +108,12 @@ mod tests {
         assert!(matches!(result, Err(DomainError::EditorError{ .. })), "Expected EditorError, got: {:?}", result)
     }
 
-    fn then_edited_board<E: Editor>(sut: &EditUseCase<MemoryIssueStorage, NilPresenter, E>) -> Board {
+    fn then_edited_board<E: Editor>(sut: &EditUseCase<MemoryIssueStorage, NilPresenter, E>) -> Board<Issue> {
         sut.storage.load()
     }
 
-    fn then_stored_issue_of_the(board: &Board) -> Entity<Issue> {
-        let issue = board.get_issue(2);
+    fn then_stored_issue_of_the(board: &Board<Issue>) -> Entity<Issue> {
+        let issue = board.get_by_index(2);
         assert!(issue.is_ok());
         issue.unwrap().clone()
     }
@@ -149,7 +149,7 @@ mod tests {
         }
     }
 
-    fn given_edit_usecase_with<E: Editor + Default>(board: Board) -> EditUseCase<MemoryIssueStorage, NilPresenter, E> {
+    fn given_edit_usecase_with<E: Editor + Default>(board: Board<Issue>) -> EditUseCase<MemoryIssueStorage, NilPresenter, E> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 

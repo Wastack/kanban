@@ -4,6 +4,7 @@ use crate::application::ports::presenter::Presenter;
 use colored::Colorize;
 use crate::application::domain::error::DomainError;
 use crate::application::domain::issue::IssueCategory;
+use crate::application::Issue;
 use crate::application::ports::time::CurrentTimeProvider;
 
 #[derive(Default)]
@@ -15,7 +16,7 @@ pub(crate) struct TabularTextRenderer<T: CurrentTimeProvider> {
 impl<T: CurrentTimeProvider> Presenter for TabularTextRenderer<T> {
 
 
-    fn render_board(&mut self, board: &Board) {
+    fn render_board(&mut self, board: &Board<Issue>) {
         let result = self.format_board(board);
 
         println!("{}", result)
@@ -27,7 +28,7 @@ impl<T: CurrentTimeProvider> Presenter for TabularTextRenderer<T> {
 }
 
 impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
-    fn format_board(&self, board: &Board) -> String {
+    fn format_board(&self, board: &Board<Issue>) -> String {
         let mut issues = board.issues_with_state();
 
         let mut done_issues_truncated = false;

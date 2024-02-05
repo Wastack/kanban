@@ -33,7 +33,7 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
         let mut history_elements = Vec::default();
 
         for &index in indices {
-            let original_state = board.get_issue(index).unwrap().state().clone();
+            let original_state = board.get_by_index(index).unwrap().state().clone();
 
             if original_state == state {
                 continue;
@@ -208,7 +208,7 @@ mod tests {
         ]))
     }
 
-    fn given_move_use_case_with(board: Board) -> MoveUseCase<MemoryIssueStorage, NilPresenter> {
+    fn given_move_use_case_with(board: Board<Issue>) -> MoveUseCase<MemoryIssueStorage, NilPresenter> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
@@ -221,7 +221,7 @@ mod tests {
     fn then_issue_with_index(index: usize, sut: &MoveUseCase<MemoryIssueStorage, NilPresenter>) -> Entity<Issue> {
         let board = sut.storage.load();
 
-        board.get_issue(index).unwrap().clone()
+        board.get_by_index(index).unwrap().clone()
     }
 
     impl History {
