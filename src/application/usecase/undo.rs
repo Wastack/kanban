@@ -77,10 +77,12 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                         board.insert(h.original_index, issue);
                     }
 
-                    let result = board.move_issue(h.original_index, h.original_state);
-                    if let Err(err) = result {
-                        return Err(DomainError::InvalidBoard(err.to_string()));
-                    }
+                    let id = board.find_entity_id_by_index(h.original_index).map_err(
+                        |e| DomainError::InvalidBoard(e.to_string())
+                    )?;
+
+                    let mut entity = board.get_mut(id);
+                    entity.state = h.original_state;
                 }
             },
         }
@@ -298,7 +300,7 @@ pub(crate) mod tests {
         }
 
         fn with_1_moved_from_done_to_open(mut self) -> Self {
-            self.move_issue(1, State::Open).unwrap();
+            self.get_mut(self.find_entity_id_by_index(1).unwrap()).state = State::Open;
             self.history_mut().push(UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![
                     MoveHistoryElement {
@@ -313,7 +315,7 @@ pub(crate) mod tests {
         }
 
         fn with_most_priority_issue_moved_to_review(mut self) -> Self {
-            self.move_issue(0, State::Review).unwrap();
+            self.get_mut(self.find_entity_id_by_index(0).unwrap()).state = State::Review;
 
             self.history_mut().push(UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![
@@ -351,7 +353,7 @@ pub(crate) mod tests {
 
         fn with_issue_moved_to_done(mut self) -> Self {
             // TODO too much logic in test
-            self.move_issue(2, State::Done).unwrap();
+            self.get_mut(self.find_entity_id_by_index(2).unwrap()).state = State::Done;
             self.prio_top_in_category(2);
             self.history_mut().push(UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![

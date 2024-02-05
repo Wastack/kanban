@@ -11,7 +11,7 @@ pub enum State {
 }
 
 pub trait Stateful {
-    fn state(&self) -> &State;
+    fn state(&self) -> State;
     fn state_mut(&mut self) -> &mut State;
 }
 
@@ -106,9 +106,10 @@ impl Issue {
     }
 }
 
+// TODO: Maybe this stateful trait is stupid?
 impl Stateful for Issue {
-    fn state(&self) -> &State {
-        &self.state
+    fn state(&self) -> State {
+        self.state
     }
 
     fn state_mut(&mut self) -> &mut State {

@@ -18,39 +18,44 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
     pub(crate) fn execute(&mut self, indices: &[usize], state: State) -> Validated<(), DomainError> {
         let mut board = self.storage.load();
 
-        let validated = board.validate_indices(indices);
+        let ids = match board.find_entities_by_indices(indices) {
+            Validated::Good(ids) => ids,
+            Fail(errors) => {
+                for e in &errors {
+                    self.presenter.render_error(e);
+                }
 
-        if let Fail(errors) = &validated {
-            errors.into_iter()
-                .for_each(|e| self.presenter.render_error(&e));
-
-            return validated;
-        }
+                return Fail(errors)
+            },
+        };
 
         // TODO there is a bug: if first move changes prio, second index might be invalid
 
         // TODO: could handling of history be handled in a more concise way?
         let mut history_elements = Vec::default();
 
-        for &index in indices {
-            let original_state = board.get_by_index(index).unwrap().state().clone();
+        for id in ids {
+            let issue = board.get_mut(id);
+            let original_state = issue.state;
 
-            if original_state == state {
+            if issue.state() == state {
                 continue;
             }
 
-            board.move_issue(index, state).unwrap();
+            issue.state = state;
 
+            // TODO: it should be done by id directly
+            let current_index = board.entities.iter().position(|e|e.id == id).unwrap();
             // If issue is moved to done, I'd like to see it on the top
             let new_index = if state == State::Done {
-                board.prio_top_in_category(index)
+                board.prio_top_in_category(current_index)
             } else {
-                index
+                current_index
             };
 
             history_elements.push(MoveHistoryElement {
                 new_index,
-                original_index: index,
+                original_index: current_index,
                 original_state,
             })
         }

@@ -14,6 +14,7 @@ use crate::application::issue::State;
 pub struct Board<T: Hash> {
     pub(crate) entities: Vec<Entity<T>>,
     pub(crate) deleted_issues: Vec<Entity<T>>,
+    // TODO: as long as the `History` is not generic, Board is not independent of `Issue`
     pub(crate) history: History,
 }
 
@@ -38,6 +39,12 @@ impl<T: Hash> Board<T> {
     pub(crate) fn get(&self, id: u64) -> &Entity<T> {
         self.entities.iter()
             .find(|&entity| entity.id == id)
+            .unwrap()
+    }
+
+    pub(crate) fn get_mut(&mut self, id: u64) -> &mut Entity<T> {
+        self.entities.iter_mut()
+            .find(|entity| entity.id == id)
             .unwrap()
     }
 
@@ -88,18 +95,6 @@ impl<T: Hash> Board<T> {
 
     pub fn contains(&self, index: usize) -> bool {
         self.entities.len() > index
-    }
-
-    pub fn validate_indices(&self, indices: &[usize]) -> Validated<(), DomainError> {
-        let mut errors = indices
-            .iter()
-            .filter(|&&i| !self.contains(i))
-            .map(|&i|DomainError::IndexOutOfRange(i));
-
-        match errors.next() {
-            None => Validated::Good(()),
-            Some(head) => Validated::Fail(NEVec::from((head, errors.collect())))
-        }
     }
 
     /// Delete issues with the given indices, in the same order.
@@ -154,27 +149,6 @@ impl<T: Hash> Board<T> {
 }
 
 impl Board<Issue> {
-
-    pub fn get_issue_mut(&mut self, index: usize) -> DomainResult<&mut Issue> {
-        self.entities.get_mut(index)
-            .and_then(|x|Some(x.deref_mut()))
-            .ok_or(DomainError::IndexOutOfRange(index))
-    }
-
-    /// Move an issue from one state to another
-    pub fn move_issue(&mut self, index: usize, new_state: State) -> DomainResult<()> {
-        let state = self.get_issue_mut(index)?.state_mut();
-
-        if *state == new_state {
-            return Ok(());
-        }
-
-        *state = new_state;
-
-        Ok(())
-    }
-
-
     /// Changes the priority (order) of the issues, so that it becomes the most priority in
     /// its category (amongst issues with similar state).
     /// Returns the new position of the issue
@@ -295,9 +269,10 @@ mod tests {
         let board = given_board_with_2_tasks();
         let indices = given_indices_within_bounds();
 
-        let result = board.validate_indices(&indices);
+        let result = board.find_entities_by_indices(&indices);
 
         assert!(result.is_good(), "Expected validation to be good");
+        // TODO: assert ids
     }
 
     fn given_board_with_2_tasks() -> Board<Issue> {
@@ -326,7 +301,7 @@ mod tests {
         let board = given_board_with_2_tasks();
         let indices = given_some_indices_are_out_of_range();
 
-        let validated = board.validate_indices(&indices);
+        let validated = board.find_entities_by_indices(&indices);
 
 
         assert!(validated.is_fail(), "Expected validation to fail");
@@ -341,16 +316,17 @@ mod tests {
         let board = given_board_with_2_tasks();
         let indices = given_no_indices();
 
-        let validated = board.validate_indices(&indices);
+        let validated = board.find_entities_by_indices(&indices);
 
         assert!(validated.is_good(), "Expected validated indices to be good");
+        // TODO: validate ids
     }
 
     #[test]
     fn test_verify_indices_empty_board() {
         let board = given_empty_board();
         let indices = given_some_indices_are_out_of_range();
-        let validated = board.validate_indices(&indices);
+        let validated = board.find_entities_by_indices(&indices);
 
         assert!(validated.is_fail(), "Expected validation of indices to fail");
         let Fail(errors) = validated else { panic!() };

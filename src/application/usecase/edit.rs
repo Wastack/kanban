@@ -17,20 +17,21 @@ impl<I: IssueStorage, P: Presenter, E: Editor> EditUseCase<I, P, E> {
     pub(crate) fn execute(&mut self, index: usize) -> DomainResult<()> {
         let mut board = self.storage.load();
 
-        let issue =(board
-            .get_by_index(index)
+        let id = board.find_entity_id_by_index(index)
             .inspect_err(|e| {
                 self.presenter.render_error(&e);
-            }))?;
+            })?;
 
-        let original_description = String::from(issue.description.as_str());
+        let entitiy = board.get(id);
+
+        let original_description = String::from(entitiy.description.as_str());
 
         let edited_description = self.editor
-            .open_editor_with( issue.description().as_str())
+            .open_editor_with( entitiy.description().as_str())
             .map_err(|e|DomainError::from(e))
             .inspect_err(|e| self.presenter.render_error(e))?;
 
-        let issue = board.get_issue_mut(index)?;
+        let mut issue = board.get_mut(id);
         issue.description_mut().set(&edited_description);
 
         board.history_mut().push(UndoableHistoryElement::Edit(
@@ -38,8 +39,6 @@ impl<I: IssueStorage, P: Presenter, E: Editor> EditUseCase<I, P, E> {
                 original_description,
             }
         ));
-
-
 
         self.storage.save(&board);
         self.presenter.render_board(&board);
