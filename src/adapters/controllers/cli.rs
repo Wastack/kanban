@@ -64,7 +64,6 @@ pub(crate) enum PrioCommand {
 
 
 impl FromStr for PrioCommand {
-    // TODO proper error handling?
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -73,6 +72,7 @@ impl FromStr for PrioCommand {
             "bottom" => Ok(PrioCommand::Bottom),
             "up" => Ok(PrioCommand::Up),
             "down" => Ok(PrioCommand::Down),
+            // This error message is presented by clap directly
             _ => Err(String::from("unknown priority command"))
         }
     }
@@ -80,7 +80,6 @@ impl FromStr for PrioCommand {
 
 
 impl FromStr for State {
-    // TODO proper error handling?
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -88,6 +87,7 @@ impl FromStr for State {
                "open" => Ok(State::Open),
                "review" => Ok(State::Review),
                "done" => Ok(State::Done),
+                // This error message is presented by clap directly
                _ => Err(String::from("unknown state")),
         }
     }
