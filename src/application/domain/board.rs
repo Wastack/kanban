@@ -1,6 +1,5 @@
 use std::collections::{HashMap};
 use std::hash::Hash;
-use std::ops::{DerefMut};
 use nonempty_collections::{NEVec};
 use crate::application::issue::{Entity, Issue, Stateful};
 use validated::Validated;

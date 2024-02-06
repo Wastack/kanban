@@ -45,6 +45,13 @@ impl<T: CurrentTimeProvider> Presenter for TabularTextRenderer<T> {
 
 impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
     fn format_board(&self, board: &Board<Issue>) -> String {
+        self.build_formatted_text_chunks(board)
+            .into_iter()
+            .map(|t| t.to_string())
+            .join("\n")
+    }
+
+    fn build_formatted_text_chunks<'a>(&'a self, board: &'a Board<Issue>) -> impl Iterator<Item = MaybeFormattedString> + 'a  {
         let mut issues = board.issues_with_state();
 
         let mut done_issues_truncated = false;
@@ -59,17 +66,18 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
 
         let current_time = self.time_provider.now();
 
-        let maybe_formatted_text_chunks = vec![
+        vec![
             State::Open,
             State::Review,
             State::Done,
         ]
             .into_iter()
-            .map(|tab|
+            .map(move |tab| {
+                let current_time = current_time; // capture to force closure to be FnOnce
                 vec![
                     // Header
                     Formatted(state_to_text(&tab).bold()),
-                    ].into_iter().chain(
+                ].into_iter().chain(
                     // Display the issues
                     issues
                         // State by state
@@ -78,7 +86,7 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
                         .into_iter()
 
                         // make it to a string with display category (e.g. overdue)
-                        .map(|IssueRef { issue, order }|
+                        .map(move |IssueRef { issue, order }|
                             {
                                 (
                                     format!("{}: {}", order, issue.description),
@@ -105,15 +113,12 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
                             }
                         )
                     )
-                )).flatten();
-
-        maybe_formatted_text_chunks
-            .into_iter()
-            .map(|t| t.to_string())
-            .join("\n")
+                )
+            }).flatten()
     }
 }
 
+// TODO: should this be a method of something?
 fn state_to_text(state: &State) -> &'static str {
     match state {
         State::Open => "Open",
