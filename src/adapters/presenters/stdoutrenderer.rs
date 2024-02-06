@@ -1,15 +1,31 @@
 use crate::application::board::{Board, BoardStateView, IssueRef};
 use crate::application::issue::{Described, State};
 use crate::application::ports::presenter::Presenter;
-use colored::Colorize;
+use colored::{ColoredString, Colorize};
+use crate::adapters::presenters::stdoutrenderer::MaybeFormattedString::{Formatted, NonFormatted};
 use crate::application::domain::error::DomainError;
 use crate::application::domain::issue::IssueCategory;
 use crate::application::Issue;
 use crate::application::ports::time::CurrentTimeProvider;
+use itertools::Itertools;
 
 #[derive(Default)]
 pub(crate) struct TabularTextRenderer<T: CurrentTimeProvider> {
     time_provider: T,
+}
+
+enum MaybeFormattedString {
+    NonFormatted(String),
+    Formatted(ColoredString)
+}
+
+impl MaybeFormattedString {
+    fn to_string(self) -> String {
+        match self {
+            NonFormatted(t) => t,
+            Formatted(t) => t.to_string(),
+        }
+    }
 }
 
 
@@ -43,7 +59,7 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
 
         let current_time = self.time_provider.now();
 
-        let result = vec![
+        let maybe_formatted_text_chunks = vec![
             State::Open,
             State::Review,
             State::Done,
@@ -52,8 +68,8 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
             .map(|tab|
                 vec![
                     // Header
-                    state_to_text(&tab).bold().to_string(),
-
+                    Formatted(state_to_text(&tab).bold()),
+                    ].into_iter().chain(
                     // Display the issues
                     issues
                         // State by state
@@ -74,25 +90,27 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
                         // apply display category
                         .map(|(text, category)|
                             match category {
-                                IssueCategory::Overdue => text.red().to_string(),
-                                IssueCategory::Normal => text,
+                                IssueCategory::Overdue => Formatted(text.red()),
+                                IssueCategory::Normal => NonFormatted(text),
                             }
                         )
 
-                        .collect::<Vec<String>>()
-                        .join("\n"),
+                ).chain(
+                    std::iter::once(
+                        NonFormatted(
+                            if tab == State::Done && done_issues_truncated {
+                                String::from("...")
+                            } else {
+                                String::default()
+                            }
+                        )
+                    )
+                )).flatten();
 
-                    // If there are non-visible done issue, indicate it with a ...
-                    if tab == State::Done && done_issues_truncated {
-                        String::from("...")
-                    } else {
-                        String::default()
-                    }
-                ].join("\n")
-            )
-            .collect::<Vec<String>>()
-            .join("\n");
-        result
+        maybe_formatted_text_chunks
+            .into_iter()
+            .map(|t| t.to_string())
+            .join("\n")
     }
 }
 
@@ -114,6 +132,7 @@ mod test {
     use crate::application::issue::Description;
 
     // TODO: bold text is not tested, as a response to IssueCategory: Overdue
+    // The crate: https://docs.rs/cansi/latest/cansi/ deconstruct text with metadata around the coloring.
 
     #[test]
     fn test_format_typical_board() {
