@@ -142,6 +142,14 @@ mod test {
     use crate::adapters::presenters::stdoutrenderer::MaybeFormattedString::{Formatted, NonFormatted};
 
     #[test]
+    fn test_format_empty_board() {
+        let formatted_board = TabularTextRenderer::<FakeTimeProvider>::default()
+            .format_board(&Board::default());
+
+        check!(formatted_board == "Open\n\nReview\n\nDone\n");
+    }
+
+    #[test]
     fn test_format_typical_board() {
         let board = given_board();
 
@@ -195,6 +203,7 @@ Done
 
     fn given_board() -> Board<Issue> {
         let board = (0..5).into_iter()
+            // Let's give it some additional done issues, so that we can test that `...` appears at the end
             .fold(Board::default().with_4_typical_issues(), |board, n| board.with_issue(
                 Issue {
                     description: Description::from(format!("Done issue number {}", n).deref()),
