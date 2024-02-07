@@ -14,6 +14,8 @@ pub(crate) struct TabularTextRenderer<T: CurrentTimeProvider> {
     time_provider: T,
 }
 
+#[derive(Debug)]
+#[derive(PartialEq)]
 enum MaybeFormattedString {
     NonFormatted(String),
     Formatted(ColoredString)
@@ -131,26 +133,17 @@ fn state_to_text(state: &State) -> &'static str {
 #[cfg(test)]
 mod test {
     use std::ops::Deref;
-    use crate::adapters::presenters::stdoutrenderer::TabularTextRenderer;
+    use crate::adapters::presenters::stdoutrenderer::{TabularTextRenderer};
     use crate::adapters::time_providers::fake::FakeTimeProvider;
     use crate::application::{Board, Issue, State};
     use crate::application::issue::Description;
-
-    // TODO: bold text is not tested, as a response to IssueCategory: Overdue
-    // The crate: https://docs.rs/cansi/latest/cansi/ deconstruct text with metadata around the coloring.
+    use assert2::{check};
+    use colored::{Colorize};
+    use crate::adapters::presenters::stdoutrenderer::MaybeFormattedString::{Formatted, NonFormatted};
 
     #[test]
     fn test_format_typical_board() {
-        // Given a board with some additional done issues
-        let board = (0..5).into_iter()
-            .fold(Board::default().with_4_typical_issues(), | board, n| board.with_issue(
-                Issue {
-                    description: Description::from(format!("Done issue number {}", n).deref()),
-                    state: State::Done,
-                    time_created: 0,
-                }
-
-            ));
+        let board = given_board();
 
         // When
         let formatted_board = TabularTextRenderer::<FakeTimeProvider>::default().format_board(&board);
@@ -170,4 +163,46 @@ Done
 3: Done issue number 1
 ..."#);
     }
+
+    #[test]
+    fn test_formatted_text_chunks() {
+        let board = given_board();
+        let text_renderer = TabularTextRenderer::<FakeTimeProvider>::default();
+
+        let mut formatted_chunks = text_renderer.build_formatted_text_chunks(&board);
+
+        [
+            Formatted("Open".bold()),
+            NonFormatted(String::from("5: Task inserted fourth")),
+            Formatted("8: Task inserted first".red()),
+            NonFormatted(String::default()), // new line
+            Formatted("Review".bold()),
+            NonFormatted(String::from("7: Task inserted second")),
+            NonFormatted(String::default()),
+            Formatted("Done".bold()),
+            NonFormatted(String::from("0: Done issue number 4")),
+            NonFormatted(String::from("1: Done issue number 3")),
+            NonFormatted(String::from("2: Done issue number 2")),
+            NonFormatted(String::from("3: Done issue number 1")),
+            NonFormatted(String::from("...")),
+        ].into_iter().for_each(|expected| {
+            let chunk = formatted_chunks.next().expect("Expected more chunks of formatted output");
+            check!(chunk == expected);
+        });
+
+        check!(formatted_chunks.next() == None, "Expected not to have any more formatted output");
+    }
+
+    fn given_board() -> Board<Issue> {
+        let board = (0..5).into_iter()
+            .fold(Board::default().with_4_typical_issues(), |board, n| board.with_issue(
+                Issue {
+                    description: Description::from(format!("Done issue number {}", n).deref()),
+                    state: State::Done,
+                    time_created: 0,
+                }
+            ));
+        board
+    }
+
 }

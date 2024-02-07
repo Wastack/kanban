@@ -5,6 +5,7 @@ pub(crate) mod tests {
     use crate::application::{Board, Issue};
     use crate::application::issue::{Description};
     use crate::{State};
+    use crate::adapters::time_providers::fake::DEFAULT_FAKE_TIME;
 
     impl Board<Issue> {
         pub(crate) fn assert_issue_count(&self, num: usize) -> &Self {
@@ -81,7 +82,7 @@ pub(crate) mod tests {
             Issue {
                 description: Description::from("Task inserted fourth"),
                 state: State::Open,
-                time_created: 1698397492,
+                time_created: DEFAULT_FAKE_TIME,
             },
         ]
     }
