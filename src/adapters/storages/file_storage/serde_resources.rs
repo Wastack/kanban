@@ -166,12 +166,14 @@ impl Into<PrioHistoryElement> for StoredPrioHistoryElement {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct StoredEditHistoryElement {
     pub original_description: String,
+    pub index: usize ,
 }
 
 impl From<&EditHistoryElement> for StoredEditHistoryElement {
     fn from(value: &EditHistoryElement) -> Self {
         Self {
             original_description: value.original_description.clone(),
+            index: value.index,
         }
     }
 }
@@ -180,6 +182,7 @@ impl Into<EditHistoryElement> for StoredEditHistoryElement {
     fn into(self) -> EditHistoryElement {
         EditHistoryElement {
             original_description: self.original_description.clone(),
+            index: self.index,
         }
     }
 }

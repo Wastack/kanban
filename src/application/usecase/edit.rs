@@ -37,6 +37,7 @@ impl<I: IssueStorage, P: Presenter, E: Editor> EditUseCase<I, P, E> {
         board.history_mut().push(UndoableHistoryElement::Edit(
             EditHistoryElement {
                 original_description,
+                index,
             }
         ));
 

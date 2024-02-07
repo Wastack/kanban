@@ -78,7 +78,11 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
                 let current_time = current_time; // capture to force closure to be FnOnce
                 vec![
                     // Header
-                    Formatted(state_to_text(&tab).bold()),
+                    Formatted((match &tab {
+                        State::Open => "Open",
+                        State::Review => "Review",
+                        State::Done => "Done",
+                    }).bold()),
                 ].into_iter().chain(
                     // Display the issues
                     issues
@@ -117,15 +121,6 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
                     )
                 )
             }).flatten()
-    }
-}
-
-// TODO: should this be a method of something?
-fn state_to_text(state: &State) -> &'static str {
-    match state {
-        State::Open => "Open",
-        State::Review => "Review",
-        State::Done => "Done",
     }
 }
 

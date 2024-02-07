@@ -58,10 +58,11 @@ impl FileStorage {
 mod tests {
     use std::env::current_dir;
     use std::ops::Deref;
+    use assert2::check;
     use crate::application::{Board, Issue, State};
     use crate::IssueStorage;
     use crate::adapters::storages::file_storage::FileStorage;
-    use crate::application::domain::history::{History, UndoableHistoryElement};
+    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, History, UndoableHistoryElement};
     use crate::application::issue::Description;
 
     #[test]
@@ -72,9 +73,9 @@ mod tests {
 
         let board = storage.load();
         // Then
-        assert_eq!(board.issues_count(), 2, "Expected board to have two issues");
-        assert_eq!(board.get_deleted_entities().len(), 2, "Expected board to have 2 deleted issues");
-        assert_eq!(board.history().len(), 2, "Expected board to have a history of 2 items");
+        check!(board.issues_count() == 2, "Expected board to have two issues");
+        check!(board.get_deleted_entities().len() == 2, "Expected board to have 2 deleted issues");
+        check!(board.history().len() == 6, "Expected board to have a specific number of history elements");
         [
             Issue {
                 description: Description::from("Get a coffee"),
@@ -91,10 +92,22 @@ mod tests {
         });
         // TODO: add more sophisticated history elements to test
         let expected_history = History::default()
+            .with_element(UndoableHistoryElement::Edit(EditHistoryElement{
+                original_description: String::from("Don't get a coffee"),
+                index: 0,
+            }))
+            .with_element(UndoableHistoryElement::Delete(DeleteHistoryElements{
+                deletions: vec![
+                    DeleteHistoryElement{ original_position_in_issues: 2 },
+                    DeleteHistoryElement{ original_position_in_issues: 3 },
+                ],
+            }))
+            .with_element(UndoableHistoryElement::Add)
+            .with_element(UndoableHistoryElement::Add)
             .with_element(UndoableHistoryElement::Add)
             .with_element(UndoableHistoryElement::Add);
 
-        assert_eq!(board.history(), &expected_history, "Expected specific history");
+        check!(board.history() == &expected_history, "Expected specific history");
     }
 
     #[test]

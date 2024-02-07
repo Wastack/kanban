@@ -48,6 +48,7 @@ pub struct PrioHistoryElement {
 #[derive(Clone, Debug, PartialEq)]
 pub struct EditHistoryElement {
     pub original_description: String,
+    pub index: usize,
 }
 
 #[derive(Clone, Debug, PartialEq)]
