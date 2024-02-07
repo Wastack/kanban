@@ -81,7 +81,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                         |e| DomainError::InvalidBoard(e.to_string())
                     )?;
 
-                    let mut entity = board.get_mut(id);
+                    let entity = board.get_mut(id);
                     entity.state = h.original_state;
                 }
             },
@@ -105,7 +105,7 @@ pub(crate) mod tests {
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
-    use crate::application::issue::{Described, Description};
+    use crate::application::issue::{Description};
     use crate::application::usecase::undo::UndoUseCase;
 
     #[test]

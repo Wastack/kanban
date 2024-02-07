@@ -3,7 +3,6 @@ use crate::application::ports::presenter::Presenter;
 use crate::{Editor};
 use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::domain::history::{EditHistoryElement, UndoableHistoryElement};
-use crate::application::domain::issue::Described;
 
 
 #[derive(Default)]
@@ -31,7 +30,7 @@ impl<I: IssueStorage, P: Presenter, E: Editor> EditUseCase<I, P, E> {
             .map_err(|e|DomainError::from(e))
             .inspect_err(|e| self.presenter.render_error(e))?;
 
-        let mut issue = board.get_mut(id);
+        let issue = board.get_mut(id);
         issue.description.set(&edited_description);
 
         board.history.push(UndoableHistoryElement::Edit(

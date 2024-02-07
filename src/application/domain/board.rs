@@ -1,7 +1,7 @@
 use std::collections::{HashMap};
 use std::hash::Hash;
 use nonempty_collections::{NEVec};
-use crate::application::issue::{Entity, Issue, Stateful};
+use crate::application::issue::{Entity, Issue};
 use validated::Validated;
 use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::issue::State;

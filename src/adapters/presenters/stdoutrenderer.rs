@@ -1,5 +1,5 @@
 use crate::application::board::{Board, BoardStateView, IssueRef};
-use crate::application::issue::{Described, State};
+use crate::application::issue::{State};
 use crate::application::ports::presenter::Presenter;
 use colored::{ColoredString, Colorize};
 use crate::adapters::presenters::stdoutrenderer::MaybeFormattedString::{Formatted, NonFormatted};

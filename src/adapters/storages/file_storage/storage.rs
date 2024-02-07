@@ -1,12 +1,9 @@
 use std::fs;
 use std::io::Write;
-use std::ops::Deref;
 use std::path::PathBuf;
 use home::home_dir;
-use serde::{Deserialize, Serialize};
 use crate::adapters::storages::file_storage::serde_resources::StoredBoard;
 use crate::application::{Board, Issue};
-use crate::application::issue::Described;
 use crate::IssueStorage;
 
 pub struct FileStorage {

@@ -2,7 +2,6 @@ use validated::Validated;
 use validated::Validated::Fail;
 use crate::application::domain::error::DomainError;
 use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
-use crate::application::issue::Stateful;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::State;

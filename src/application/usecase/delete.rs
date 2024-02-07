@@ -49,7 +49,7 @@ mod tests {
     use validated::Validated;
     use validated::Validated::Fail;
     use crate::application::{Board, Issue};
-    use crate::application::issue::{Described, Description};
+    use crate::application::issue::{Description};
     use crate::{DeleteUseCase, IssueStorage};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
