@@ -113,9 +113,8 @@ mod tests {
     }
 
     fn then_stored_issue_of_the(board: &Board<Issue>) -> Entity<Issue> {
-        let issue = board.get_by_index(2);
-        assert!(issue.is_ok());
-        issue.unwrap().clone()
+        let issue = board.get(board.find_entity_id_by_index(2).unwrap());
+        issue.clone()
     }
 
     impl Issue {

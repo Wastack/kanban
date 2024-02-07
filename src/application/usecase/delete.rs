@@ -128,7 +128,7 @@ mod tests {
         fn assert_third_issue_is_the_only_one_left(&self) -> &Self {
             assert_eq!(self.issues_count(), 1, "Expected to contain only 1 issue after deletion");
 
-            let remaining_issue = self.get_by_index(0).expect("Expected to have an issue with index 0");
+            let remaining_issue = self.get(self.find_entity_id_by_index(0).expect("Expected to have an issue with index 0"));
             assert_eq!(remaining_issue.description, Description::from("Task inserted second"), "Expected the third task to remain with index 0");
 
             self

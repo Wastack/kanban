@@ -226,7 +226,7 @@ mod tests {
     fn then_issue_with_index(index: usize, sut: &MoveUseCase<MemoryIssueStorage, NilPresenter>) -> Entity<Issue> {
         let board = sut.storage.load();
 
-        board.get_by_index(index).unwrap().clone()
+        board.get(board.find_entity_id_by_index(index).unwrap()).clone()
     }
 
     impl History {

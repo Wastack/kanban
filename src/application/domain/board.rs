@@ -82,11 +82,6 @@ impl<T: Hash> Board<T> {
         Validated::Good(indices.iter().map(|&order| self.entities[order].id).collect())
     }
 
-    pub fn get_by_index(&self, index: usize) -> DomainResult<&Entity<T>> {
-        /// TODO: this method should go away
-        self.entities.get(index).ok_or(DomainError::IndexOutOfRange(index))
-    }
-
     /// Returns the number of (not deleted) issues in Board
     pub fn issues_count(&self) -> usize {
         self.entities.len()

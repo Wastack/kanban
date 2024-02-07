@@ -70,7 +70,7 @@ mod tests {
 
     impl Board<Issue> {
         fn assert_first_issue_content(&self) -> &Self {
-            let issue = self.get_by_index(0).unwrap();
+            let issue = self.get(self.find_entity_id_by_index(0).unwrap());
             assert_eq!(issue.description, Description::from("New task"), "Expected specific description of added issue");
             assert_eq!(issue.state, State::Review, "Expected specific state of added issue");
             assert_eq!(issue.time_created, DEFAULT_FAKE_TIME, "Expected creation time to have been set");

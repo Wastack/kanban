@@ -55,6 +55,7 @@ pub struct Entity<T: Hash> {
 
 impl<T: Hash> From<T> for Entity<T> {
     fn from(value: T) -> Self {
+        // todo: instead of hashing, uuid?
         let mut s = DefaultHasher::new();
         value.hash(&mut s);
         let id = s.finish();

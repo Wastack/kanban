@@ -374,7 +374,7 @@ pub(crate) mod tests {
         }
 
         fn has_additional_issue_added_with_state_open(&self) -> &Self {
-            let issue = self.get_by_index(0).expect("Expected to have an issue");
+            let issue = self.get(self.find_entity_id_by_index(0).expect("Expected to have an issue"));
             assert_eq!(issue.description, Description::from("Additional Issue"), "Expected Additional Issue in first place");
             assert_eq!(issue.state, State::Open, "Expected issue to be in Open state");
 
