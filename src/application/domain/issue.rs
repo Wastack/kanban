@@ -2,6 +2,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
+use crate::application::board::Historized;
+use crate::application::domain::history::UndoableHistoryElement;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum State {
@@ -51,6 +53,10 @@ pub struct Entity<T: Hash> {
     /// Uniquely identifies an `Entity` in a `Board`
     pub(crate) id: u64,
     pub(crate) entity: T,
+}
+
+impl Historized for Issue {
+    type HistoryType = UndoableHistoryElement;
 }
 
 impl<T: Hash> From<T> for Entity<T> {

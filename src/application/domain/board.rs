@@ -4,20 +4,23 @@ use nonempty_collections::{NEVec};
 use crate::application::issue::{Entity, Issue, Stateful};
 use validated::Validated;
 use crate::application::domain::error::{DomainError, DomainResult};
-use crate::application::domain::history::History;
 use crate::application::issue::State;
 
 
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Board<T: Hash> {
+pub struct Board<T: Hash + Historized> {
     pub(crate) entities: Vec<Entity<T>>,
     pub(crate) deleted_issues: Vec<Entity<T>>,
-    // TODO: as long as the `History` is not generic, Board is not independent of `Issue`
-    pub(crate) history: History,
+    pub(crate) history: Vec<T::HistoryType>,
 }
 
-impl<T: Hash> Default for Board<T> {
+/// Defines what is the type that is used to define history elements in the board.
+pub trait Historized {
+    type HistoryType;
+}
+
+impl<T: Hash + Historized> Default for Board<T> {
     // Because of the generic type, derive for `Default` didn't work
     fn default() -> Self {
         Self {
@@ -29,7 +32,7 @@ impl<T: Hash> Default for Board<T> {
 }
 
 
-impl<T: Hash> Board<T> {
+impl<T: Hash + Historized> Board<T> {
     pub(crate) fn entities(&self) -> &[Entity<T>] {
         &self.entities
     }
@@ -82,37 +85,8 @@ impl<T: Hash> Board<T> {
         Validated::Good(indices.iter().map(|&order| self.entities[order].id).collect())
     }
 
-    /// Returns the number of (not deleted) issues in Board
-    pub fn issues_count(&self) -> usize {
-        self.entities.len()
-    }
-
     pub fn contains(&self, index: usize) -> bool {
         self.entities.len() > index
-    }
-
-    /// Delete issues with the given indices, in the same order.
-    ///
-    /// Deleted issues are still accessible with `get_deleted_issues`.
-    /// Order of the deleted issues is relevant.
-    ///
-    /// If indices are [2, 0, 1], then the most recently deleted issue is with index `1`, because
-    /// it first deletes `2`, then `0` and then `1`.
-    /// TODO: this method should go away
-    pub fn delete_entities_by_indices(&mut self, indices: &[usize]) {
-        // Sort the indices in descending order,
-        // so that each removal does not affect the next index.
-        let mut sorted_descending_indices = indices.to_owned();
-        sorted_descending_indices.sort_unstable_by(|a, b| b.cmp(a));
-
-        let mut removed_entities: HashMap<usize, Entity<T>> = sorted_descending_indices
-            .into_iter()
-            .map(|index|(index, self.entities.remove(index)))
-            .collect();
-
-        for i in indices {
-            self.deleted_issues.insert(0, removed_entities.remove(i).unwrap());
-        }
     }
 
     /// Adds a new issue to the board to first priority
@@ -131,14 +105,6 @@ impl<T: Hash> Board<T> {
 
     pub fn get_deleted_entities_mut(&mut self) -> &mut Vec<Entity<T>> {
         &mut self.deleted_issues
-    }
-
-    pub fn history(&self) -> &History {
-        &self.history
-    }
-
-    pub fn history_mut(&mut self) -> &mut History {
-        &mut self.history
     }
 }
 
@@ -285,8 +251,8 @@ mod tests {
 
                 }.into(),
             ],
-            deleted_issues: Vec::default(),
-            history: History::default(),
+            deleted_issues: Default::default(),
+            history: Default::default(),
         }
     }
 

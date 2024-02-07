@@ -1,28 +1,5 @@
 use crate::State;
 
-#[derive(Debug, PartialEq, Clone, Default)]
-pub struct History {
-    pub(crate) elements: Vec<UndoableHistoryElement>,
-}
-
-impl History {
-    pub fn len(&self) -> usize {
-        self.elements.len()
-    }
-
-    pub fn push(&mut self, element: UndoableHistoryElement) {
-        self.elements.push(element);
-    }
-
-    pub fn peek(&self) -> Option<&UndoableHistoryElement> {
-        self.elements.last()
-    }
-
-    pub fn pop(&mut self) -> Option<UndoableHistoryElement> {
-        self.elements.pop()
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct MoveHistoryElements {
     pub moves: Vec<MoveHistoryElement>,
@@ -69,17 +46,4 @@ pub enum UndoableHistoryElement {
     Move(MoveHistoryElements),
     Prio(PrioHistoryElement),
     Edit(EditHistoryElement)
-}
-
-
-#[cfg(test)]
-pub(crate) mod test {
-    use crate::application::domain::history::{History, UndoableHistoryElement};
-
-    impl History {
-        pub(crate) fn with_element(mut self, e: UndoableHistoryElement) -> Self {
-            self.elements.push(e);
-            self
-        }
-    }
 }

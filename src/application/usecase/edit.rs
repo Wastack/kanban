@@ -34,7 +34,7 @@ impl<I: IssueStorage, P: Presenter, E: Editor> EditUseCase<I, P, E> {
         let mut issue = board.get_mut(id);
         issue.description.set(&edited_description);
 
-        board.history_mut().push(UndoableHistoryElement::Edit(
+        board.history.push(UndoableHistoryElement::Edit(
             EditHistoryElement {
                 original_description,
                 index,

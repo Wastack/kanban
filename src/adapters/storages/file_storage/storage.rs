@@ -62,7 +62,7 @@ mod tests {
     use crate::application::{Board, Issue, State};
     use crate::IssueStorage;
     use crate::adapters::storages::file_storage::FileStorage;
-    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, History, UndoableHistoryElement};
+    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
 
     #[test]
@@ -73,9 +73,9 @@ mod tests {
 
         let board = storage.load();
         // Then
-        check!(board.issues_count() == 2, "Expected board to have two issues");
+        check!(board.entities.len() == 2, "Expected board to have two issues");
         check!(board.get_deleted_entities().len() == 2, "Expected board to have 2 deleted issues");
-        check!(board.history().len() == 6, "Expected board to have a specific number of history elements");
+        check!(board.history.len() == 6, "Expected board to have a specific number of history elements");
         [
             Issue {
                 description: Description::from("Get a coffee"),
@@ -90,24 +90,25 @@ mod tests {
         ].into_iter().zip(board.entities().iter()).for_each(|(expected_issue, actual_issue)| {
             assert_eq!(actual_issue.deref(), &expected_issue, "Expected specific loaded issues")
         });
-        // TODO: add more sophisticated history elements to test
-        let expected_history = History::default()
-            .with_element(UndoableHistoryElement::Edit(EditHistoryElement{
+
+        let expected_history = vec![
+            UndoableHistoryElement::Edit(EditHistoryElement{
                 original_description: String::from("Don't get a coffee"),
                 index: 0,
-            }))
-            .with_element(UndoableHistoryElement::Delete(DeleteHistoryElements{
+            }),
+            UndoableHistoryElement::Delete(DeleteHistoryElements{
                 deletions: vec![
                     DeleteHistoryElement{ original_position_in_issues: 2 },
                     DeleteHistoryElement{ original_position_in_issues: 3 },
                 ],
-            }))
-            .with_element(UndoableHistoryElement::Add)
-            .with_element(UndoableHistoryElement::Add)
-            .with_element(UndoableHistoryElement::Add)
-            .with_element(UndoableHistoryElement::Add);
+            }),
+            UndoableHistoryElement::Add,
+            UndoableHistoryElement::Add,
+            UndoableHistoryElement::Add,
+            UndoableHistoryElement::Add,
+        ];
 
-        check!(board.history() == &expected_history, "Expected specific history");
+        check!(board.history == expected_history, "Expected specific history");
     }
 
     #[test]
@@ -124,11 +125,5 @@ mod tests {
         assert_eq!(board, Board::default());
     }
 
-
-    // TODO: validate dynamic aspects of Board after loading, like:
-    // - Whether undo entries are consistent with the rest of the board:
-    //   + undo add, but there is no issue in Board
-    //   + undo delete, but there is no history
-    //   + undo move, but there is no ticket in where the ticket was supposed to be moved
-    // ...
+    // todo: test save
 }

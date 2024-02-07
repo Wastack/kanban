@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use crate::application::{Board, Issue, State};
-use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, History, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
+use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
 use crate::application::issue::{Described, Description, Entity};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
@@ -14,7 +14,7 @@ pub struct StoredBoard {
     deleted_issues: Vec<StoredIssue>,
 
     #[serde(default)]
-    history: StoredHistory,
+    history: Vec<StoredUndoableHistoryElement>,
 }
 
 impl From<&Board<Issue>> for StoredBoard {
@@ -22,7 +22,7 @@ impl From<&Board<Issue>> for StoredBoard {
         Self {
             issues: b.entities().into_iter().map(|e| StoredIssue::from(e.deref())).collect(),
             deleted_issues: b.get_deleted_entities().into_iter().map(|e| StoredIssue::from(e.deref())).collect(),
-            history: b.history().into(),
+            history: b.history.iter().map(|x| x.into()).collect(),
         }
     }
 }
@@ -32,7 +32,7 @@ impl Into<Board<Issue>> for StoredBoard {
         Board {
             entities: self.issues.into_iter().map(|x| Entity::<Issue>::from(Into::<Issue>::into(x))).collect(),
             deleted_issues: self.deleted_issues.into_iter().map(|x| Entity::<Issue>::from(Into::<Issue>::into(x))).collect(),
-            history: self.history.into(),
+            history: self.history.into_iter().map(|x| x.into()).collect(),
         }
     }
 }
@@ -64,28 +64,6 @@ impl From<&Issue> for StoredIssue {
             description: issue.description.to_string(),
             state: issue.state.into(),
             time_created: issue.time_created,
-        }
-    }
-}
-
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
-pub struct StoredHistory {
-    elements: Vec<StoredUndoableHistoryElement>,
-}
-
-impl From<&History> for StoredHistory {
-    fn from(value: &History) -> Self {
-        Self {
-            elements: value.elements.iter().map(|x|x.into()).collect(),
-        }
-    }
-}
-
-impl Into<History> for StoredHistory {
-    fn into(self) -> History {
-        History {
-            elements: self.elements.into_iter().map(|x| x.into()).collect(),
         }
     }
 }

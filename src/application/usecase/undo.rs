@@ -12,10 +12,10 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
     pub(crate) fn execute(&mut self) -> DomainResult<()> {
         let mut board = self.storage.load();
 
-        let history = board.history();
+        let history = &board.history;
 
         let event_to_undo = history
-            .peek()
+            .last()
             .ok_or(DomainError::EmptyHistory)?;
 
         match event_to_undo {
@@ -87,7 +87,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
             },
         }
 
-        board.history_mut().pop();
+        board.history.pop();
 
         self.storage.save(&board);
         self.presenter.render_board(&board);
@@ -260,13 +260,13 @@ pub(crate) mod tests {
                     time_created: 0,
                 }
             );
-            self.history_mut().push(UndoableHistoryElement::Add);
+            self.history.push(UndoableHistoryElement::Add);
 
             self
         }
         fn with_an_issue_deleted(mut self) -> Self {
-            self.delete_entities_by_indices(&[2]);
-            self.history_mut().push(UndoableHistoryElement::Delete(
+            self.mark_as_deleted(self.find_entity_id_by_index(2).unwrap());
+            self.history.push(UndoableHistoryElement::Delete(
                 DeleteHistoryElements {
                     deletions: vec![
                         DeleteHistoryElement{
@@ -280,8 +280,12 @@ pub(crate) mod tests {
         }
 
         fn with_1_0_2_issues_deleted(mut self) -> Self {
-            self.delete_entities_by_indices(&[1, 0, 2]);
-            self.history_mut().push(UndoableHistoryElement::Delete(
+            self.find_entities_by_indices(&[1, 0, 2])
+                .unwrap()
+                .into_iter()
+                .for_each(|id| self.mark_as_deleted(id));
+
+            self.history.push(UndoableHistoryElement::Delete(
                 DeleteHistoryElements {
                     deletions: vec![
                         DeleteHistoryElement{
@@ -301,7 +305,7 @@ pub(crate) mod tests {
 
         fn with_1_moved_from_done_to_open(mut self) -> Self {
             self.get_mut(self.find_entity_id_by_index(1).unwrap()).state = State::Open;
-            self.history_mut().push(UndoableHistoryElement::Move(MoveHistoryElements{
+            self.history.push(UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![
                     MoveHistoryElement {
                         new_index: 1,
@@ -317,7 +321,7 @@ pub(crate) mod tests {
         fn with_most_priority_issue_moved_to_review(mut self) -> Self {
             self.get_mut(self.find_entity_id_by_index(0).unwrap()).state = State::Review;
 
-            self.history_mut().push(UndoableHistoryElement::Move(MoveHistoryElements{
+            self.history.push(UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![
                     MoveHistoryElement {
                         original_state: State::Open,
@@ -332,8 +336,8 @@ pub(crate) mod tests {
 
         fn with_inconsistent_delete_history(mut self) -> Self {
             // There is one less issue actually deleted compared to what history suggests
-            self.delete_entities_by_indices(&[1, 0]);
-            self.history_mut().push(UndoableHistoryElement::Delete(
+            [1, 0].into_iter().for_each(|i| self.mark_as_deleted(self.find_entity_id_by_index(i).unwrap()));
+            self.history.push(UndoableHistoryElement::Delete(
                 DeleteHistoryElements {
                     deletions: vec![
                         DeleteHistoryElement{
@@ -355,7 +359,7 @@ pub(crate) mod tests {
             // TODO too much logic in test
             self.get_mut(self.find_entity_id_by_index(2).unwrap()).state = State::Done;
             self.prio_top_in_category(2);
-            self.history_mut().push(UndoableHistoryElement::Move(MoveHistoryElements{
+            self.history.push(UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![
                     MoveHistoryElement{
                         original_index: 2,
@@ -369,7 +373,7 @@ pub(crate) mod tests {
         }
 
         fn has_original_history(&self) -> &Self {
-            assert!(self.history().peek().is_none(), "Expected history to be empty, got: {:?}", self.history());
+            assert!(self.history.last().is_none(), "Expected history to be empty, got: {:?}", self.history);
             self
         }
 
@@ -382,7 +386,7 @@ pub(crate) mod tests {
         }
 
         fn has_the_addition_in_history(&self) -> &Self {
-            assert_eq!(self.history().peek(), Some(&UndoableHistoryElement::Add), "Expected addition to be present in history as last event");
+            assert_eq!(self.history.last(), Some(&UndoableHistoryElement::Add), "Expected addition to be present in history as last event");
 
             self
         }

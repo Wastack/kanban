@@ -30,7 +30,7 @@ impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
             board.mark_as_deleted(id);
         }
 
-        board.history_mut().push(UndoableHistoryElement::Delete(
+        board.history.push(UndoableHistoryElement::Delete(
             DeleteHistoryElements {
                 deletions: indices.iter().map(|&i|DeleteHistoryElement {
                     original_position_in_issues: i,
@@ -126,7 +126,7 @@ mod tests {
 
     impl Board<Issue> {
         fn assert_third_issue_is_the_only_one_left(&self) -> &Self {
-            assert_eq!(self.issues_count(), 1, "Expected to contain only 1 issue after deletion");
+            assert_eq!(self.entities.len(), 1, "Expected to contain only 1 issue after deletion");
 
             let remaining_issue = self.get(self.find_entity_id_by_index(0).expect("Expected to have an issue with index 0"));
             assert_eq!(remaining_issue.description, Description::from("Task inserted second"), "Expected the third task to remain with index 0");

@@ -7,19 +7,18 @@ issues:
     state: done
     timeCreated: 1702298969
 history:
-  elements:
-    - Edit:
-        # TODO: here, there should be an index?
-        original_description: Don't get a coffee
-        index: 0
-    - Delete:
-        deletions:
-          - original_position_in_issues: 2
-          - original_position_in_issues: 3
-    - Add
-    - Add
-    - Add
-    - Add
+  - Edit:
+      # TODO: here, there should be an index?
+      original_description: Don't get a coffee
+      index: 0
+  - Delete:
+      deletions:
+        - original_position_in_issues: 2
+        - original_position_in_issues: 3
+  - Add
+  - Add
+  - Add
+  - Add
 deletedIssues:
   - description: deleted issue 1
     state: open

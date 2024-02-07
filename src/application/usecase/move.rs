@@ -25,8 +25,8 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
                     self.presenter.render_error(e);
                 }
 
-                return Fail(errors)
-            },
+                return Fail(errors);
+            }
         };
 
         // TODO there is a bug: if first move changes prio, second index might be invalid
@@ -45,7 +45,7 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
             issue.state = state;
 
             // TODO: it should be done by id directly
-            let current_index = board.entities.iter().position(|e|e.id == id).unwrap();
+            let current_index = board.entities.iter().position(|e| e.id == id).unwrap();
             // If issue is moved to done, I'd like to see it on the top
             let new_index = if state == State::Done {
                 board.prio_top_in_category(current_index)
@@ -61,7 +61,7 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
         }
 
         if !history_elements.is_empty() {
-            board.history_mut().push(UndoableHistoryElement::Move(MoveHistoryElements{
+            board.history.push(UndoableHistoryElement::Move(MoveHistoryElements {
                 moves: history_elements,
             }));
         }
@@ -82,7 +82,7 @@ mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::domain::error::{DomainError};
-    use crate::application::domain::history::{History, MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
+    use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
     use crate::application::issue::{Description, Entity};
 
     #[test]
@@ -101,9 +101,16 @@ mod tests {
 
         let stored_board = move_use_case.storage.load();
 
-        stored_board
-            .history()
-            .assert_contains_1_moving();
+        assert_eq!(stored_board.history.last().expect("Expected an entry in history"),
+                   &UndoableHistoryElement::Move(MoveHistoryElements {
+                       moves: vec![
+                           MoveHistoryElement {
+                               original_state: State::Open,
+                               original_index: 0,
+                               new_index: 0,
+                           },
+                       ]
+                   }), "Expected a history element with specific content");
 
         let presented_board = move_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
         assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
@@ -128,9 +135,16 @@ mod tests {
 
         let stored_board = move_use_case.storage.load();
 
-        stored_board
-            .history()
-            .assert_consist_of_1_move_with_index_changed();
+        assert_eq!(stored_board.history.last().expect("Expected element in history"),
+                   &UndoableHistoryElement::Move(MoveHistoryElements {
+                       moves: vec![
+                           MoveHistoryElement {
+                               original_state: State::Open,
+                               original_index: 3,
+                               new_index: 1,
+                           },
+                       ]
+                   }), "Expected a history element with specific content");
 
         let presented_board = move_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
         assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
@@ -163,10 +177,10 @@ mod tests {
         // Given
         let mut sut = given_move_use_case_with(
             Board::default()
-                .with_issue(Issue{ description: Description::from("I'm doing it now, B"), state: State::Open, time_created: 0, })
-                .with_issue(Issue{ description: Description::from("I'm doing it now, A"), state: State::Open, time_created: 0, })
-                .with_issue(Issue{ description: Description::from("Lazy to do"), state: State::Open, time_created: 0, })
-                .with_issue(Issue{ description: Description::from("I finished this first"), state: State::Done, time_created: 0, })
+                .with_issue(Issue { description: Description::from("I'm doing it now, B"), state: State::Open, time_created: 0 })
+                .with_issue(Issue { description: Description::from("I'm doing it now, A"), state: State::Open, time_created: 0 })
+                .with_issue(Issue { description: Description::from("Lazy to do"), state: State::Open, time_created: 0 })
+                .with_issue(Issue { description: Description::from("I finished this first"), state: State::Done, time_created: 0 })
         );
 
         // When
@@ -184,11 +198,10 @@ mod tests {
                 .assert_state_is(expected_state);
         });
 
-        let stored_board= sut.storage.load();
+        let stored_board = sut.storage.load();
         let presented_board = sut.presenter.last_board_rendered.expect("Expected a board to be presented");
         assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
     }
-
 
 
     #[test]
@@ -229,38 +242,6 @@ mod tests {
         board.get(board.find_entity_id_by_index(index).unwrap()).clone()
     }
 
-    impl History {
-        fn assert_contains_1_moving(&self) -> &Self {
-            assert!(self.len() >= 1, "Expected an entry in history");
-            assert_eq!(self.peek().unwrap(), &UndoableHistoryElement::Move(MoveHistoryElements{
-                moves: vec![
-                    MoveHistoryElement {
-                        original_state: State::Open,
-                        original_index: 0,
-                        new_index: 0,
-                    },
-                ]
-            }), "Expected a history element with specific content");
-
-            self
-        }
-
-        fn assert_consist_of_1_move_with_index_changed(&self) -> &Self {
-            assert!(self.len() >= 1, "Expected an entry in history");
-            assert_eq!(self.peek().unwrap(), &UndoableHistoryElement::Move(MoveHistoryElements{
-                moves: vec![
-                    MoveHistoryElement {
-                        original_state: State::Open,
-                        original_index: 3,
-                        new_index: 1,
-                    },
-                ]
-            }), "Expected a history element with specific content");
-
-            self
-        }
-    }
-
     fn then_moving(result: &Validated<(), DomainError>) -> MovingResult {
         MovingResult {
             result,
@@ -268,7 +249,7 @@ mod tests {
     }
 
     struct MovingResult<'a> {
-        result: &'a Validated<(), DomainError>
+        result: &'a Validated<(), DomainError>,
     }
 
     impl MovingResult<'_> {
@@ -298,5 +279,4 @@ mod tests {
             self
         }
     }
-
 }
