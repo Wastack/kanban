@@ -35,7 +35,7 @@ impl IssueStorage for FileStorage {
     }
 
     fn save(&mut self, board: &Board<Issue>) {
-        let content = Self::board_to_string(board);
+        let content = Self::board_to_yaml(board);
 
         let mut file = fs::File::create(&self.source).expect("cannot open file to write board");
         file.write_all(content.as_bytes()).expect("cannot write to file");
@@ -43,7 +43,7 @@ impl IssueStorage for FileStorage {
 }
 
 impl FileStorage {
-    fn board_to_string(board: &Board<Issue>) -> String {
+    fn board_to_yaml(board: &Board<Issue>) -> String {
         let storable_board = StoredBoard::from(board);
         let content = serde_yaml::to_string(&storable_board)
             .expect("Internal error: cannot serialize board");
@@ -122,5 +122,27 @@ mod tests {
         assert_eq!(board, Board::default());
     }
 
-    // todo: test save
+    #[test]
+    fn test_typical_board_to_storage_yaml() {
+        let board = Board::default().with_4_typical_issues();
+        let formatted_output  = FileStorage::board_to_yaml(&board);
+
+        assert_eq!(formatted_output,r#"---
+issues:
+  - description: Task inserted fourth
+    state: open
+    timeCreated: 1706727855
+  - description: Task inserted third
+    state: done
+    timeCreated: 1698397491
+  - description: Task inserted second
+    state: review
+    timeCreated: 1698397490
+  - description: Task inserted first
+    state: open
+    timeCreated: 1698397489
+deletedIssues: []
+history: []
+"#);
+    }
 }

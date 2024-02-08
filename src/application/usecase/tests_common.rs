@@ -7,6 +7,8 @@ pub(crate) mod tests {
     use crate::{State};
     use crate::adapters::time_providers::fake::DEFAULT_FAKE_TIME;
 
+    // TODO: move this to a more appropriate place. It's not only a concern for use-cases, but also used for adapters.
+
     impl Board<Issue> {
         pub(crate) fn assert_issue_count(&self, num: usize) -> &Self {
             assert_eq!(self.entities.len(), num, "Expected board to have {} issues", num);
