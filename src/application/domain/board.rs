@@ -307,8 +307,8 @@ mod tests {
 
         let validated = board.find_entities_by_indices(&indices);
 
-        assert!(validated.is_good(), "Expected validated indices to be good");
-        // TODO: validate ids
+        let_assert!(Good(ids) = validated, "Expected validated indices to be good");
+        check!(ids == [] as [u64; 0]);
     }
 
     #[test]
