@@ -248,7 +248,8 @@ pub trait BoardStateView {
 
 #[cfg(test)]
 mod tests {
-    use validated::Validated::Fail;
+    use assert2::{check, let_assert};
+    use validated::Validated::{Fail, Good};
     use crate::application::issue::Description;
     use super::*;
 
@@ -259,8 +260,8 @@ mod tests {
 
         let result = board.find_entities_by_indices(&indices);
 
-        assert!(result.is_good(), "Expected validation to be good");
-        // TODO: assert ids
+        let_assert!(Good(ids) = result, "Expected validation to succeed");
+        check!(ids == [4169611935799584098, 10033970510661967047]);
     }
 
     fn given_board_with_2_tasks() -> Board<Issue> {

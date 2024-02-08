@@ -31,7 +31,7 @@ impl<I: IssueStorage, P: Presenter, T: CurrentTimeProvider> AddUseCase<I, P, T> 
 
 #[cfg(test)]
 mod tests {
-    use assert2::{check, let_assert};
+    use assert2::{let_assert};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::{AddUseCase, IssueStorage, State};
