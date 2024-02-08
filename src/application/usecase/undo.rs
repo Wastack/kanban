@@ -356,8 +356,9 @@ pub(crate) mod tests {
 
         fn with_issue_moved_to_done(mut self) -> Self {
             // TODO too much logic in test
-            self.get_mut(self.find_entity_id_by_index(2).unwrap()).state = State::Done;
-            self.prio_top_in_category(2);
+            let id = self.find_entity_id_by_index(2).unwrap();
+            self.get_mut(id).state = State::Done;
+            self.prio_top_in_category(id);
             self.push_to_history(UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![
                     MoveHistoryElement{

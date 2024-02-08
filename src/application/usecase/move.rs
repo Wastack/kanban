@@ -43,11 +43,10 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
 
             issue.state = state;
 
-            // TODO: it should be done by id directly
             let current_index = board.entities().iter().position(|e| e.id == id).unwrap();
             // If issue is moved to done, I'd like to see it on the top
             let new_index = if state == State::Done {
-                board.prio_top_in_category(current_index)
+                board.prio_top_in_category(id)
             } else {
                 current_index
             };

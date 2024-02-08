@@ -14,14 +14,14 @@ impl<I: IssueStorage, P: Presenter> PrioUseCase<I, P> {
     pub(crate) fn execute(&mut self, index: usize, command: PrioCommand) -> DomainResult<()> {
         let mut board = self.storage.load();
 
-        let _id = board.find_entity_id_by_index(index)
+        let id = board.find_entity_id_by_index(index)
             .inspect_err(|e| self.presenter.render_error(e))?;
 
-        // todo: use id instead of index
-        // TODO move back here storing stuff from domain?
         match command {
-            PrioCommand::Top => { board.prio_top_in_category(index); },
-            PrioCommand::Bottom => board.prio_bottom_in_category(index),
+            PrioCommand::Top => { board.prio_top_in_category(id); },
+            PrioCommand::Bottom => board.prio_bottom_in_category(id),
+            // todo: use id instead of index
+            // TODO move back here storing stuff from domain?
             PrioCommand::Up => board.prio_up_in_category(index),
             PrioCommand::Down => board.prio_down_in_category(index),
         }

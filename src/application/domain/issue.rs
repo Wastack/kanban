@@ -50,8 +50,11 @@ impl Historized for Issue {
 }
 
 impl<T: Hash> From<T> for Entity<T> {
+    /// This conversion will generate the `id` of the `Entity` by hashing all the fields of the candidate `Entity`.
+    /// This will only be unique if all the fields in the candidate makes the candidate unique.
+    /// For example, for `Issue`, it is true as long as you don't spawn multiple issues at the same time,
+    /// with the same text...
     fn from(value: T) -> Self {
-        // todo: instead of hashing, uuid?
         let mut s = DefaultHasher::new();
         value.hash(&mut s);
         let id = s.finish();

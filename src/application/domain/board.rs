@@ -140,30 +140,29 @@ impl Board<Issue> {
     /// Changes the priority (order) of the issues, so that it becomes the most priority in
     /// its category (amongst issues with similar state).
     /// Returns the new position of the issue
-    pub fn prio_top_in_category(&mut self, index: usize) -> usize {
-        let state = self.entities[index].state;
+    pub fn prio_top_in_category(&mut self, id: u64) -> usize {
+        let state = self.get(id).state;
         let most_prio_position = self.entities
             .iter()
             .position(|i|i.state == state)
             .unwrap();
 
-        let issue = self.entities.remove(index);
-        self.entities.insert(most_prio_position, issue);
+        let issue = self.remove(id);
+        self.insert(most_prio_position, issue);
 
         most_prio_position
     }
 
     /// Changes the priority (order) of the issues, so that it becomes the least priority in
     /// its category (amongst issues with similar state)
-    pub fn prio_bottom_in_category(&mut self, index: usize) {
-        let state = self.entities[index].state;
+    pub fn prio_bottom_in_category(&mut self, id: u64) {
+        let state = self.get(id).state;
         let least_prio_position = self.entities
             .iter()
             .rposition(|i|i.state == state)
             .unwrap();
 
-        let issue = self.entities.remove(index);
-        // the previous remove modified the positions, thus no +1 needed
+        let issue = self.remove(id);
         self.entities.insert(least_prio_position, issue);
     }
 
@@ -322,6 +321,17 @@ mod tests {
         assert_eq!(errors.len(), 4, "Expected 4 errors for empty board");
     }
 
+    #[test]
+    fn test_prio_top_in_category_only_one_in_category() {
+        let mut board = given_board_with_2_tasks(); // 0 in Open, 1 in Review
+
+        // When
+        board.prio_top_in_category(board.find_entity_id_by_index(1).unwrap());
+
+        // Then
+        check!(board.entities == given_board_with_2_tasks().entities, "Expect board not to change");
+    }
+
     fn given_empty_board() -> Board<Issue> {
         Board::default()
     }
@@ -337,4 +347,5 @@ mod tests {
     fn given_no_indices() -> Vec<usize> {
         vec![]
     }
+
 }
