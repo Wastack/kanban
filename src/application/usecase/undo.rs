@@ -355,7 +355,7 @@ pub(crate) mod tests {
         }
 
         fn with_issue_moved_to_done(mut self) -> Self {
-            // TODO too much logic in test
+            // todo: too much logic in test, maybe it's worthwhile to use the move usecase.
             let id = self.find_entity_id_by_index(2).unwrap();
             self.get_mut(id).state = State::Done;
             self.prio_top_in_category(id);

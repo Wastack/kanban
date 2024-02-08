@@ -255,7 +255,7 @@ mod tests {
     #[test]
     fn test_verify_indices_valid() {
         let board = given_board_with_2_tasks();
-        let indices = given_indices_within_bounds();
+        let indices = vec![0, 1];
 
         let result = board.find_entities_by_indices(&indices);
 
@@ -287,7 +287,7 @@ mod tests {
     #[test]
     fn test_verify_indices_invalid() {
         let board = given_board_with_2_tasks();
-        let indices = given_some_indices_are_out_of_range();
+        let indices = vec![0, 1, 2, 3];
 
         let validated = board.find_entities_by_indices(&indices);
 
@@ -302,7 +302,7 @@ mod tests {
     #[test]
     fn test_verify_indices_empty_indices() {
         let board = given_board_with_2_tasks();
-        let indices = given_no_indices();
+        let indices = vec![];
 
         let validated = board.find_entities_by_indices(&indices);
 
@@ -312,8 +312,8 @@ mod tests {
 
     #[test]
     fn test_verify_indices_empty_board() {
-        let board = given_empty_board();
-        let indices = given_some_indices_are_out_of_range();
+        let board : Board<Issue>= Board::default();
+        let indices = vec![0, 1, 2, 3];
         let validated = board.find_entities_by_indices(&indices);
 
         assert!(validated.is_fail(), "Expected validation of indices to fail");
@@ -331,21 +331,4 @@ mod tests {
         // Then
         check!(board.entities == given_board_with_2_tasks().entities, "Expect board not to change");
     }
-
-    fn given_empty_board() -> Board<Issue> {
-        Board::default()
-    }
-
-    fn given_indices_within_bounds() -> Vec<usize> {
-        vec![0, 1]
-    }
-
-    fn given_some_indices_are_out_of_range() -> Vec<usize> {
-        vec![0, 1, 2, 3]
-    }
-
-    fn given_no_indices() -> Vec<usize> {
-        vec![]
-    }
-
 }
