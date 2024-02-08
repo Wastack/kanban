@@ -10,9 +10,9 @@ use crate::application::issue::State;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Board<T: Hash + Historized> {
-    pub(crate) entities: Vec<Entity<T>>,
-    pub(crate) deleted_issues: Vec<Entity<T>>,
-    pub(crate) history: Vec<T::HistoryType>,
+    entities: Vec<Entity<T>>,
+    deleted_entities: Vec<Entity<T>>,
+    history: Vec<T::HistoryType>,
 }
 
 /// Defines what is the type that is used to define history elements in the board.
@@ -25,7 +25,7 @@ impl<T: Hash + Historized> Default for Board<T> {
     fn default() -> Self {
         Self {
             entities: Default::default(),
-            deleted_issues: Default::default(),
+            deleted_entities: Default::default(),
             history: Default::default(),
         }
     }
@@ -33,8 +33,20 @@ impl<T: Hash + Historized> Default for Board<T> {
 
 
 impl<T: Hash + Historized> Board<T> {
+    pub(crate) fn new(entities: Vec<T>, deleted_entities: Vec<T>, history: Vec<T::HistoryType>) -> Self {
+        Self {
+            entities: entities.into_iter().map(|x| x.into()).collect(),
+            deleted_entities: deleted_entities.into_iter().map(|x| x.into()).collect(),
+            history,
+        }
+    }
+
     pub(crate) fn entities(&self) -> &[Entity<T>] {
         &self.entities
+    }
+
+    pub(crate) fn entity_count(&self) -> usize {
+        self.entities.len()
     }
 
     /// Gets entity with id. Panics if used with a non-existing id
@@ -59,7 +71,7 @@ impl<T: Hash + Historized> Board<T> {
     pub(crate) fn mark_as_deleted(&mut self, id: u64) {
         let index = self.entities.iter().position(|entity| entity.id == id).unwrap();
         let entity = self.entities.remove(index);
-        self.deleted_issues.insert(0, entity);
+        self.deleted_entities.insert(0, entity);
     }
 
     pub(crate) fn remove_by_index(&mut self, index: usize) -> Entity<T> {
@@ -100,11 +112,27 @@ impl<T: Hash + Historized> Board<T> {
 
     /// Returns a list of the deleted issues. The first element of the list is the one most recently deleted.
     pub fn get_deleted_entities(&self) -> &[Entity<T>] {
-        &self.deleted_issues
+        &self.deleted_entities
     }
 
     pub fn get_deleted_entities_mut(&mut self) -> &mut Vec<Entity<T>> {
-        &mut self.deleted_issues
+        &mut self.deleted_entities
+    }
+
+    pub fn push_to_history(&mut self, elem: T::HistoryType) {
+        self.history.push(elem)
+    }
+
+    pub fn last_history(&self) -> Option<&T::HistoryType> {
+        self.history.last()
+    }
+
+    pub fn pop_history(&mut self) -> Option<T::HistoryType> {
+        self.history.pop()
+    }
+
+    pub fn history(&self) -> &[T::HistoryType] {
+        &self.history
     }
 }
 
@@ -251,7 +279,7 @@ mod tests {
 
                 }.into(),
             ],
-            deleted_issues: Default::default(),
+            deleted_entities: Default::default(),
             history: Default::default(),
         }
     }

@@ -22,7 +22,7 @@ impl<I: IssueStorage, P: Presenter, T: CurrentTimeProvider> AddUseCase<I, P, T> 
             state,
             time_created: self.time_provider.now(),
         });
-        board.history.push(UndoableHistoryElement::Add);
+        board.push_to_history(UndoableHistoryElement::Add);
 
         self.storage.save(&board);
         self.presenter.render_board(&board)
@@ -31,6 +31,7 @@ impl<I: IssueStorage, P: Presenter, T: CurrentTimeProvider> AddUseCase<I, P, T> 
 
 #[cfg(test)]
 mod tests {
+    use assert2::{check, let_assert};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::{AddUseCase, IssueStorage, State};
@@ -79,9 +80,9 @@ mod tests {
         }
 
         fn assert_history_consists_of_one_addition(&self) -> &Self {
-            let history = &self.history;
-            assert_eq!(history.len(), 1, "Expected to have an item in history");
-            assert_eq!(history.last().unwrap(), &UndoableHistoryElement::Add, "Expected item in history to represent and addition of an issue");
+            let history = self.last_history();
+            let_assert!(Some(history) = history, "Expected to have an item in history");
+            assert_eq!(history, &UndoableHistoryElement::Add, "Expected item in history to represent and addition of an issue");
 
             self
         }

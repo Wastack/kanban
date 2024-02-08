@@ -44,7 +44,7 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
             issue.state = state;
 
             // TODO: it should be done by id directly
-            let current_index = board.entities.iter().position(|e| e.id == id).unwrap();
+            let current_index = board.entities().iter().position(|e| e.id == id).unwrap();
             // If issue is moved to done, I'd like to see it on the top
             let new_index = if state == State::Done {
                 board.prio_top_in_category(current_index)
@@ -60,7 +60,7 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
         }
 
         if !history_elements.is_empty() {
-            board.history.push(UndoableHistoryElement::Move(MoveHistoryElements {
+            board.push_to_history(UndoableHistoryElement::Move(MoveHistoryElements {
                 moves: history_elements,
             }));
         }
@@ -100,7 +100,7 @@ mod tests {
 
         let stored_board = move_use_case.storage.load();
 
-        assert_eq!(stored_board.history.last().expect("Expected an entry in history"),
+        assert_eq!(stored_board.last_history().expect("Expected an entry in history"),
                    &UndoableHistoryElement::Move(MoveHistoryElements {
                        moves: vec![
                            MoveHistoryElement {
@@ -134,7 +134,7 @@ mod tests {
 
         let stored_board = move_use_case.storage.load();
 
-        assert_eq!(stored_board.history.last().expect("Expected element in history"),
+        assert_eq!(stored_board.last_history().expect("Expected element in history"),
                    &UndoableHistoryElement::Move(MoveHistoryElements {
                        moves: vec![
                            MoveHistoryElement {

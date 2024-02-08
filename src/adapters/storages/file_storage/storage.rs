@@ -70,9 +70,9 @@ mod tests {
 
         let board = storage.load();
         // Then
-        check!(board.entities.len() == 2, "Expected board to have two issues");
+        check!(board.entity_count() == 2, "Expected board to have two issues");
         check!(board.get_deleted_entities().len() == 2, "Expected board to have 2 deleted issues");
-        check!(board.history.len() == 6, "Expected board to have a specific number of history elements");
+        check!(board.history().len() == 6, "Expected board to have a specific number of history elements");
         [
             Issue {
                 description: Description::from("Get a coffee"),
@@ -105,7 +105,7 @@ mod tests {
             UndoableHistoryElement::Add,
         ];
 
-        check!(board.history == expected_history, "Expected specific history");
+        check!(board.history() == expected_history.as_slice(), "Expected specific history");
     }
 
     #[test]

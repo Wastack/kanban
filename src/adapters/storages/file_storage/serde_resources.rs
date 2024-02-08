@@ -22,18 +22,18 @@ impl From<&Board<Issue>> for StoredBoard {
         Self {
             issues: b.entities().into_iter().map(|e| StoredIssue::from(e.deref())).collect(),
             deleted_issues: b.get_deleted_entities().into_iter().map(|e| StoredIssue::from(e.deref())).collect(),
-            history: b.history.iter().map(|x| x.into()).collect(),
+            history: b.history().iter().map(|x| x.into()).collect(),
         }
     }
 }
 
 impl Into<Board<Issue>> for StoredBoard {
     fn into(self) -> Board<Issue> {
-        Board {
-            entities: self.issues.into_iter().map(|x| Entity::<Issue>::from(Into::<Issue>::into(x))).collect(),
-            deleted_issues: self.deleted_issues.into_iter().map(|x| Entity::<Issue>::from(Into::<Issue>::into(x))).collect(),
-            history: self.history.into_iter().map(|x| x.into()).collect(),
-        }
+        Board::new(
+            self.issues.into_iter().map(|x| x.into()).collect(),
+            self.deleted_issues.into_iter().map(|x| x.into()).collect(),
+            self.history.into_iter().map(|x| x.into()).collect(),
+        )
     }
 }
 

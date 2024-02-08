@@ -2,6 +2,7 @@
 #[cfg(test)]
 pub(crate) mod tests {
     use std::ops::Deref;
+    use assert2::check;
     use crate::application::{Board, Issue};
     use crate::application::issue::{Description};
     use crate::{State};
@@ -11,14 +12,14 @@ pub(crate) mod tests {
 
     impl Board<Issue> {
         pub(crate) fn assert_issue_count(&self, num: usize) -> &Self {
-            assert_eq!(self.entities.len(), num, "Expected board to have {} issues", num);
+            assert_eq!(self.entity_count(), num, "Expected board to have {} issues", num);
 
             self
         }
 
         pub(crate) fn assert_has_original_issues(&self) -> &Self {
             let original_board = Board::default().with_4_typical_issues();
-            assert!(self.entities.len() >= original_board.entities.len(), "Expected board to have the 4 original issues");
+            check!(self.entity_count() >= original_board.entity_count(), "Expected board to have the 4 original issues");
 
             for issue in original_board.entities() {
                 let found = self.entities().into_iter().find(
