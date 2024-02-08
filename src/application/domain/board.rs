@@ -331,4 +331,35 @@ mod tests {
         // Then
         check!(board.entities == given_board_with_2_tasks().entities, "Expect board not to change");
     }
+
+    #[test]
+    fn test_prio_top_in_category() {
+        let mut board = Board::new(
+            vec![
+                Issue { description: Description::from("First open task"), state: State::Open, time_created: 0 },
+                Issue { description: Description::from("First done task"), state: State::Done, time_created: 0 },
+                Issue { description: Description::from("First review task"), state: State::Review, time_created: 0 },
+                Issue { description: Description::from("Second open task"), state: State::Open, time_created: 0 },
+                Issue { description: Description::from("Third open task"), state: State::Open, time_created: 0 },
+            ],
+            vec![],
+            vec![]);
+
+        // When
+        let id_of_third_open_task = board.find_entity_id_by_index(4).unwrap();
+        board.prio_top_in_category(id_of_third_open_task); // Third open task
+
+        // Then
+        [
+            ("Third open task", State::Open),
+            ("First open task", State::Open),
+            ("First done task", State::Done),
+            ("First review task", State::Review),
+            ("Second open task", State::Open),
+        ].into_iter().enumerate().for_each(|(index, (expected_description, expected_state))| {
+            let entity = &board.entities()[index];
+            check!(entity.description == Description::from(expected_description), "Expected specific description for Issue at index '{}'", index);
+            check!(entity.state == expected_state, "Expected specific state for Issue at index '{}'", index);
+        });
+    }
 }
