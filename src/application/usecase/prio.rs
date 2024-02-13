@@ -20,10 +20,8 @@ impl<I: IssueStorage, P: Presenter> PrioUseCase<I, P> {
         match command {
             PrioCommand::Top => { board.prio_top_in_category(id); },
             PrioCommand::Bottom => board.prio_bottom_in_category(id),
-            // todo: use id instead of index
-            // TODO move back here storing stuff from domain?
-            PrioCommand::Up => board.prio_up_in_category(index),
-            PrioCommand::Down => board.prio_down_in_category(index),
+            PrioCommand::Up => board.prio_up_in_category(id),
+            PrioCommand::Down => board.prio_down_in_category(id),
         }
 
         // TODO: add history

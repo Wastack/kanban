@@ -1,5 +1,6 @@
 use std::collections::{HashMap};
 use std::hash::Hash;
+use std::iter;
 use nonempty_collections::{NEVec};
 use crate::application::issue::{Entity, Issue};
 use validated::Validated;
@@ -110,6 +111,10 @@ impl<T: Hash + Historized> Board<T> {
         self.entities.insert(index, entity)
     }
 
+    pub fn position(&self, id: u64) -> usize {
+        self.entities.iter().position(|e| e.id == id).unwrap()
+    }
+
     /// Returns a list of the deleted issues. The first element of the list is the one most recently deleted.
     pub fn get_deleted_entities(&self) -> &[Entity<T>] {
         &self.deleted_entities
@@ -168,58 +173,53 @@ impl Board<Issue> {
 
     /// Changes the priority (order) of the issues, so that it becomes one more priority in
     /// its category (amongst issues with similar state)
-    pub fn prio_up_in_category(&mut self, index: usize) {
-        let state = self.entities[index].state;
-        let issues = self.issues_with_state();
-        let category = issues.get(&state).unwrap();
-        let position_in_category = category
+    pub fn prio_up_in_category(&mut self, id: u64) {
+        let state = self.get(id).state;
+
+        let entity_pos_reversed = self.entities
             .iter()
-            .position(|i|i.order == index)
-            .unwrap();
+            .rev()
+            .position(|i|i.id == id).unwrap();
 
-        if position_in_category <= 0 {
+        let move_up_this_much = self.entities.iter()
+            .rev()
+            .skip(entity_pos_reversed+1)
+            .position(|i|i.state == state);
+
+        let move_up_this_much = if let Some(p) = move_up_this_much { p + 1 } else {
             // there is nothing to do, because the issue is already top priority
+            // todo: should this be an error?
             return
-        }
+        };
 
-        let position_of_issue_above = category
-            .get(position_in_category-1)
-            .unwrap()
-            .order;
-
-        let issue = self.entities.remove(index);
-        self.entities.insert(position_of_issue_above, issue);
+        let new_position = self.position(id) - move_up_this_much;
+        let entity = self.remove(id);
+        self.insert(new_position, entity);
     }
 
     /// Changes the priority (order) of the issues, so that it one less priority in
     /// its category (amongst issues with similar state)
-    pub fn prio_down_in_category(&mut self, index: usize) {
-        let state = self.entities[index].state;
-        let issues = self.issues_with_state();
-        let category = issues.get(&state).unwrap();
-        let position_in_category = category
-            .iter()
-            .position(|i|i.order == index)
-            .unwrap();
+    pub fn prio_down_in_category(&mut self, id: u64) {
+        let current_position =  self.position(id);
 
-        if position_in_category >= category.len() - 1 {
-            // there is nothing to do, because the issue is already least priority
+        let steps_down = self.entities.iter()
+            .skip(current_position+1)
+            .position(|x| x.state == self.get(id).state)
+            .map(|steps| steps + 1 );
+
+        let steps_down = if let Some(p) = steps_down { p } else {
             return
-        }
+        };
 
-        let position_of_issue_below = category
-            .get(position_in_category+1)
-            .unwrap()
-            .order;
+        let issue = self.remove(id);
 
-        let issue = self.entities.remove(index);
-
-        // the previous remove modified the positions, thus no +1 needed
-        self.entities.insert(position_of_issue_below, issue);
+        // by removing an issue, all subsequent indices shift to the left. Thus, -1.
+        self.entities.insert(current_position + steps_down, issue);
     }
 }
 
 
+// todo: this is only needed for presenters
 impl BoardStateView for Board<Issue> {
     /// Returns the issues categorized by state, alongside their global order (priority). The
     /// returned Vectors are ordered by their priority.
@@ -247,6 +247,7 @@ pub trait BoardStateView {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Borrow;
     use assert2::{check, let_assert};
     use validated::Validated::{Fail, Good};
     use crate::application::issue::Description;
@@ -324,17 +325,142 @@ mod tests {
     #[test]
     fn test_prio_top_in_category_only_one_in_category() {
         let mut board = given_board_with_2_tasks(); // 0 in Open, 1 in Review
-
-        // When
         board.prio_top_in_category(board.find_entity_id_by_index(1).unwrap());
-
-        // Then
         check!(board.entities == given_board_with_2_tasks().entities, "Expect board not to change");
     }
 
     #[test]
     fn test_prio_top_in_category() {
-        let mut board = Board::new(
+        let mut board = board_for_testing_priorities();
+
+        // When
+        let id_of_third_open_task = board.find_entity_id_by_index(4).unwrap();
+        board.prio_top_in_category(id_of_third_open_task); // Third open task
+
+        // Then
+        let expected = [
+            ("Third open task", State::Open),
+            ("First open task", State::Open),
+            ("First done task", State::Done),
+            ("First review task", State::Review),
+            ("Second open task", State::Open),
+        ];
+
+        check_priorities(&expected, &board);
+    }
+
+    #[test]
+    fn test_prio_bottom_in_category_solo_in_state() {
+        let mut board = given_board_with_2_tasks(); // 0 in Open, 1 in Review
+        board.prio_bottom_in_category(board.find_entity_id_by_index(0).unwrap());
+        check!(board.entities == given_board_with_2_tasks().entities, "Expect board not to change");
+    }
+
+    #[test]
+    fn test_prio_up_in_category_solo_in_state() {
+        let mut board = given_board_with_2_tasks(); // 0 in Open, 1 in Review
+        board.prio_up_in_category(board.find_entity_id_by_index(0).unwrap());
+        check!(board.entities == given_board_with_2_tasks().entities, "Expect board not to change");
+    }
+
+    #[test]
+    fn test_prio_down_in_category_solo_in_state() {
+        let mut board = given_board_with_2_tasks(); // 0 in Open, 1 in Review
+        board.prio_down_in_category(board.find_entity_id_by_index(0).unwrap());
+        check!(board.entities == given_board_with_2_tasks().entities, "Expect board not to change");
+    }
+
+    #[test]
+    fn test_prio_bottom_in_category() {
+        let mut board = board_for_testing_priorities();
+
+        // When
+        let id = board.find_entity_id_by_index(0).unwrap();
+        board.prio_bottom_in_category(id); // Third open task
+
+        // Then
+        let expected = [
+            ("First done task", State::Done), // ^ from here
+            ("First review task", State::Review),
+            ("Second open task", State::Open),
+            ("Third open task", State::Open),
+            ("First open task", State::Open), // moved here
+        ];
+
+        check_priorities(&expected, &board);
+    }
+
+    #[test]
+    fn test_prio_up_in_category() {
+        let mut board = board_for_testing_priorities();
+
+        // When
+        let id = board.find_entity_id_by_index(4).unwrap();
+        board.prio_up_in_category(id); // Third open task
+
+        // Then
+        let expected = [
+            ("First open task", State::Open),
+            ("First done task", State::Done),
+            ("First review task", State::Review),
+            ("Third open task", State::Open),
+            ("Second open task", State::Open),
+        ];
+
+        check_priorities(&expected, &board);
+    }
+
+    #[test]
+    fn test_prio_down_in_category() {
+        let mut board = board_for_testing_priorities();
+
+        // When
+        let id_of_third_open_task = board.find_entity_id_by_index(3).unwrap();
+        board.prio_down_in_category(id_of_third_open_task); // Third open task
+
+        // Then
+        let expected = [
+            ("First open task", State::Open),
+            ("First done task", State::Done),
+            ("First review task", State::Review),
+            ("Third open task", State::Open), // ^ from here
+            ("Second open task", State::Open), // <-- moved here
+        ];
+
+        check_priorities(&expected, &board);
+    }
+
+    #[test]
+    fn test_prio_up_multiple_hop () {
+        let mut board = board_for_testing_priorities();
+
+        // When
+        let id = board.find_entity_id_by_index(0).unwrap();
+        board.prio_down_in_category(id); // Third open task
+
+        // Then
+        let expected = [
+            ("First done task", State::Done), // ^ from here
+            ("First review task", State::Review),
+            ("Second open task", State::Open),
+            ("First open task", State::Open), // moved here
+            ("Third open task", State::Open),
+        ];
+
+        check_priorities(&expected, &board);
+
+    }
+
+    fn check_priorities(expected: &[(&str, State)], actual: &Board<Issue>) {
+        expected.into_iter().enumerate().for_each(|(index, &(expected_description, expected_state))| {
+            let entity = &actual.entities()[index];
+            check!(entity.description == Description::from(expected_description), "Expected specific description for Issue at index '{}.\nBoard was: '{:?}'", index, actual);
+            check!(entity.state == expected_state, "Expected specific state for Issue at index '{}'.\nBoard was: '{:?}'", index, actual);
+        })
+    }
+
+    fn board_for_testing_priorities() -> Board<Issue> {
+        Board::new(
             vec![
                 Issue { description: Description::from("First open task"), state: State::Open, time_created: 0 },
                 Issue { description: Description::from("First done task"), state: State::Done, time_created: 0 },
@@ -343,23 +469,6 @@ mod tests {
                 Issue { description: Description::from("Third open task"), state: State::Open, time_created: 0 },
             ],
             vec![],
-            vec![]);
-
-        // When
-        let id_of_third_open_task = board.find_entity_id_by_index(4).unwrap();
-        board.prio_top_in_category(id_of_third_open_task); // Third open task
-
-        // Then
-        [
-            ("Third open task", State::Open),
-            ("First open task", State::Open),
-            ("First done task", State::Done),
-            ("First review task", State::Review),
-            ("Second open task", State::Open),
-        ].into_iter().enumerate().for_each(|(index, (expected_description, expected_state))| {
-            let entity = &board.entities()[index];
-            check!(entity.description == Description::from(expected_description), "Expected specific description for Issue at index '{}'", index);
-            check!(entity.state == expected_state, "Expected specific state for Issue at index '{}'", index);
-        });
+            vec![])
     }
 }
