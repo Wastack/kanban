@@ -30,7 +30,7 @@ fn main() {
 
     match root.command {
         Some(Command::Add{description, state}) => {
-            AddUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>, FakeTimeProvider>::default().execute(
+            AddUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>, SimpleTimeProvider>::default().execute(
                 &description,
                 state.unwrap_or(State::Open));
         },
