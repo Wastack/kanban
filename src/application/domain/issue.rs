@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash};
+use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use uuid::Uuid;
 use crate::application::board::Historized;
@@ -39,38 +40,53 @@ impl Display for Description {
 }
 
 #[derive(Debug, Clone)]
-pub struct Entity<T> {
+pub struct Entity<T, IdGen: IdGenerator = UUidGenerator> {
     /// Uniquely identifies an `Entity` in a `Board`
     pub(crate) id: Uuid,
     pub(crate) entity: T,
+
+    id_generator_type: PhantomData<IdGen>
+}
+
+pub trait IdGenerator {
+    fn gen() -> Uuid;
+}
+
+
+#[derive(Debug, Clone)]
+pub struct UUidGenerator;
+
+impl IdGenerator for UUidGenerator {
+    fn gen() -> Uuid {
+        Uuid::new_v4()
+    }
 }
 
 impl Historized for Issue {
     type HistoryType = UndoableHistoryElement;
 }
 
-impl<T> AsRef<T> for Entity<T> {
+impl<T, IdGen: IdGenerator> AsRef<T> for Entity<T, IdGen> {
     fn as_ref(&self) -> &T {
         return &self.entity
     }
 }
 
-impl<T> From<T> for Entity<T> {
+impl<T, IdGen: IdGenerator> From<T> for Entity<T, IdGen> {
     /// This conversion will generate the `id` of the `Entity` by hashing all the fields of the candidate `Entity`.
-    /// This will only be unique if all the fields in the candidate makes the candidate unique.
-    /// For example, for `Issue`, it is true as long as you don't spawn multiple issues at the same time,
-    /// with the same text...
     fn from(value: T) -> Self {
-        let id = uuid::Uuid::new_v4();
+        let id = IdGen::gen();
 
         Self {
             id,
             entity: value,
+
+            id_generator_type: Default::default(),
         }
     }
 }
 
-impl<T: Hash> Deref for Entity<T> {
+impl<T, IdGen: IdGenerator> Deref for Entity<T, IdGen> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -78,7 +94,7 @@ impl<T: Hash> Deref for Entity<T> {
     }
 }
 
-impl<T: Hash> DerefMut for Entity<T> {
+impl<T, IdGen: IdGenerator> DerefMut for Entity<T, IdGen> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.entity
     }

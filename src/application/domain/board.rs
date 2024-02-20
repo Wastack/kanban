@@ -1,8 +1,9 @@
 use std::collections::{HashMap};
 use std::fmt::Debug;
+use std::marker::PhantomData;
 use nonempty_collections::{NEVec};
 use uuid::Uuid;
-use crate::application::issue::{Entity, Issue};
+use crate::application::issue::{Entity, IdGenerator, Issue, UUidGenerator};
 use validated::Validated;
 use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::issue::State;
@@ -10,10 +11,12 @@ use crate::application::issue::State;
 
 
 #[derive(Debug, Clone)]
-pub struct Board<T: Historized> {
+pub struct Board<T: Historized, IdGen: IdGenerator = UUidGenerator> {
     entities: Vec<Entity<T>>,
     deleted_entities: Vec<Entity<T>>,
     history: Vec<T::HistoryType>,
+
+    id_generator_type: PhantomData<IdGen>
 }
 
 /// Defines what is the type that is used to define history elements in the board.
@@ -28,6 +31,7 @@ impl<T: Historized> Default for Board<T> {
             entities: Default::default(),
             deleted_entities: Default::default(),
             history: Default::default(),
+            id_generator_type: Default::default(),
         }
     }
 }
@@ -39,6 +43,8 @@ impl<T: Historized> Board<T> {
             entities: entities.into_iter().map(|x| x.into()).collect(),
             deleted_entities: deleted_entities.into_iter().map(|x| x.into()).collect(),
             history,
+
+            id_generator_type: Default::default(),
         }
     }
 
@@ -188,7 +194,6 @@ impl Board<Issue> {
 
         let move_up_this_much = if let Some(p) = move_up_this_much { p + 1 } else {
             // there is nothing to do, because the issue is already top priority
-            // todo: should this be an error?
             return
         };
 
@@ -282,6 +287,7 @@ mod tests {
             ],
             deleted_entities: Default::default(),
             history: Default::default(),
+            id_generator_type: Default::default(),
         }
     }
 

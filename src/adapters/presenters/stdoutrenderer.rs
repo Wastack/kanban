@@ -151,8 +151,6 @@ mod test {
         // When
         let formatted_board = TabularTextRenderer::<FakeTimeProvider>::default().format_board(&board);
 
-        //todo: give it a better string assertion
-
         // Then
         assert_eq!(formatted_board, r#"Open
 5: An open issue overdue
