@@ -15,7 +15,6 @@ use application::usecase::add::AddUseCase;
 use crate::adapters::editors::os_default_editor::OsDefaultEditor;
 use crate::adapters::presenters::stdoutrenderer::TabularTextRenderer;
 use crate::adapters::storages::FileStorage;
-use crate::adapters::time_providers::fake::FakeTimeProvider;
 use crate::adapters::time_providers::simple::SimpleTimeProvider;
 use crate::application::ports::editor::Editor;
 use crate::application::usecase::delete::DeleteUseCase;

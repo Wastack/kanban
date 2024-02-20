@@ -54,6 +54,7 @@ mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::domain::error::DomainError;
+    use crate::application::usecase::tests_common::tests::check_boards_are_equal;
 
     #[test]
     fn test_execute_successful_deletion() {
@@ -72,7 +73,7 @@ mod tests {
             .assert_deleted_issues_consists_of_three_deletions();
 
         let presented_board = sut.presenter.last_board_rendered.expect("Expected a board to be presented");
-        assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
+        check_boards_are_equal(&presented_board, &stored_board);
     }
 
     #[test]

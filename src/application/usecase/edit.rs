@@ -56,6 +56,7 @@ mod tests {
     use crate::application::{Board, Issue};
     use crate::application::domain::error::DomainError;
     use crate::application::issue::Entity;
+    use crate::application::usecase::tests_common::tests::check_boards_are_equal;
 
     #[test]
     fn test_execute_successful_editing() {
@@ -71,7 +72,7 @@ mod tests {
             .assert_other_issues_did_not_change();
 
         let presented_board = edit_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
-        assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
+        check_boards_are_equal(&presented_board, &stored_board);
 
         assert!(matches!(result, Ok(_)))
     }

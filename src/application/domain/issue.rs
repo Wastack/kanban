@@ -1,7 +1,7 @@
-use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Display, Formatter};
-use std::hash::{Hash, Hasher};
+use std::hash::{Hash};
 use std::ops::{Deref, DerefMut};
+use uuid::Uuid;
 use crate::application::board::Historized;
 use crate::application::domain::history::UndoableHistoryElement;
 
@@ -38,10 +38,10 @@ impl Display for Description {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct Entity<T: Hash> {
+#[derive(Debug, Clone)]
+pub struct Entity<T> {
     /// Uniquely identifies an `Entity` in a `Board`
-    pub(crate) id: u64,
+    pub(crate) id: Uuid,
     pub(crate) entity: T,
 }
 
@@ -49,15 +49,19 @@ impl Historized for Issue {
     type HistoryType = UndoableHistoryElement;
 }
 
-impl<T: Hash> From<T> for Entity<T> {
+impl<T> AsRef<T> for Entity<T> {
+    fn as_ref(&self) -> &T {
+        return &self.entity
+    }
+}
+
+impl<T> From<T> for Entity<T> {
     /// This conversion will generate the `id` of the `Entity` by hashing all the fields of the candidate `Entity`.
     /// This will only be unique if all the fields in the candidate makes the candidate unique.
     /// For example, for `Issue`, it is true as long as you don't spawn multiple issues at the same time,
     /// with the same text...
     fn from(value: T) -> Self {
-        let mut s = DefaultHasher::new();
-        value.hash(&mut s);
-        let id = s.finish();
+        let id = uuid::Uuid::new_v4();
 
         Self {
             id,

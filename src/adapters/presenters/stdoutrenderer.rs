@@ -129,7 +129,7 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
 mod test {
     use std::ops::Deref;
     use crate::adapters::presenters::stdoutrenderer::{TabularTextRenderer};
-    use crate::adapters::time_providers::fake::FakeTimeProvider;
+    use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TIME, FakeTimeProvider};
     use crate::application::{Board, Issue, State};
     use crate::application::issue::Description;
     use assert2::{check};
@@ -151,13 +151,15 @@ mod test {
         // When
         let formatted_board = TabularTextRenderer::<FakeTimeProvider>::default().format_board(&board);
 
+        //todo: give it a better string assertion
+
         // Then
         assert_eq!(formatted_board, r#"Open
-5: Task inserted fourth
-8: Task inserted first
+5: An open issue overdue
+6: An open issue not overdue
 
 Review
-7: Task inserted second
+7: An issue in review
 
 Done
 0: Done issue number 4
@@ -176,11 +178,11 @@ Done
 
         [
             Formatted("Open".bold()),
-            NonFormatted(String::from("5: Task inserted fourth")),
-            Formatted("8: Task inserted first".red()),
+            Formatted("5: An open issue overdue".red()),
+            NonFormatted(String::from("6: An open issue not overdue")),
             NonFormatted(String::default()), // new line
             Formatted("Review".bold()),
-            NonFormatted(String::from("7: Task inserted second")),
+            NonFormatted(String::from("7: An issue in review")),
             NonFormatted(String::default()),
             Formatted("Done".bold()),
             NonFormatted(String::from("0: Done issue number 4")),
@@ -197,16 +199,37 @@ Done
     }
 
     fn given_board() -> Board<Issue> {
-        let board = (0..5).into_iter()
-            // Let's give it some additional done issues, so that we can test that `...` appears at the end
-            .fold(Board::default().with_4_typical_issues(), |board, n| board.with_issue(
-                Issue {
-                    description: Description::from(format!("Done issue number {}", n).deref()),
-                    state: State::Done,
-                    time_created: 0,
-                }
-            ));
-        board
+        let board = Board::new(
+            (0..5).into_iter().rev().map(|n| Issue {
+                description: Description::from(format!("Done issue number {}", n).deref()),
+                state: State::Done,
+                time_created: 0,
+            })
+                .chain(
+                    vec![
+                        Issue {
+                            description: Description::from("An open issue overdue"),
+                            state: State::Open,
+                            time_created: 1698397491,
+                        },
+                        Issue {
+                            description: Description::from("An open issue not overdue"),
+                            state: State::Open,
+                            time_created: DEFAULT_FAKE_TIME,
+                        },
+                        Issue {
+                            description: Description::from("An issue in review"),
+                            state: State::Review,
+                            time_created: 1698397491,
+                        },
+
+                    ].into_iter()
+                )
+                .collect()
+            , vec![], vec![]);
+
+
+        board // the additional 4 issues as ususal
     }
 
 }

@@ -82,6 +82,7 @@ mod tests {
     use crate::application::domain::error::{DomainError};
     use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
     use crate::application::issue::{Description, Entity};
+    use crate::application::usecase::tests_common::tests::check_boards_are_equal;
 
     #[test]
     fn test_successful_move_use_case() {
@@ -111,7 +112,7 @@ mod tests {
                    }), "Expected a history element with specific content");
 
         let presented_board = move_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
-        assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
+        check_boards_are_equal(&presented_board, &stored_board);
     }
 
     /// Tests whether the issue goes on the top of the done list, when being moved there.
@@ -145,7 +146,7 @@ mod tests {
                    }), "Expected a history element with specific content");
 
         let presented_board = move_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
-        assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
+        check_boards_are_equal(&presented_board, &stored_board);
     }
 
     // TODO: undo counterpart
@@ -174,11 +175,12 @@ mod tests {
     fn test_move_multiple_to_done_with_changing_priorities() {
         // Given
         let mut sut = given_move_use_case_with(
-            Board::default()
-                .with_issue(Issue { description: Description::from("I'm doing it now, B"), state: State::Open, time_created: 0 })
-                .with_issue(Issue { description: Description::from("I'm doing it now, A"), state: State::Open, time_created: 0 })
-                .with_issue(Issue { description: Description::from("Lazy to do"), state: State::Open, time_created: 0 })
-                .with_issue(Issue { description: Description::from("I finished this first"), state: State::Done, time_created: 0 })
+            Board::new(vec![
+                Issue { description: Description::from("I finished this first"), state: State::Done, time_created: 0 },
+                Issue { description: Description::from("Lazy to do"), state: State::Open, time_created: 0 },
+                Issue { description: Description::from("I'm doing it now, A"), state: State::Open, time_created: 0 }, // Move this second
+                Issue { description: Description::from("I'm doing it now, B"), state: State::Open, time_created: 0 }, // Move this first
+            ], vec![], vec![])
         );
 
         // When
@@ -198,7 +200,7 @@ mod tests {
 
         let stored_board = sut.storage.load();
         let presented_board = sut.presenter.last_board_rendered.expect("Expected a board to be presented");
-        assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
+        check_boards_are_equal(&presented_board, &stored_board);
     }
 
 

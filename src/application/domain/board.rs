@@ -1,7 +1,7 @@
 use std::collections::{HashMap};
-use std::hash::Hash;
-use std::iter;
+use std::fmt::Debug;
 use nonempty_collections::{NEVec};
+use uuid::Uuid;
 use crate::application::issue::{Entity, Issue};
 use validated::Validated;
 use crate::application::domain::error::{DomainError, DomainResult};
@@ -9,8 +9,8 @@ use crate::application::issue::State;
 
 
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct Board<T: Hash + Historized> {
+#[derive(Debug, Clone)]
+pub struct Board<T: Historized> {
     entities: Vec<Entity<T>>,
     deleted_entities: Vec<Entity<T>>,
     history: Vec<T::HistoryType>,
@@ -21,7 +21,7 @@ pub trait Historized {
     type HistoryType;
 }
 
-impl<T: Hash + Historized> Default for Board<T> {
+impl<T: Historized> Default for Board<T> {
     // Because of the generic type, derive for `Default` didn't work
     fn default() -> Self {
         Self {
@@ -33,7 +33,7 @@ impl<T: Hash + Historized> Default for Board<T> {
 }
 
 
-impl<T: Hash + Historized> Board<T> {
+impl<T: Historized> Board<T> {
     pub(crate) fn new(entities: Vec<T>, deleted_entities: Vec<T>, history: Vec<T::HistoryType>) -> Self {
         Self {
             entities: entities.into_iter().map(|x| x.into()).collect(),
@@ -51,25 +51,25 @@ impl<T: Hash + Historized> Board<T> {
     }
 
     /// Gets entity with id. Panics if used with a non-existing id
-    pub(crate) fn get(&self, id: u64) -> &Entity<T> {
+    pub(crate) fn get(&self, id: Uuid) -> &Entity<T> {
         self.entities.iter()
             .find(|&entity| entity.id == id)
             .unwrap()
     }
 
-    pub(crate) fn get_mut(&mut self, id: u64) -> &mut Entity<T> {
+    pub(crate) fn get_mut(&mut self, id: Uuid) -> &mut Entity<T> {
         self.entities.iter_mut()
             .find(|entity| entity.id == id)
             .unwrap()
     }
 
     /// Removes entity with id. Panics if used with a non-existing id.
-    pub(crate) fn remove(&mut self, id: u64) -> Entity<T> {
+    pub(crate) fn remove(&mut self, id: Uuid) -> Entity<T> {
         let index = self.entities.iter().position(|entity| entity.id == id).unwrap();
         self.entities.remove(index)
     }
 
-    pub(crate) fn mark_as_deleted(&mut self, id: u64) {
+    pub(crate) fn mark_as_deleted(&mut self, id: Uuid) {
         let index = self.entities.iter().position(|entity| entity.id == id).unwrap();
         let entity = self.entities.remove(index);
         self.deleted_entities.insert(0, entity);
@@ -79,13 +79,13 @@ impl<T: Hash + Historized> Board<T> {
         self.entities.remove(index)
     }
 
-    pub fn find_entity_id_by_index(&self, index: usize) -> DomainResult<u64> {
+    pub fn find_entity_id_by_index(&self, index: usize) -> DomainResult<Uuid> {
         self.entities.get(index)
             .and_then(|e| Some(e.id))
             .ok_or(DomainError::IndexOutOfRange(index))
     }
 
-    pub fn find_entities_by_indices(&self, indices: &[usize]) -> Validated<Vec<u64>, DomainError> {
+    pub fn find_entities_by_indices(&self, indices: &[usize]) -> Validated<Vec<Uuid>, DomainError> {
         let mut errors = indices
             .iter()
             .filter(|&&i| !self.contains(i))
@@ -111,7 +111,7 @@ impl<T: Hash + Historized> Board<T> {
         self.entities.insert(index, entity)
     }
 
-    pub fn position(&self, id: u64) -> usize {
+    pub fn position(&self, id: Uuid) -> usize {
         self.entities.iter().position(|e| e.id == id).unwrap()
     }
 
@@ -145,7 +145,7 @@ impl Board<Issue> {
     /// Changes the priority (order) of the issues, so that it becomes the most priority in
     /// its category (amongst issues with similar state).
     /// Returns the new position of the issue
-    pub fn prio_top_in_category(&mut self, id: u64) -> usize {
+    pub fn prio_top_in_category(&mut self, id: Uuid) -> usize {
         let state = self.get(id).state;
         let most_prio_position = self.entities
             .iter()
@@ -160,7 +160,7 @@ impl Board<Issue> {
 
     /// Changes the priority (order) of the issues, so that it becomes the least priority in
     /// its category (amongst issues with similar state)
-    pub fn prio_bottom_in_category(&mut self, id: u64) {
+    pub fn prio_bottom_in_category(&mut self, id: Uuid) {
         let state = self.get(id).state;
         let least_prio_position = self.entities
             .iter()
@@ -173,7 +173,7 @@ impl Board<Issue> {
 
     /// Changes the priority (order) of the issues, so that it becomes one more priority in
     /// its category (amongst issues with similar state)
-    pub fn prio_up_in_category(&mut self, id: u64) {
+    pub fn prio_up_in_category(&mut self, id: Uuid) {
         let state = self.get(id).state;
 
         let entity_pos_reversed = self.entities
@@ -199,7 +199,7 @@ impl Board<Issue> {
 
     /// Changes the priority (order) of the issues, so that it one less priority in
     /// its category (amongst issues with similar state)
-    pub fn prio_down_in_category(&mut self, id: u64) {
+    pub fn prio_down_in_category(&mut self, id: Uuid) {
         let current_position =  self.position(id);
 
         let steps_down = self.entities.iter()
@@ -247,10 +247,10 @@ pub trait BoardStateView {
 
 #[cfg(test)]
 mod tests {
-    use std::borrow::Borrow;
     use assert2::{check, let_assert};
     use validated::Validated::{Fail, Good};
     use crate::application::issue::Description;
+    use crate::application::usecase::tests_common::tests::check_compare_issues;
     use super::*;
 
     #[test]
@@ -261,7 +261,7 @@ mod tests {
         let result = board.find_entities_by_indices(&indices);
 
         let_assert!(Good(ids) = result, "Expected validation to succeed");
-        check!(ids == [4169611935799584098, 10033970510661967047]);
+        // todo: assert ids?
     }
 
     fn given_board_with_2_tasks() -> Board<Issue> {
@@ -308,7 +308,7 @@ mod tests {
         let validated = board.find_entities_by_indices(&indices);
 
         let_assert!(Good(ids) = validated, "Expected validated indices to be good");
-        check!(ids == [] as [u64; 0]);
+        check!(ids == [] as [Uuid; 0]);
     }
 
     #[test]
@@ -326,8 +326,10 @@ mod tests {
     fn test_prio_top_in_category_only_one_in_category() {
         let mut board = given_board_with_2_tasks(); // 0 in Open, 1 in Review
         board.prio_top_in_category(board.find_entity_id_by_index(1).unwrap());
-        check!(board.entities == given_board_with_2_tasks().entities, "Expect board not to change");
+
+        check_compare_issues(board.entities(), &given_board_with_2_tasks().entities());
     }
+
 
     #[test]
     fn test_prio_top_in_category() {
@@ -353,21 +355,21 @@ mod tests {
     fn test_prio_bottom_in_category_solo_in_state() {
         let mut board = given_board_with_2_tasks(); // 0 in Open, 1 in Review
         board.prio_bottom_in_category(board.find_entity_id_by_index(0).unwrap());
-        check!(board.entities == given_board_with_2_tasks().entities, "Expect board not to change");
+        check_compare_issues(board.entities(), &given_board_with_2_tasks().entities());
     }
 
     #[test]
     fn test_prio_up_in_category_solo_in_state() {
         let mut board = given_board_with_2_tasks(); // 0 in Open, 1 in Review
         board.prio_up_in_category(board.find_entity_id_by_index(0).unwrap());
-        check!(board.entities == given_board_with_2_tasks().entities, "Expect board not to change");
+        check_compare_issues(board.entities(), &given_board_with_2_tasks().entities());
     }
 
     #[test]
     fn test_prio_down_in_category_solo_in_state() {
         let mut board = given_board_with_2_tasks(); // 0 in Open, 1 in Review
         board.prio_down_in_category(board.find_entity_id_by_index(0).unwrap());
-        check!(board.entities == given_board_with_2_tasks().entities, "Expect board not to change");
+        check_compare_issues(board.entities(), &given_board_with_2_tasks().entities());
     }
 
     #[test]
@@ -458,6 +460,7 @@ mod tests {
             check!(entity.state == expected_state, "Expected specific state for Issue at index '{}'.\nBoard was: '{:?}'", index, actual);
         })
     }
+
 
     fn board_for_testing_priorities() -> Board<Issue> {
         Board::new(

@@ -21,6 +21,7 @@ mod tests {
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::{Board};
     use crate::application::usecase::get::GetUseCase;
+    use crate::application::usecase::tests_common::tests::check_boards_are_equal;
 
     #[test]
     fn test_get_usecase_on_typical_board() {
@@ -35,6 +36,6 @@ mod tests {
         get_use_case.execute();
 
         let presented_board = get_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
-        assert_eq!(presented_board, Board::default().with_4_typical_issues(), "Expected presented board to be the one fetched from storage");
+        check_boards_are_equal(&presented_board, &Board::default().with_4_typical_issues());
     }
 }

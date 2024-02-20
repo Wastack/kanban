@@ -61,6 +61,7 @@ mod tests {
     use crate::adapters::storages::file_storage::FileStorage;
     use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
+    use crate::application::usecase::tests_common::tests::check_boards_are_equal;
 
     #[test]
     fn test_file_storage_load_non_existent_file_failed_no_permission() {
@@ -119,7 +120,7 @@ mod tests {
         let board = storage.load();
 
         // Then
-        assert_eq!(board, Board::default());
+        check_boards_are_equal(&board, &Board::default())
     }
 
     #[test]

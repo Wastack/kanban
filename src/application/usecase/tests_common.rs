@@ -4,7 +4,7 @@ pub(crate) mod tests {
     use std::ops::Deref;
     use assert2::check;
     use crate::application::{Board, Issue};
-    use crate::application::issue::{Description};
+    use crate::application::issue::{Description, Entity};
     use crate::{State};
     use crate::adapters::time_providers::fake::DEFAULT_FAKE_TIME;
 
@@ -49,12 +49,8 @@ pub(crate) mod tests {
         }
 
         pub(crate) fn with_4_typical_issues(mut self) -> Self {
+            // todo: don't do it with append
             typical_4_issues().into_iter().for_each(|i|self.append_entity(i));
-            self
-        }
-
-        pub(crate) fn with_issue(mut self, issue: Issue) -> Self {
-            self.append_entity(issue);
             self
         }
 
@@ -90,5 +86,19 @@ pub(crate) mod tests {
         ]
     }
 
+    pub(crate) fn check_compare_issues(actual: &[Entity<Issue>], expected: &[Entity<Issue>]) {
+        actual.into_iter().map(|e| e)
+            .zip(expected.into_iter())
+            .for_each(|(actual, expected)| {
+                check!(actual.as_ref() == expected.as_ref());
+            });
+    }
+
+    pub(crate) fn check_boards_are_equal(actual: &Board<Issue>, expected: &Board<Issue>) {
+        check_compare_issues(actual.entities(), expected.entities());
+        check_compare_issues(actual.get_deleted_entities(), expected.get_deleted_entities());
+        check!(actual.history() == expected.history(), "Expected board to have the same history");
+
+    }
 }
 

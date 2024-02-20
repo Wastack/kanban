@@ -39,6 +39,7 @@ mod tests {
     use crate::application::{Board, Issue};
     use crate::application::domain::history::UndoableHistoryElement;
     use crate::application::issue::Description;
+    use crate::application::usecase::tests_common::tests::check_boards_are_equal;
 
     #[test]
     fn test_successful_add_use_case() {
@@ -56,7 +57,7 @@ mod tests {
             .assert_history_consists_of_one_addition();
 
         let presented_board = add_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
-        assert_eq!(presented_board, stored_board, "Expected stored and presented board to be equal");
+        check_boards_are_equal(&presented_board, &stored_board);
     }
 
     fn given_add_use_case_with(board: Board<Issue>) -> AddUseCase<MemoryIssueStorage, NilPresenter, FakeTimeProvider> {
