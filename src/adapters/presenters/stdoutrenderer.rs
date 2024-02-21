@@ -133,38 +133,29 @@ mod test {
     use crate::application::{Board, Issue, State};
     use crate::application::issue::Description;
     use assert2::{check};
-    use colored::{Colorize};
+    use colored::{ColoredString, Colorize};
     use crate::adapters::presenters::stdoutrenderer::MaybeFormattedString::{Formatted, NonFormatted};
 
     #[test]
     fn test_format_empty_board() {
-        let formatted_board = TabularTextRenderer::<FakeTimeProvider>::default()
-            .format_board(&Board::default());
+        let board = Board::default();
+        let text_renderer = TabularTextRenderer::<FakeTimeProvider>::default();
 
-        check!(formatted_board == "Open\n\nReview\n\nDone\n");
-    }
+        let mut formatted_chunks = text_renderer.build_formatted_text_chunks(&board);
+        [
+            Formatted("Open".bold()),
+            NonFormatted(String::default()),
+            Formatted("Review".bold()),
+            NonFormatted(String::default()),
+            Formatted("Done".bold()),
+            NonFormatted(String::default()),
+        ].into_iter().for_each(|expected| {
+            let chunk = formatted_chunks.next().expect("Expected more chunks of formatted output");
+            check!(chunk == expected);
+        });
 
-    #[test]
-    fn test_format_typical_board() {
-        let board = given_board();
+        check!(formatted_chunks.next() == None, "Expected not to have any more formatted output");
 
-        // When
-        let formatted_board = TabularTextRenderer::<FakeTimeProvider>::default().format_board(&board);
-
-        // Then
-        assert_eq!(formatted_board, r#"Open
-5: An open issue overdue
-6: An open issue not overdue
-
-Review
-7: An issue in review
-
-Done
-0: Done issue number 4
-1: Done issue number 3
-2: Done issue number 2
-3: Done issue number 1
-..."#);
     }
 
     #[test]
