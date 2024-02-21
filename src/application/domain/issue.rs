@@ -42,7 +42,7 @@ impl Display for Description {
 pub struct Entity<T> {
     /// Uniquely identifies an `Entity` in a `Board`
     pub(crate) id: Uuid,
-    pub(crate) entity: T,
+    pub(crate) content: T,
 }
 
 pub trait IdGenerator: Default {
@@ -65,7 +65,7 @@ impl Historized for Issue {
 
 impl<T> AsRef<T> for Entity<T> {
     fn as_ref(&self) -> &T {
-        return &self.entity
+        return &self.content
     }
 }
 
@@ -73,13 +73,13 @@ impl<T> Deref for Entity<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.entity
+        &self.content
     }
 }
 
 impl<T> DerefMut for Entity<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.entity
+        &mut self.content
     }
 }
 
@@ -91,7 +91,7 @@ impl<T> Entity<T> {
 
         Self {
             id,
-            entity,
+            content: entity,
         }
     }
 }

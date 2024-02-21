@@ -28,8 +28,6 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
             }
         };
 
-        // TODO there is a bug: if first move changes prio, second index might be invalid
-
         // TODO: could handling of history be handled in a more concise way?
         let mut history_elements = Vec::default();
 
@@ -188,8 +186,8 @@ mod tests {
 
         // Then
         [
-            (0, State::Done, "I'm doing it now, B"),
-            (1, State::Done, "I'm doing it now, A"),
+            (0, State::Done, "I'm doing it now, A"),
+            (1, State::Done, "I'm doing it now, B"),
             (2, State::Done, "I finished this first"),
             (3, State::Open, "Lazy to do"),
         ].into_iter().for_each(|(expected_index, expected_state, expected_description)| {

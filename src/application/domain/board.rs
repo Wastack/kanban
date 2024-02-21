@@ -260,8 +260,8 @@ mod tests {
     use super::*;
 
     #[derive(Default, Debug)]
-    struct FakeIdGenerator {
-        current: usize,
+    struct FixedIdGenerator {
+        current_index: usize,
     }
     const TEST_UUIDS: [Uuid;6] = [
         uuid!("147522ad-5906-45da-ba74-93fd948b183f"),
@@ -272,10 +272,10 @@ mod tests {
         uuid!("eb072a84-aea5-420b-8579-1a3de4a660bd"),
     ];
 
-    impl IdGenerator for FakeIdGenerator {
+    impl IdGenerator for FixedIdGenerator {
         fn gen(&mut self) -> Uuid {
-            let current = self.current;
-            self.current += 1;
+            let current = self.current_index;
+            self.current_index += 1;
 
             TEST_UUIDS[current]
         }
@@ -292,7 +292,7 @@ mod tests {
         check!(ids == TEST_UUIDS[0..2]);
     }
 
-    fn given_board_with_2_tasks() -> Board<Issue, FakeIdGenerator> {
+    fn given_board_with_2_tasks() -> Board<Issue, FixedIdGenerator> {
         Board::new(vec![
             Issue {
                 description: Description::from("First task"),
@@ -487,7 +487,7 @@ mod tests {
     }
 
 
-    fn board_for_testing_priorities() -> Board<Issue, FakeIdGenerator> {
+    fn board_for_testing_priorities() -> Board<Issue, FixedIdGenerator> {
         Board::new(
             vec![
                 Issue { description: Description::from("First open task"), state: State::Open, time_created: 0 },
