@@ -1,11 +1,9 @@
-use std::collections::{HashMap};
 use std::fmt::Debug;
 use nonempty_collections::{NEVec};
 use uuid::Uuid;
 use crate::application::issue::{Entity, IdGenerator, Issue, UUidGenerator};
 use validated::Validated;
 use crate::application::domain::error::{DomainError, DomainResult};
-use crate::application::issue::State;
 
 
 
@@ -224,37 +222,13 @@ impl<IdGen: IdGenerator> Board<Issue, IdGen> {
 }
 
 
-// todo: this is only needed for presenters
-impl BoardStateView for Board<Issue> {
-    /// Returns the issues categorized by state, alongside their global order (priority). The
-    /// returned Vectors are ordered by their priority.
-    fn issues_with_state(&self) -> HashMap<State, Vec<IssueRef>> {
-        self.entities.iter()
-            .enumerate()
-            .map(|(order, issue) | (issue.state, IssueRef{ order, issue }))
-            .fold(HashMap::new(), |mut acc, (state, issue_ref) | {
-                acc.entry(state).or_insert_with(Vec::new).push(issue_ref);
-                acc
-            })
-    }
-}
-
-/// And Issue referenced, and its position (a.k.a. order or priority) amongst all the issues.
-pub struct IssueRef<'a> {
-    pub order: usize,
-    pub issue: &'a Issue,
-}
-
-pub trait BoardStateView {
-    fn issues_with_state(&self) -> HashMap<State, Vec<IssueRef>>;
-}
-
 
 #[cfg(test)]
 mod tests {
     use assert2::{check, let_assert};
     use uuid::uuid;
     use validated::Validated::{Fail, Good};
+    use crate::application::issue::State;
     use crate::application::issue::Description;
     use crate::application::usecase::tests_common::tests::check_compare_issues;
     use super::*;

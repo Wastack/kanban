@@ -1,4 +1,5 @@
-use crate::application::board::{Board, BoardStateView, IssueRef};
+use std::collections::HashMap;
+use crate::application::board::{Board};
 use crate::application::issue::{State};
 use crate::application::ports::presenter::Presenter;
 use colored::{ColoredString, Colorize};
@@ -54,12 +55,18 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
     }
 
     fn build_formatted_text_chunks<'a>(&'a self, board: &'a Board<Issue>) -> impl Iterator<Item = MaybeFormattedString> + 'a  {
-        let mut issues = board.issues_with_state();
+        let mut issues_categorised_by_state = board.entities().iter()
+            .enumerate()
+            .map(|(index, issue) | (issue.state, (index, issue)))
+            .fold(HashMap::new(), |mut acc, (state, issue_ref) | {
+                acc.entry(state).or_insert_with(Vec::new).push(issue_ref);
+                acc
+            });
 
         let mut done_issues_truncated = false;
 
         // Keep only the first 4 issues of DONE
-        if let Some(done_issues) = issues.get_mut(&State::Done) {
+        if let Some(done_issues) = issues_categorised_by_state.get_mut(&State::Done) {
             if done_issues.len() > 4 {
                 done_issues_truncated = true;
             }
@@ -85,17 +92,17 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
                     }).bold()),
                 ].into_iter().chain(
                     // Display the issues
-                    issues
+                    issues_categorised_by_state
                         // State by state
                         .remove(&tab)
-                        .unwrap_or(Vec::<IssueRef>::default())
+                        .unwrap_or(Vec::default())
                         .into_iter()
 
                         // make it to a string with display category (e.g. overdue)
-                        .map(move |IssueRef { issue, order }|
+                        .map(move | (index, issue)|
                             {
                                 (
-                                    format!("{}: {}", order, issue.description),
+                                    format!("{}: {}", index, issue.description),
                                     issue.category(current_time)
                                 )
                             }
@@ -133,7 +140,7 @@ mod test {
     use crate::application::{Board, Issue, State};
     use crate::application::issue::Description;
     use assert2::{check};
-    use colored::{ColoredString, Colorize};
+    use colored::{Colorize};
     use crate::adapters::presenters::stdoutrenderer::MaybeFormattedString::{Formatted, NonFormatted};
 
     #[test]
