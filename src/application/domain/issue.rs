@@ -1,6 +1,5 @@
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash};
-use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use uuid::Uuid;
 use crate::application::board::Historized;
@@ -40,24 +39,22 @@ impl Display for Description {
 }
 
 #[derive(Debug, Clone)]
-pub struct Entity<T, IdGen: IdGenerator = UUidGenerator> {
+pub struct Entity<T> {
     /// Uniquely identifies an `Entity` in a `Board`
     pub(crate) id: Uuid,
     pub(crate) entity: T,
-
-    id_generator_type: PhantomData<IdGen>
 }
 
-pub trait IdGenerator {
-    fn gen() -> Uuid;
+pub trait IdGenerator: Default {
+    fn gen(&mut self) -> Uuid;
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct UUidGenerator;
 
 impl IdGenerator for UUidGenerator {
-    fn gen() -> Uuid {
+    fn gen(&mut self) -> Uuid {
         Uuid::new_v4()
     }
 }
@@ -66,27 +63,13 @@ impl Historized for Issue {
     type HistoryType = UndoableHistoryElement;
 }
 
-impl<T, IdGen: IdGenerator> AsRef<T> for Entity<T, IdGen> {
+impl<T> AsRef<T> for Entity<T> {
     fn as_ref(&self) -> &T {
         return &self.entity
     }
 }
 
-impl<T, IdGen: IdGenerator> From<T> for Entity<T, IdGen> {
-    /// This conversion will generate the `id` of the `Entity` by hashing all the fields of the candidate `Entity`.
-    fn from(value: T) -> Self {
-        let id = IdGen::gen();
-
-        Self {
-            id,
-            entity: value,
-
-            id_generator_type: Default::default(),
-        }
-    }
-}
-
-impl<T, IdGen: IdGenerator> Deref for Entity<T, IdGen> {
+impl<T> Deref for Entity<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -94,12 +77,24 @@ impl<T, IdGen: IdGenerator> Deref for Entity<T, IdGen> {
     }
 }
 
-impl<T, IdGen: IdGenerator> DerefMut for Entity<T, IdGen> {
+impl<T> DerefMut for Entity<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.entity
     }
 }
 
+
+impl<T> Entity<T> {
+    /// This conversion will generate the `id` of the `Entity` by hashing all the fields of the candidate `Entity`.
+    pub fn build<IdGen: IdGenerator>(entity: T, id_generator: &mut IdGen) -> Self {
+        let id = id_generator.gen();
+
+        Self {
+            id,
+            entity,
+        }
+    }
+}
 
 #[derive(Debug, PartialEq, Clone, Hash)]
 pub struct Issue {
@@ -115,6 +110,7 @@ pub struct Issue {
 }
 
 impl Issue {
+
     pub fn category(&self, time_since_epoch: u64) -> IssueCategory {
         let two_weeks_in_secs = 60 * 60 * 24 * 14;
 

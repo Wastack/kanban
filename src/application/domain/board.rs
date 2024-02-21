@@ -1,6 +1,5 @@
 use std::collections::{HashMap};
 use std::fmt::Debug;
-use std::marker::PhantomData;
 use nonempty_collections::{NEVec};
 use uuid::Uuid;
 use crate::application::issue::{Entity, IdGenerator, Issue, UUidGenerator};
@@ -16,7 +15,7 @@ pub struct Board<T: Historized, IdGen: IdGenerator = UUidGenerator> {
     deleted_entities: Vec<Entity<T>>,
     history: Vec<T::HistoryType>,
 
-    id_generator_type: PhantomData<IdGen>
+    id_generator: IdGen
 }
 
 /// Defines what is the type that is used to define history elements in the board.
@@ -24,27 +23,28 @@ pub trait Historized {
     type HistoryType;
 }
 
-impl<T: Historized> Default for Board<T> {
+impl<T: Historized, IdGen: IdGenerator> Default for Board<T, IdGen> {
     // Because of the generic type, derive for `Default` didn't work
     fn default() -> Self {
         Self {
             entities: Default::default(),
             deleted_entities: Default::default(),
             history: Default::default(),
-            id_generator_type: Default::default(),
+            id_generator: Default::default(),
         }
     }
 }
 
 
-impl<T: Historized> Board<T> {
+impl<T: Historized, IdGen: IdGenerator> Board<T, IdGen> {
     pub(crate) fn new(entities: Vec<T>, deleted_entities: Vec<T>, history: Vec<T::HistoryType>) -> Self {
+        let mut id_generator = IdGen::default();
         Self {
-            entities: entities.into_iter().map(|x| x.into()).collect(),
-            deleted_entities: deleted_entities.into_iter().map(|x| x.into()).collect(),
+            entities: entities.into_iter().map(|x| Entity::build(x, &mut id_generator)).collect(),
+            deleted_entities: deleted_entities.into_iter().map(|x| Entity::build(x, &mut id_generator)).collect(),
             history,
 
-            id_generator_type: Default::default(),
+            ..Default::default()
         }
     }
 
@@ -110,7 +110,7 @@ impl<T: Historized> Board<T> {
 
     /// Adds a new issue to the board to first priority
     pub fn append_entity(&mut self, issue: T) {
-        self.entities.insert(0, issue.into() );
+        self.entities.insert(0, Entity::build(issue, &mut self.id_generator) );
     }
 
     pub fn insert(&mut self, index: usize, entity: Entity<T>) {
@@ -147,7 +147,7 @@ impl<T: Historized> Board<T> {
     }
 }
 
-impl Board<Issue> {
+impl<IdGen: IdGenerator> Board<Issue, IdGen> {
     /// Changes the priority (order) of the issues, so that it becomes the most priority in
     /// its category (amongst issues with similar state).
     /// Returns the new position of the issue
@@ -253,10 +253,33 @@ pub trait BoardStateView {
 #[cfg(test)]
 mod tests {
     use assert2::{check, let_assert};
+    use uuid::uuid;
     use validated::Validated::{Fail, Good};
     use crate::application::issue::Description;
     use crate::application::usecase::tests_common::tests::check_compare_issues;
     use super::*;
+
+    #[derive(Default, Debug)]
+    struct FakeIdGenerator {
+        current: usize,
+    }
+    const TEST_UUIDS: [Uuid;6] = [
+        uuid!("147522ad-5906-45da-ba74-93fd948b183f"),
+        uuid!("2ef43558-cb32-4874-9ef1-e18ea184c16d"),
+        uuid!("79d47f67-23a3-48c4-aff0-26977063ef67"),
+        uuid!("f94130f9-e46b-48ff-8412-33d8536b7cb4"),
+        uuid!("5f4cb165-c103-4398-8e54-a3b1bacba5bb"),
+        uuid!("eb072a84-aea5-420b-8579-1a3de4a660bd"),
+    ];
+
+    impl IdGenerator for FakeIdGenerator {
+        fn gen(&mut self) -> Uuid {
+            let current = self.current;
+            self.current += 1;
+
+            TEST_UUIDS[current]
+        }
+    }
 
     #[test]
     fn test_verify_indices_valid() {
@@ -266,29 +289,25 @@ mod tests {
         let result = board.find_entities_by_indices(&indices);
 
         let_assert!(Good(ids) = result, "Expected validation to succeed");
-        // todo: assert ids?
+        check!(ids == TEST_UUIDS[0..2]);
     }
 
-    fn given_board_with_2_tasks() -> Board<Issue> {
-        Board {
-            entities: vec![
-                Issue {
-                    description: Description::from("First task"),
-                    state: State::Open,
-                    time_created: 1698397489,
+    fn given_board_with_2_tasks() -> Board<Issue, FakeIdGenerator> {
+        Board::new(vec![
+            Issue {
+                description: Description::from("First task"),
+                state: State::Open,
+                time_created: 1698397489,
 
-                }.into(),
-                Issue {
-                    description: Description::from("Second task"),
-                    state: State::Review,
-                    time_created: 1698397490,
+            },
+            Issue {
+                description: Description::from("Second task"),
+                state: State::Review,
+                time_created: 1698397490,
 
-                }.into(),
-            ],
-            deleted_entities: Default::default(),
-            history: Default::default(),
-            id_generator_type: Default::default(),
-        }
+            },
+
+        ], vec![], vec![])
     }
 
     #[test]
@@ -459,7 +478,7 @@ mod tests {
 
     }
 
-    fn check_priorities(expected: &[(&str, State)], actual: &Board<Issue>) {
+    fn check_priorities<IdGen: IdGenerator + Debug>(expected: &[(&str, State)], actual: &Board<Issue, IdGen>) {
         expected.into_iter().enumerate().for_each(|(index, &(expected_description, expected_state))| {
             let entity = &actual.entities()[index];
             check!(entity.description == Description::from(expected_description), "Expected specific description for Issue at index '{}.\nBoard was: '{:?}'", index, actual);
@@ -468,7 +487,7 @@ mod tests {
     }
 
 
-    fn board_for_testing_priorities() -> Board<Issue> {
+    fn board_for_testing_priorities() -> Board<Issue, FakeIdGenerator> {
         Board::new(
             vec![
                 Issue { description: Description::from("First open task"), state: State::Open, time_created: 0 },
