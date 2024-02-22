@@ -1,7 +1,9 @@
+use uuid::Uuid;
 use validated::Validated;
 use validated::Validated::Fail;
 use crate::application::domain::error::DomainError;
 use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
+use crate::application::{Board, Issue};
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::State;
@@ -28,33 +30,10 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
             }
         };
 
-        // TODO: could handling of history be handled in a more concise way?
-        let mut history_elements = Vec::default();
-
-        for id in ids {
-            let issue = board.get_mut(id);
-            let original_state = issue.state;
-
-            if issue.state == state {
-                continue;
-            }
-
-            issue.state = state;
-
-            let current_index = board.entities().iter().position(|e| e.id == id).unwrap();
-            // If issue is moved to done, I'd like to see it on the top
-            let new_index = if state == State::Done {
-                board.prio_top_in_category(id)
-            } else {
-                current_index
-            };
-
-            history_elements.push(MoveHistoryElement {
-                new_index,
-                original_index: current_index,
-                original_state,
-            })
-        }
+        let history_elements: Vec<_> = ids.into_iter()
+            .map(|id| Self::move_entity(&mut board, id, state))
+            .flatten()
+            .collect();
 
         if !history_elements.is_empty() {
             board.push_to_history(UndoableHistoryElement::Move(MoveHistoryElements {
@@ -66,6 +45,32 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
         self.presenter.render_board(&board);
 
         Validated::Good(())
+    }
+
+    fn move_entity(board: &mut Board<Issue>, id: Uuid, state: State) -> Option<MoveHistoryElement> {
+        let issue = board.get_mut(id);
+
+        if issue.state == state {
+            return None
+        }
+
+        let original_state = issue.state;
+        issue.state = state;
+
+        let original_index = board.position(id);
+
+        // If issue is moved to done, I'd like to see it on the top
+        let new_index = if state == State::Done {
+            board.prio_top_in_category(id)
+        } else {
+            original_index
+        };
+
+        Some(MoveHistoryElement {
+            original_state,
+            original_index,
+            new_index
+        })
     }
 }
 
