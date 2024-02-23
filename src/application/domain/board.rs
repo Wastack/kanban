@@ -2,8 +2,7 @@ use std::fmt::Debug;
 use nonempty_collections::{NEVec};
 use uuid::Uuid;
 use crate::application::issue::{Entity, IdGenerator, Issue, UUidGenerator};
-use validated::Validated;
-use crate::application::domain::error::{DomainError, DomainResult};
+use crate::application::domain::error::{DomainError, DomainResult, DomainResultMultiError};
 
 
 
@@ -89,21 +88,17 @@ impl<T: Historized, IdGen: IdGenerator> Board<T, IdGen> {
             .ok_or(DomainError::IndexOutOfRange(index))
     }
 
-    pub fn find_entities_by_indices(&self, indices: &[usize]) -> Validated<Vec<Uuid>, DomainError> {
+    pub fn find_entities_by_indices(&self, indices: &[usize]) -> DomainResultMultiError<Vec<Uuid>> {
         let mut errors = indices
             .iter()
-            .filter(|&&i| !self.contains(i))
+            .filter(|&&i| self.entities.len() <= i)
             .map(|&i|DomainError::IndexOutOfRange(i));
 
         if let Some(head) = errors.next() {
-            return Validated::Fail(NEVec::from((head, errors.collect())));
+            return Err(NEVec::from((head, errors.collect())));
         }
 
-        Validated::Good(indices.iter().map(|&order| self.entities[order].id).collect())
-    }
-
-    pub fn contains(&self, index: usize) -> bool {
-        self.entities.len() > index
+        Ok(indices.iter().map(|&order| self.entities[order].id).collect())
     }
 
     /// Adds a new issue to the board to first priority
@@ -227,7 +222,6 @@ impl<IdGen: IdGenerator> Board<Issue, IdGen> {
 mod tests {
     use assert2::{check, let_assert};
     use uuid::uuid;
-    use validated::Validated::{Fail, Good};
     use crate::application::issue::State;
     use crate::application::issue::Description;
     use crate::application::usecase::tests_common::tests::check_compare_issues;
@@ -262,7 +256,7 @@ mod tests {
 
         let result = board.find_entities_by_indices(&indices);
 
-        let_assert!(Good(ids) = result, "Expected validation to succeed");
+        let_assert!(Ok(ids) = result, "Expected validation to succeed");
         check!(ids == TEST_UUIDS[0..2]);
     }
 
@@ -289,11 +283,9 @@ mod tests {
         let board = given_board_with_2_tasks();
         let indices = vec![0, 1, 2, 3];
 
-        let validated = board.find_entities_by_indices(&indices);
+        let result = board.find_entities_by_indices(&indices);
 
-
-        assert!(validated.is_fail(), "Expected validation to fail");
-        let Fail(errors) = validated else { panic!("expected error when validating indices of board") };
+        let_assert!(Err(errors) = result, "expected errors when validating indices of board");
         assert_eq!(errors.len(), 2, "Expected 2 errors");
         assert!(matches!(errors[0], DomainError::IndexOutOfRange(2)));
         assert!(matches!(errors[1], DomainError::IndexOutOfRange(3)));
@@ -306,7 +298,7 @@ mod tests {
 
         let validated = board.find_entities_by_indices(&indices);
 
-        let_assert!(Good(ids) = validated, "Expected validated indices to be good");
+        let_assert!(Ok(ids) = validated, "Expected validated indices to be good");
         check!(ids == [] as [Uuid; 0]);
     }
 
@@ -316,8 +308,7 @@ mod tests {
         let indices = vec![0, 1, 2, 3];
         let validated = board.find_entities_by_indices(&indices);
 
-        assert!(validated.is_fail(), "Expected validation of indices to fail");
-        let Fail(errors) = validated else { panic!() };
+        let_assert!(Err(errors) = validated);
         assert_eq!(errors.len(), 4, "Expected 4 errors for empty board");
     }
 

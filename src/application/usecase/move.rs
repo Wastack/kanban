@@ -1,7 +1,5 @@
 use uuid::Uuid;
-use validated::Validated;
-use validated::Validated::Fail;
-use crate::application::domain::error::DomainError;
+use crate::application::domain::error::{DomainResultMultiError};
 use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
 use crate::application::{Board, Issue};
 use crate::application::ports::issue_storage::IssueStorage;
@@ -16,38 +14,36 @@ pub(crate) struct MoveUseCase<I: IssueStorage, P: Presenter> {
 }
 
 impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
-    pub(crate) fn execute(&mut self, indices: &[usize], state: State) -> Validated<(), DomainError> {
+    pub(crate) fn execute(&mut self, indices: &[usize], state: State) -> DomainResultMultiError<()> {
         let mut board = self.storage.load();
 
-        let ids = match board.find_entities_by_indices(indices) {
-            Validated::Good(ids) => ids,
-            Fail(errors) => {
-                for e in &errors {
-                    self.presenter.render_error(e);
-                }
+        let ids = board.find_entities_by_indices(indices)
+            .inspect_err(|errors| for e in errors {
+                self.presenter.render_error(e);
+            })?;
 
-                return Fail(errors);
-            }
-        };
-
-        let history_elements: Vec<_> = ids.into_iter()
-            .map(|id| Self::move_entity(&mut board, id, state))
+        let history_for_undo = ids.into_iter()
+            .map(|id| Self::move_issue(&mut board, id, state))
             .flatten()
             .collect();
 
+        Self::update_history(&mut board, history_for_undo);
+
+        self.storage.save(&board);
+        self.presenter.render_board(&board);
+
+        Ok(())
+    }
+
+    fn update_history(board: &mut Board<Issue>, history_elements: Vec<MoveHistoryElement>) {
         if !history_elements.is_empty() {
             board.push_to_history(UndoableHistoryElement::Move(MoveHistoryElements {
                 moves: history_elements,
             }));
         }
-
-        self.storage.save(&board);
-        self.presenter.render_board(&board);
-
-        Validated::Good(())
     }
 
-    fn move_entity(board: &mut Board<Issue>, id: Uuid, state: State) -> Option<MoveHistoryElement> {
+    fn move_issue(board: &mut Board<Issue>, id: Uuid, state: State) -> Option<MoveHistoryElement> {
         let issue = board.get_mut(id);
 
         if issue.state == state {
@@ -76,13 +72,12 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
 
 #[cfg(test)]
 mod tests {
-    use validated::Validated;
-    use validated::Validated::Fail;
+    use assert2::let_assert;
     use crate::application::{Board, Issue};
     use crate::{IssueStorage, MoveUseCase, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::application::domain::error::{DomainError};
+    use crate::application::domain::error::{DomainError, DomainResultMultiError};
     use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
     use crate::application::issue::{Description, Entity};
     use crate::application::usecase::tests_common::tests::check_boards_are_equal;
@@ -93,7 +88,7 @@ mod tests {
             Board::default().with_4_typical_issues(),
         );
 
-        move_use_case.execute(&vec![1, 0], State::Done);
+        let _ = move_use_case.execute(&vec![1, 0], State::Done);
 
         then_issue_with_index(0, &move_use_case)
             .assert_state_is(State::Done);
@@ -125,7 +120,7 @@ mod tests {
             Board::default().with_4_typical_issues(),
         );
 
-        move_use_case.execute(&vec![3], State::Done);
+        let _ = move_use_case.execute(&vec![3], State::Done);
 
         then_issue_with_index(1, &move_use_case)
             .assert_description("Task inserted first")
@@ -216,7 +211,6 @@ mod tests {
         let result = move_use_case.execute(&vec![1, 4, 5], State::Done);
 
         then_moving(&result)
-            .assert_failed()
             .assert_has_two_errors();
 
         move_use_case.storage.load()
@@ -245,24 +239,19 @@ mod tests {
         board.get(board.find_entity_id_by_index(index).unwrap()).clone()
     }
 
-    fn then_moving(result: &Validated<(), DomainError>) -> MovingResult {
+    fn then_moving(result: &DomainResultMultiError<()>) -> MovingResult {
         MovingResult {
             result,
         }
     }
 
     struct MovingResult<'a> {
-        result: &'a Validated<(), DomainError>,
+        result: &'a DomainResultMultiError<()>,
     }
 
     impl MovingResult<'_> {
-        fn assert_failed(&self) -> &Self {
-            assert!(self.result.is_fail(), "Expected deletion to fail");
-            self
-        }
-
         fn assert_has_two_errors(&self) -> &Self {
-            let Fail(errors) = self.result else { panic!("Expected moving to fail") };
+            let_assert!(Err(errors) = self.result);
             assert_eq!(errors.len(), 2, "Expected 2 errors");
             assert!(matches!(errors[0], DomainError::IndexOutOfRange(4)));
             assert!(matches!(errors[1], DomainError::IndexOutOfRange(5)));

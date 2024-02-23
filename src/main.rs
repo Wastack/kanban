@@ -34,10 +34,10 @@ fn main() {
                 state.unwrap_or(State::Open));
         },
         Some(Command::Delete{index}) => {
-            DeleteUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute(&index);
+            let _ = DeleteUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute(&index);
         },
         Some(Command::Move{indices, state}) => {
-            MoveUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute(&indices, state);
+            let _ = MoveUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute(&indices, state);
         },
         Some(Command::Edit{index}) => {
             let _ = EditUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>, OsDefaultEditor>::default().execute(index);

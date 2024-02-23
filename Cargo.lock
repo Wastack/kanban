@@ -308,7 +308,6 @@ dependencies = [
  "tempfile",
  "thiserror",
  "uuid",
- "validated",
 ]
 
 [[package]]
@@ -583,15 +582,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.48",
-]
-
-[[package]]
-name = "validated"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "734f0065f244a3a8db90f1fff5680274f853ad36170c4675d3880f6f992840a9"
-dependencies = [
- "nonempty-collections",
 ]
 
 [[package]]

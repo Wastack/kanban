@@ -1,6 +1,4 @@
-use validated::Validated;
-use validated::Validated::Fail;
-use crate::application::domain::error::{DomainError};
+use crate::application::domain::error::{DomainResultMultiError};
 use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, UndoableHistoryElement};
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
@@ -13,18 +11,13 @@ pub(crate) struct DeleteUseCase<I: IssueStorage, P: Presenter> {
 }
 
 impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
-    pub(crate) fn execute(&mut self, indices: &[usize]) -> Validated<(), DomainError> {
+    pub(crate) fn execute(&mut self, indices: &[usize]) -> DomainResultMultiError<()> {
         let mut board = self.storage.load();
-        let ids = match board.find_entities_by_indices(indices) {
-            Validated::Good(ids) => ids,
-            Fail(errors) => {
-                for e in &errors {
-                    self.presenter.render_error(e);
-                }
 
-                return Fail(errors)
-            },
-        };
+        let ids = board.find_entities_by_indices(indices)
+            .inspect_err(|errors| for e in errors {
+                self.presenter.render_error(e);
+            })?;
 
         for id in ids {
             board.mark_as_deleted(id);
@@ -40,20 +33,19 @@ impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
         self.presenter.render_board(&board);
         self.storage.save(&board);
 
-        Validated::Good(())
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use validated::Validated;
-    use validated::Validated::Fail;
+    use assert2::let_assert;
     use crate::application::{Board, Issue};
     use crate::application::issue::{Description};
     use crate::{DeleteUseCase, IssueStorage};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::application::domain::error::DomainError;
+    use crate::application::domain::error::{DomainError, DomainResultMultiError};
     use crate::application::usecase::tests_common::tests::check_boards_are_equal;
 
     #[test]
@@ -63,7 +55,7 @@ mod tests {
         );
 
         // When second, fourth and first issue are deleted
-        sut.execute(&vec![1, 3, 0]);
+        let _ = sut.execute(&vec![1, 3, 0]);
 
         // Then
         let stored_board = sut.storage.load();
@@ -85,7 +77,6 @@ mod tests {
         let result = delete_use_case.execute(&vec![1, 4, 5]);
 
         then_deletion(&result)
-            .assert_failed()
             .assert_two_errors_indicated_out_of_range();
 
         let presented_errors = delete_use_case.presenter
@@ -98,24 +89,20 @@ mod tests {
             .assert_has_original_issues();
     }
 
-    fn then_deletion(result: &Validated<(), DomainError>) -> DeletionResult {
+    fn then_deletion(result: &DomainResultMultiError<()>) -> DeletionResult {
         DeletionResult {
             result,
         }
     }
 
     struct DeletionResult<'a> {
-        result: &'a Validated<(), DomainError>
+        result: &'a DomainResultMultiError<()>
     }
 
     impl DeletionResult<'_> {
-        fn assert_failed(&self) -> &Self {
-            assert!(self.result.is_fail(), "Expected deletion to fail");
-            self
-        }
 
         fn assert_two_errors_indicated_out_of_range(&self) -> &Self {
-            let Fail(errors) = self.result else { panic!("Expected deletion to fail") };
+            let_assert!(Err(errors) = self.result);
             assert_eq!(errors.len(), 2, "Expected 2 errors");
             assert!(matches!(errors[0], DomainError::IndexOutOfRange(4)));
             assert!(matches!(errors[1], DomainError::IndexOutOfRange(5)));

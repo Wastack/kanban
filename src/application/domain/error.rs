@@ -1,7 +1,9 @@
 use std::{io};
+use nonempty_collections::NEVec;
 use thiserror::Error;
 
 pub type DomainResult<T> = Result<T, DomainError>;
+pub type DomainResultMultiError<T> = Result<T, NEVec<DomainError>>;
 
 #[derive(Debug, Error)]
 pub enum DomainError {
