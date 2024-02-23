@@ -227,28 +227,6 @@ mod tests {
     use crate::application::usecase::tests_common::tests::check_compare_issues;
     use super::*;
 
-    #[derive(Default, Debug)]
-    struct FixedIdGenerator {
-        current_index: usize,
-    }
-    const TEST_UUIDS: [Uuid;6] = [
-        uuid!("147522ad-5906-45da-ba74-93fd948b183f"),
-        uuid!("2ef43558-cb32-4874-9ef1-e18ea184c16d"),
-        uuid!("79d47f67-23a3-48c4-aff0-26977063ef67"),
-        uuid!("f94130f9-e46b-48ff-8412-33d8536b7cb4"),
-        uuid!("5f4cb165-c103-4398-8e54-a3b1bacba5bb"),
-        uuid!("eb072a84-aea5-420b-8579-1a3de4a660bd"),
-    ];
-
-    impl IdGenerator for FixedIdGenerator {
-        fn gen(&mut self) -> Uuid {
-            let current = self.current_index;
-            self.current_index += 1;
-
-            TEST_UUIDS[current]
-        }
-    }
-
     #[test]
     fn test_verify_indices_valid() {
         let board = given_board_with_2_tasks();
@@ -258,24 +236,6 @@ mod tests {
 
         let_assert!(Ok(ids) = result, "Expected validation to succeed");
         check!(ids == TEST_UUIDS[0..2]);
-    }
-
-    fn given_board_with_2_tasks() -> Board<Issue, FixedIdGenerator> {
-        Board::new(vec![
-            Issue {
-                description: Description::from("First task"),
-                state: State::Open,
-                time_created: 1698397489,
-
-            },
-            Issue {
-                description: Description::from("Second task"),
-                state: State::Review,
-                time_created: 1698397490,
-
-            },
-
-        ], vec![], vec![])
     }
 
     #[test]
@@ -442,6 +402,47 @@ mod tests {
         check_priorities(&expected, &board);
 
     }
+
+    #[derive(Default, Debug)]
+    struct FixedIdGenerator {
+        current_index: usize,
+    }
+    const TEST_UUIDS: [Uuid;6] = [
+        uuid!("147522ad-5906-45da-ba74-93fd948b183f"),
+        uuid!("2ef43558-cb32-4874-9ef1-e18ea184c16d"),
+        uuid!("79d47f67-23a3-48c4-aff0-26977063ef67"),
+        uuid!("f94130f9-e46b-48ff-8412-33d8536b7cb4"),
+        uuid!("5f4cb165-c103-4398-8e54-a3b1bacba5bb"),
+        uuid!("eb072a84-aea5-420b-8579-1a3de4a660bd"),
+    ];
+
+    impl IdGenerator for FixedIdGenerator {
+        fn gen(&mut self) -> Uuid {
+            let current = self.current_index;
+            self.current_index += 1;
+
+            TEST_UUIDS[current]
+        }
+    }
+
+    fn given_board_with_2_tasks() -> Board<Issue, FixedIdGenerator> {
+        Board::new(vec![
+            Issue {
+                description: Description::from("First task"),
+                state: State::Open,
+                time_created: 1698397489,
+
+            },
+            Issue {
+                description: Description::from("Second task"),
+                state: State::Review,
+                time_created: 1698397490,
+
+            },
+
+        ], vec![], vec![])
+    }
+
 
     fn check_priorities<IdGen: IdGenerator + Debug>(expected: &[(&str, State)], actual: &Board<Issue, IdGen>) {
         expected.into_iter().enumerate().for_each(|(index, &(expected_description, expected_state))| {
