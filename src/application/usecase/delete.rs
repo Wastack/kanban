@@ -15,9 +15,7 @@ impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
         let mut board = self.storage.load();
 
         let ids = board.find_entities_by_indices(indices)
-            .inspect_err(|errors| for e in errors {
-                self.presenter.render_error(e);
-            })?;
+            .inspect_err(|errors| self.presenter.render_errors(errors))?;
 
         for id in ids {
             board.mark_as_deleted(id);

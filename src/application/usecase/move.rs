@@ -18,9 +18,7 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
         let mut board = self.storage.load();
 
         let ids = board.find_entities_by_indices(indices)
-            .inspect_err(|errors| for e in errors {
-                self.presenter.render_error(e);
-            })?;
+            .inspect_err(|errors| self.presenter.render_errors(errors))?;
 
         let history_for_undo = ids.into_iter()
             .map(|id| Self::move_issue(&mut board, id, state))
