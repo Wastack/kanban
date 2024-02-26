@@ -5,7 +5,6 @@ use crate::application::issue::{Entity, IdGenerator, Issue, UUidGenerator};
 use crate::application::domain::error::{DomainError, DomainResult, DomainResultMultiError};
 
 
-
 #[derive(Debug, Clone)]
 pub struct Board<T: Historized, IdGen: IdGenerator = UUidGenerator> {
     entities: Vec<Entity<T>>,
@@ -493,7 +492,6 @@ pub(crate) mod test_utils {
                 assert!(found, "Expected issue: {:?} to be found in board", issue);
             }
 
-            // TODO: move this assertion to a separate then block
             assert!(self.get_deleted_entities().is_empty(), "Expected not to have deleted issues");
             self
         }

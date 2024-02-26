@@ -14,7 +14,9 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
 
         let event_to_undo = board
             .last_history()
-            .ok_or(DomainError::EmptyHistory)?;
+            .ok_or(DomainError::EmptyHistory)?
+            // todo: if history was just an addendum, clone would not be needed, because only the non-historic board part would need to be mutable
+            .clone();
 
         match event_to_undo {
             UndoableHistoryElement::Add => {
@@ -67,8 +69,6 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                 return Err(DomainError::NotImplemented)
             },
             UndoableHistoryElement::Move(info) => {
-                // TODO let us not clone history
-                let info = info.clone();
                 for h in info.moves.iter().rev() {
                     if h.original_index != h.new_index {
                         let issue = board.remove_by_index(h.new_index);

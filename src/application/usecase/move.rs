@@ -195,6 +195,23 @@ mod tests {
         });
 
         let stored_board = sut.storage.load();
+
+        assert_eq!(stored_board.last_history().expect("Expected element in history"),
+                   &UndoableHistoryElement::Move(MoveHistoryElements {
+                       moves: vec![
+                           MoveHistoryElement {
+                               original_state: State::Open,
+                               original_index: 3,
+                               new_index: 0,
+                           },
+                           MoveHistoryElement {
+                               original_state: State::Open,
+                               original_index: 3,
+                               new_index: 0,
+                           },
+                       ]
+                   }), "Expected a history element with specific content");
+
         let presented_board = sut.presenter.last_board_rendered.expect("Expected a board to be presented");
         check_boards_are_equal(&presented_board, &stored_board);
     }
@@ -211,7 +228,8 @@ mod tests {
         then_moving(&result)
             .assert_has_two_errors();
 
-        move_use_case.storage.load()
+        let stored_board = move_use_case.storage.load();
+        stored_board
             .assert_issue_count(4)
             .assert_has_original_issues();
 
