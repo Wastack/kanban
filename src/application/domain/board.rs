@@ -222,9 +222,9 @@ impl<IdGen: IdGenerator> Board<Issue, IdGen> {
 mod tests {
     use assert2::{check, let_assert};
     use uuid::uuid;
+    use crate::application::board::test_utils::check_compare_issues;
     use crate::application::issue::State;
     use crate::application::issue::Description;
-    use crate::application::usecase::tests_common::tests::check_compare_issues;
     use super::*;
 
     #[test]
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn test_verify_indices_empty_board() {
-        let board : Board<Issue>= Board::default();
+        let board: Board<Issue> = Board::default();
         let indices = vec![0, 1, 2, 3];
         let validated = board.find_entities_by_indices(&indices);
 
@@ -383,7 +383,7 @@ mod tests {
     }
 
     #[test]
-    fn test_prio_up_multiple_hop () {
+    fn test_prio_up_multiple_hop() {
         let mut board = board_for_testing_priorities();
 
         // When
@@ -400,14 +400,14 @@ mod tests {
         ];
 
         check_priorities(&expected, &board);
-
     }
 
     #[derive(Default, Debug)]
     struct FixedIdGenerator {
         current_index: usize,
     }
-    const TEST_UUIDS: [Uuid;6] = [
+
+    const TEST_UUIDS: [Uuid; 6] = [
         uuid!("147522ad-5906-45da-ba74-93fd948b183f"),
         uuid!("2ef43558-cb32-4874-9ef1-e18ea184c16d"),
         uuid!("79d47f67-23a3-48c4-aff0-26977063ef67"),
@@ -439,7 +439,6 @@ mod tests {
                 time_created: 1698397490,
 
             },
-
         ], vec![], vec![])
     }
 
@@ -464,5 +463,106 @@ mod tests {
             ],
             vec![],
             vec![])
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod test_utils {
+    use std::ops::Deref;
+    use assert2::check;
+    use crate::adapters::time_providers::fake::DEFAULT_FAKE_TIME;
+    use crate::application::{Board, Issue, State};
+    use crate::application::issue::{Description, Entity};
+
+    impl Board<Issue> {
+        pub(crate) fn assert_issue_count(&self, num: usize) -> &Self {
+            assert_eq!(self.entity_count(), num, "Expected board to have {} issues", num);
+
+            self
+        }
+
+        pub(crate) fn assert_has_original_issues(&self) -> &Self {
+            let original_board = Board::default().with_4_typical_issues();
+            check!(self.entity_count() >= original_board.entity_count(), "Expected board to have the 4 original issues");
+
+            for issue in original_board.entities() {
+                let found = self.entities().into_iter().find(
+                    |&i| issue.description == i.description
+                ).is_some();
+
+                assert!(found, "Expected issue: {:?} to be found in board", issue);
+            }
+
+            // TODO: move this assertion to a separate then block
+            assert!(self.get_deleted_entities().is_empty(), "Expected not to have deleted issues");
+            self
+        }
+
+        pub(crate) fn has_the_original_4_issues_in_order(&self) -> &Self {
+            typical_4_issues()
+                .into_iter()
+                .zip(self.entities()
+                    .iter()
+                    .map(|x|x.deref()))
+                .for_each(|(expected, actual)|{
+                    assert_eq!(actual, &expected, "Expected Issue to be the original one");
+                });
+
+            self
+        }
+
+        pub(crate) fn with_4_typical_issues(self) -> Self {
+            Board::new(
+                [self.entities.into_iter().map(|x| x.content).collect::<Vec<_>>(), typical_4_issues()].concat(),
+                self.deleted_entities.into_iter().map(|x1| x1.content).collect(),
+                self.history
+            )
+        }
+
+    }
+
+    fn typical_4_issues() -> Vec<Issue> {
+        vec![
+            // index 0
+            Issue {
+                description: Description::from("Task inserted fourth"),
+                state: State::Open,
+                time_created: DEFAULT_FAKE_TIME,
+            },
+            // index 1
+            Issue {
+                description: Description::from("Task inserted third"),
+                state: State::Done,
+                time_created: 1698397491,
+            },
+            // index 2
+            Issue {
+                description: Description::from("Task inserted second"),
+                state: State::Review,
+                time_created: 1698397490,
+            },
+            // index 3
+            Issue {
+                description: Description::from("Task inserted first"),
+                state: State::Open,
+                time_created: 1698397489,
+
+            },
+        ]
+    }
+
+    pub(crate) fn check_compare_issues(actual: &[Entity<Issue>], expected: &[Entity<Issue>]) {
+        actual.into_iter().map(|e| e)
+            .zip(expected.into_iter())
+            .for_each(|(actual, expected)| {
+                check!(actual.as_ref() == expected.as_ref());
+            });
+    }
+
+    pub(crate) fn check_boards_are_equal(actual: &Board<Issue>, expected: &Board<Issue>) {
+        check_compare_issues(actual.entities(), expected.entities());
+        check_compare_issues(actual.get_deleted_entities(), expected.get_deleted_entities());
+        check!(actual.history() == expected.history(), "Expected board to have the same history");
+
     }
 }

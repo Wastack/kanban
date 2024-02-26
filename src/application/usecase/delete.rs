@@ -43,8 +43,8 @@ mod tests {
     use crate::{DeleteUseCase, IssueStorage};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
+    use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::{DomainError, DomainResultMultiError};
-    use crate::application::usecase::tests_common::tests::check_boards_are_equal;
 
     #[test]
     fn test_execute_successful_deletion() {

@@ -97,7 +97,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use assert2::check;
+    use assert2::{check, let_assert};
     use crate::application::{Board, Issue};
     use crate::{IssueStorage, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
@@ -239,16 +239,10 @@ pub(crate) mod tests {
         );
         let result = undo_use_case.execute();
 
-        let Err(DomainError::InvalidBoard(error_reason)) = result else { panic!("Expected InvalidBoard error") };
+        let_assert!(Err(DomainError::InvalidBoard(error_reason)) = result, "Expected InvalidBoard error");
         assert_eq!(error_reason, "has 2 deleted issues, and history suggests to restore 3 deleted issues", "expected specific reason for InvalidBoard error")
 
     }
-
-
-    /*
-        Test implementation comes here
-    */
-
 
     impl Board<Issue> {
         fn with_an_issue_added_additionally(mut self) -> Self {

@@ -59,9 +59,9 @@ mod tests {
     use crate::application::{Board, Issue, State};
     use crate::IssueStorage;
     use crate::adapters::storages::file_storage::FileStorage;
+    use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
-    use crate::application::usecase::tests_common::tests::check_boards_are_equal;
 
     #[test]
     fn test_file_storage_load_non_existent_file_failed_no_permission() {

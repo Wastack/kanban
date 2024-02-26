@@ -37,9 +37,9 @@ mod tests {
     use crate::{AddUseCase, IssueStorage, State};
     use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TIME, FakeTimeProvider};
     use crate::application::{Board, Issue};
+    use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::history::UndoableHistoryElement;
     use crate::application::issue::Description;
-    use crate::application::usecase::tests_common::tests::check_boards_are_equal;
 
     #[test]
     fn test_successful_add_use_case() {

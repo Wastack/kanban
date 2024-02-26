@@ -20,8 +20,8 @@ mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::{Board};
+    use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::usecase::get::GetUseCase;
-    use crate::application::usecase::tests_common::tests::check_boards_are_equal;
 
     #[test]
     fn test_get_usecase_on_typical_board() {
