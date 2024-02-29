@@ -281,8 +281,9 @@ pub(crate) mod tests {
 
         // When
         let result = undo_use_case.execute();
-        let_assert!(Ok(()) = result);
 
+        // Then
+        let_assert!(Ok(()) = result);
         let stored_board = undo_use_case.storage.load();
 
         for (index, expected_description, expected_state) in [
@@ -406,7 +407,6 @@ pub(crate) mod tests {
         }
 
         fn with_issue_moved_to_done(mut self) -> Self {
-            // todo: too much logic in test, maybe it's worthwhile to use the move usecase.
             let id = self.find_entity_id_by_index(2).unwrap();
             self.get_mut(id).state = State::Done;
             self.prio_top_in_category(id);
