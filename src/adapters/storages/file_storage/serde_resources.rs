@@ -22,7 +22,7 @@ impl From<&HistorizedBoard<Issue>> for StoredBoard {
         Self {
             issues: b.entities().into_iter().map(|e| StoredIssue::from(e.deref())).collect(),
             deleted_issues: b.get_deleted_entities().into_iter().map(|e| StoredIssue::from(e.deref())).collect(),
-            history: b.history.iter().map(|x| x.into()).collect(),
+            history: b.history.stack.iter().map(|x| x.into()).collect(),
         }
     }
 }

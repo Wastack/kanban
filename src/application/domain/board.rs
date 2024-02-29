@@ -5,6 +5,7 @@ use uuid::Uuid;
 use crate::application::issue::{Entity, IdGenerator, Issue, UUidGenerator};
 use crate::application::domain::error::{DomainError, DomainResult, DomainResultMultiError};
 
+// todo: slice this file
 
 #[derive(Debug, Clone)]
 pub struct Board<T, IdGen: IdGenerator = UUidGenerator> {
@@ -117,11 +118,25 @@ impl<T, IdGen: IdGenerator> Board<T, IdGen> {
 
 
 #[derive(Debug, Clone)]
+#[derive(PartialEq)]
+pub struct History<H> {
+    /// The top (last) element denotes the most recently performed action.
+    pub stack: Vec<H>
+}
+
+impl<H> Default for History<H> {
+    fn default() -> Self {
+        Self {
+            stack: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct HistorizedBoard<T: Historized, IdGen: IdGenerator = UUidGenerator> {
     pub board: Board<T, IdGen>,
 
-    /// Defines the history of the board as a stack, where the last element denotes the most recently performed action.
-    pub history: Vec<T::HistoryType>,
+    pub history: History<T::HistoryType>,
 }
 
 impl<T: Historized, IdGen: IdGenerator> Deref for HistorizedBoard<T, IdGen> {
@@ -159,20 +174,24 @@ impl<T: Historized, IdGen: IdGenerator> HistorizedBoard<T, IdGen> {
     pub(crate) fn new(entities: Vec<T>, deleted_entities: Vec<T>, history: Vec<T::HistoryType>) -> Self {
         Self {
             board: Board::new(entities, deleted_entities),
-            history,
+            history: History {
+                stack: history,
+            },
         }
     }
+}
 
-    pub fn push_to_history(&mut self, elem: T::HistoryType) {
-        self.history.push(elem)
+impl<H> History<H> {
+    pub fn add(&mut self, elem: H) {
+        self.stack.push(elem)
     }
 
-    pub fn last_history(&self) -> Option<&T::HistoryType> {
-        self.history.last()
+    pub fn last(&self) -> Option<&H> {
+        self.stack.last()
     }
 
-    pub fn pop_history(&mut self) -> Option<T::HistoryType> {
-        self.history.pop()
+    pub fn pop(&mut self) -> Option<H> {
+        self.stack.pop()
     }
 }
 
@@ -554,7 +573,7 @@ pub(crate) mod test_utils {
             HistorizedBoard::new(
                 [self.board.entities.into_iter().map(|x| x.content).collect::<Vec<_>>(), typical_4_issues()].concat(),
                 self.board.deleted_entities.into_iter().map(|x1| x1.content).collect(),
-                self.history
+                self.history.stack
             )
         }
 

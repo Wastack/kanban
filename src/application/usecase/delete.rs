@@ -21,7 +21,7 @@ impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
             board.mark_as_deleted(id);
         }
 
-        board.push_to_history(UndoableHistoryElement::Delete(
+        board.history.add(UndoableHistoryElement::Delete(
             DeleteHistoryElements {
                 deletions: indices.iter().map(|&i|DeleteHistoryElement {
                     original_position_in_issues: i,

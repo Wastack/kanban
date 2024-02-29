@@ -12,8 +12,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
     pub(crate) fn execute(&mut self) -> DomainResult<()> {
         let mut board = self.storage.load();
 
-        let event_to_undo = board
-            .last_history()
+        let event_to_undo = board.history.last()
             .ok_or(DomainError::EmptyHistory)?
             // todo: if history was just an addendum, clone would not be needed, because only the non-historic board part would need to be mutable
             .clone();
@@ -85,7 +84,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
             },
         }
 
-        board.pop_history();
+        board.history.pop();
 
         self.storage.save(&board);
         self.presenter.render_board(&board);
@@ -103,6 +102,7 @@ pub(crate) mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TIME};
+    use crate::application::board::History;
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
@@ -296,7 +296,7 @@ pub(crate) mod tests {
             check!(issue.state == expected_state);
         }
 
-        check!(stored_board.history == [], "Expected history to have been cleared");
+        check!(stored_board.history == History::default(), "Expected history to have been cleared");
         let_assert!(Some(presented_board) = undo_use_case.presenter.last_board_rendered, "Expected board to have been presented");
 
         check_boards_are_equal(&stored_board, &presented_board);
@@ -311,14 +311,14 @@ pub(crate) mod tests {
                     time_created: 0,
                 }
             );
-            self.push_to_history(UndoableHistoryElement::Add);
+            self.history.add(UndoableHistoryElement::Add);
 
             self
         }
         fn with_an_issue_deleted(mut self) -> Self {
             let id = self.find_entity_id_by_index(2).unwrap();
             self.mark_as_deleted(id);
-            self.push_to_history(UndoableHistoryElement::Delete(
+            self.history.add(UndoableHistoryElement::Delete(
                 DeleteHistoryElements {
                     deletions: vec![
                         DeleteHistoryElement{
@@ -337,7 +337,7 @@ pub(crate) mod tests {
                 .into_iter()
                 .for_each(|id| self.mark_as_deleted(id));
 
-            self.push_to_history(UndoableHistoryElement::Delete(
+            self.history.add(UndoableHistoryElement::Delete(
                 DeleteHistoryElements {
                     deletions: vec![
                         DeleteHistoryElement{
@@ -358,7 +358,7 @@ pub(crate) mod tests {
         fn with_1_moved_from_done_to_open(mut self) -> Self {
             let id = self.find_entity_id_by_index(1).unwrap();
             self.get_mut(id).state = State::Open;
-            self.push_to_history(UndoableHistoryElement::Move(MoveHistoryElements{
+            self.history.add(UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![
                     MoveHistoryElement {
                         new_index: 1,
@@ -375,7 +375,7 @@ pub(crate) mod tests {
             let id = self.find_entity_id_by_index(0);
             self.get_mut(id.unwrap()).state = State::Review;
 
-            self.push_to_history(UndoableHistoryElement::Move(MoveHistoryElements{
+            self.history.add(UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![
                     MoveHistoryElement {
                         original_state: State::Open,
@@ -394,7 +394,7 @@ pub(crate) mod tests {
                 let id = self.find_entity_id_by_index(i).unwrap();
                 self.mark_as_deleted(id)
             });
-            self.push_to_history(UndoableHistoryElement::Delete(
+            self.history.add(UndoableHistoryElement::Delete(
                 DeleteHistoryElements {
                     deletions: vec![
                         DeleteHistoryElement{
@@ -416,7 +416,7 @@ pub(crate) mod tests {
             let id = self.find_entity_id_by_index(2).unwrap();
             self.get_mut(id).state = State::Done;
             self.prio_top_in_category(id);
-            self.push_to_history(UndoableHistoryElement::Move(MoveHistoryElements{
+            self.history.add(UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![
                     MoveHistoryElement{
                         original_index: 2,
@@ -430,7 +430,7 @@ pub(crate) mod tests {
         }
 
         fn has_original_history(&self) -> &Self {
-            check!(self.last_history().is_none(), "Expected history to be empty");
+            check!(self.history.last().is_none(), "Expected history to be empty");
             self
         }
 
@@ -443,7 +443,7 @@ pub(crate) mod tests {
         }
 
         fn has_the_addition_in_history(&self) -> &Self {
-            assert_eq!(self.last_history(), Some(&UndoableHistoryElement::Add), "Expected addition to be present in history as last event");
+            assert_eq!(self.history.last(), Some(&UndoableHistoryElement::Add), "Expected addition to be present in history as last event");
 
             self
         }

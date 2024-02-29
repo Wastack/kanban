@@ -22,7 +22,7 @@ impl<I: IssueStorage, P: Presenter, T: CurrentTimeProvider> AddUseCase<I, P, T> 
             state,
             time_created: self.time_provider.now(),
         });
-        board.push_to_history(UndoableHistoryElement::Add);
+        board.history.add(UndoableHistoryElement::Add);
 
         self.storage.save(&board);
         self.presenter.render_board(&board)
@@ -81,7 +81,7 @@ mod tests {
         }
 
         fn assert_history_consists_of_one_addition(&self) -> &Self {
-            let history = self.last_history();
+            let history = self.history.last();
             let_assert!(Some(history) = history, "Expected to have an item in history");
             assert_eq!(history, &UndoableHistoryElement::Add, "Expected item in history to represent and addition of an issue");
 

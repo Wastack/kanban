@@ -35,7 +35,7 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
 
     fn update_history(board: &mut HistorizedBoard<Issue>, history_elements: Vec<MoveHistoryElement>) {
         if !history_elements.is_empty() {
-            board.push_to_history(UndoableHistoryElement::Move(MoveHistoryElements {
+            board.history.add(UndoableHistoryElement::Move(MoveHistoryElements {
                 moves: history_elements,
             }));
         }
@@ -95,7 +95,7 @@ mod tests {
 
         }
 
-        assert_eq!(stored_board.last_history().expect("Expected an entry in history"),
+        assert_eq!(stored_board.history.last().expect("Expected an entry in history"),
                    &UndoableHistoryElement::Move(MoveHistoryElements {
                        moves: vec![
                            MoveHistoryElement {
@@ -128,7 +128,7 @@ mod tests {
 
         }
 
-        assert_eq!(stored_board.last_history().expect("Expected element in history"),
+        assert_eq!(stored_board.history.last().expect("Expected element in history"),
                    &UndoableHistoryElement::Move(MoveHistoryElements {
                        moves: vec![
                            MoveHistoryElement {
@@ -193,7 +193,7 @@ mod tests {
             check!(issue.description.as_str() == expected_description);
         });
 
-        assert_eq!(stored_board.last_history().expect("Expected element in history"),
+        assert_eq!(stored_board.history.last().expect("Expected element in history"),
                    &UndoableHistoryElement::Move(MoveHistoryElements {
                        moves: vec![
                            MoveHistoryElement {
