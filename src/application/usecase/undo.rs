@@ -1,7 +1,8 @@
 use crate::{IssueStorage, Presenter};
+use crate::application::board::Board;
 use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::domain::history::{UndoableHistoryElement};
-use crate::application::HistorizedBoard;
+use crate::application::{HistorizedBoard, Issue};
 
 #[derive(Default)]
 pub(crate) struct UndoUseCase<I, P> {
@@ -17,15 +18,33 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
         } = self.storage.load();
 
         let event_to_undo = history.last()
-            .ok_or(DomainError::EmptyHistory)?;
+            .ok_or(DomainError::EmptyHistory)
+            .inspect_err(|e| self.presenter.render_error(e))?;
 
-        match event_to_undo {
+        Self::undo(&mut board, event_to_undo)
+            .inspect_err(|e| self.presenter.render_error(e))?;
+
+        history.pop();
+
+        let historized_board = HistorizedBoard {
+            board,
+            history,
+        };
+
+        self.storage.save(&historized_board);
+        self.presenter.render_board(&historized_board);
+
+        Ok(())
+    }
+
+    fn undo(board: &mut Board<Issue>, history: &UndoableHistoryElement) -> DomainResult<()> {
+        match history {
             UndoableHistoryElement::Add => {
+                // todo: test error branch
                 let id = board
                     .find_entity_id_by_index(0)
                     // In this case, we fail because the board was invalid, not because the user specified a wrong range
-                    .map_err(|e| DomainError::InvalidBoard(e.to_string()))
-                    .inspect_err(|e|self.presenter.render_error(e))?;
+                    .map_err(|e| DomainError::InvalidBoard(e.to_string()))?;
 
                 board.remove(id);
             },
@@ -76,6 +95,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                         board.insert(h.original_index, issue);
                     }
 
+                    // todo: test error branch
                     let id = board.find_entity_id_by_index(h.original_index).map_err(
                         |e| DomainError::InvalidBoard(e.to_string())
                     )?;
@@ -84,17 +104,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                     entity.state = h.original_state;
                 }
             },
-        }
-
-        history.pop();
-
-        let historized_board = HistorizedBoard {
-            board,
-            history,
         };
-
-        self.storage.save(&historized_board);
-        self.presenter.render_board(&historized_board);
 
         Ok(())
     }
@@ -109,9 +119,10 @@ pub(crate) mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TIME};
-    use crate::application::board::History;
+    use crate::application::board::{History};
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
+    use crate::application::domain::error::DomainError::InvalidBoard;
     use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
     use crate::application::issue::{Description};
     use crate::application::usecase::undo::UndoUseCase;
@@ -184,6 +195,7 @@ pub(crate) mod tests {
                 .with_1_moved_from_done_to_open()
         );
 
+        // todo: all results in this file should come from presenter, not return value
         let result = undo_use_case.execute();
 
         assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
@@ -250,6 +262,27 @@ pub(crate) mod tests {
 
         let_assert!(Err(DomainError::InvalidBoard(error_reason)) = result, "Expected InvalidBoard error");
         assert_eq!(error_reason, "has 2 deleted issues, and history suggests to restore 3 deleted issues", "expected specific reason for InvalidBoard error")
+    }
+
+    #[test]
+    fn test_undo_empty_history() {
+        let mut undo_use_case = given_undo_usecase_with(
+            HistorizedBoard::default()
+        );
+        let result = undo_use_case.execute();
+
+        let_assert!(Err(DomainError::EmptyHistory) = result, "Expected Empty History error");
+    }
+
+    #[test]
+    fn test_undo_invalid_add() {
+        let board = HistorizedBoard::new( vec![], vec![], vec![UndoableHistoryElement::Add]);
+        let mut undo_use_case = given_undo_usecase_with(board);
+
+        let _ = undo_use_case.execute();
+        let err = undo_use_case.presenter.errors_presented.last().expect("Expected error");
+        let_assert!(InvalidBoard(error_message) = err);
+        check!(error_message.as_str() == "Index `0` is out of range");
     }
 
     /// Testing undoing a command of complicated moves, where multiple issues are moved to done,
