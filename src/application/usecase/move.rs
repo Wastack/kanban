@@ -70,7 +70,7 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
 
 #[cfg(test)]
 mod tests {
-    use assert2::let_assert;
+    use assert2::{check, let_assert};
     use crate::application::{Board, Issue};
     use crate::{IssueStorage, MoveUseCase, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
@@ -78,7 +78,7 @@ mod tests {
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::{DomainError, DomainResultMultiError};
     use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
-    use crate::application::issue::{Description, Entity};
+    use crate::application::issue::{Description};
 
     #[test]
     fn test_successful_move_use_case() {
@@ -88,13 +88,12 @@ mod tests {
 
         let _ = move_use_case.execute(&vec![1, 0], State::Done);
 
-        then_issue_with_index(0, &move_use_case)
-            .assert_state_is(State::Done);
-
-        then_issue_with_index(1, &move_use_case)
-            .assert_state_is(State::Done);
-
         let stored_board = move_use_case.storage.load();
+        for index in 0..1 {
+            let issue = stored_board.get(stored_board.find_entity_id_by_index(index).unwrap());
+            check!(issue.state == State::Done);
+
+        }
 
         assert_eq!(stored_board.last_history().expect("Expected an entry in history"),
                    &UndoableHistoryElement::Move(MoveHistoryElements {
@@ -120,15 +119,14 @@ mod tests {
 
         let _ = move_use_case.execute(&vec![3], State::Done);
 
-        then_issue_with_index(1, &move_use_case)
-            .assert_description("Task inserted first")
-            .assert_state_is(State::Done);
-
-        then_issue_with_index(2, &move_use_case)
-            .assert_description("Task inserted third")
-            .assert_state_is(State::Done);
-
         let stored_board = move_use_case.storage.load();
+
+        for (index, expected_description) in [(1, "Task inserted first"), (2, "Task inserted third")] {
+            let issue = stored_board.get(stored_board.find_entity_id_by_index(index).unwrap());
+            check!(issue.description.as_str() == expected_description);
+            check!(issue.state == State::Done);
+
+        }
 
         assert_eq!(stored_board.last_history().expect("Expected element in history"),
                    &UndoableHistoryElement::Move(MoveHistoryElements {
@@ -183,18 +181,17 @@ mod tests {
         sut.execute(&[3, 2], State::Done).expect("Expected move to succeed");
 
         // Then
+        let stored_board = sut.storage.load();
         [
             (0, State::Done, "I'm doing it now, A"),
             (1, State::Done, "I'm doing it now, B"),
             (2, State::Done, "I finished this first"),
             (3, State::Open, "Lazy to do"),
         ].into_iter().for_each(|(expected_index, expected_state, expected_description)| {
-            then_issue_with_index(expected_index, &sut)
-                .assert_description(expected_description)
-                .assert_state_is(expected_state);
+            let issue = stored_board.get(stored_board.find_entity_id_by_index(expected_index).unwrap());
+            check!(issue.state == expected_state);
+            check!(issue.description.as_str() == expected_description);
         });
-
-        let stored_board = sut.storage.load();
 
         assert_eq!(stored_board.last_history().expect("Expected element in history"),
                    &UndoableHistoryElement::Move(MoveHistoryElements {
@@ -249,12 +246,6 @@ mod tests {
         }
     }
 
-    fn then_issue_with_index(index: usize, sut: &MoveUseCase<MemoryIssueStorage, NilPresenter>) -> Entity<Issue> {
-        let board = sut.storage.load();
-
-        board.get(board.find_entity_id_by_index(index).unwrap()).clone()
-    }
-
     fn then_moving(result: &DomainResultMultiError<()>) -> MovingResult {
         MovingResult {
             result,
@@ -276,15 +267,4 @@ mod tests {
         }
     }
 
-    impl Issue {
-        fn assert_state_is(&self, s: State) -> &Self {
-            assert_eq!(self.state, s, "Expected moved issue to be in state: {:?}", s);
-            self
-        }
-
-        fn assert_description(&self, description: &str) -> &Self {
-            assert_eq!(self.description, Description::from(description));
-            self
-        }
-    }
 }

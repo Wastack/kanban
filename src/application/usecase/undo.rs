@@ -102,6 +102,8 @@ pub(crate) mod tests {
     use crate::{IssueStorage, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
+    use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TIME};
+    use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
     use crate::application::issue::{Description};
@@ -241,7 +243,62 @@ pub(crate) mod tests {
 
         let_assert!(Err(DomainError::InvalidBoard(error_reason)) = result, "Expected InvalidBoard error");
         assert_eq!(error_reason, "has 2 deleted issues, and history suggests to restore 3 deleted issues", "expected specific reason for InvalidBoard error")
+    }
 
+    /// Testing undoing a command of complicated moves, where multiple issues are moved to done,
+    /// which causes priority changes.
+    #[test]
+    fn test_multi_move_with_prio_change_undo() {
+        // Given
+        let entities = [
+            (State::Done, "I'm doing it now, A"),
+            (State::Done, "I'm doing it now, B"),
+            (State::Done, "I finished this first"),
+            (State::Open, "Lazy to do"),
+        ].into_iter().map(|(state, description)| Issue {
+            description: Description::from(description),
+            state,
+            time_created: DEFAULT_FAKE_TIME,
+        }).collect();
+
+        let history = vec![UndoableHistoryElement::Move(MoveHistoryElements {
+            moves: vec![
+                MoveHistoryElement {
+                    original_state: State::Open,
+                    original_index: 3,
+                    new_index: 0,
+                },
+                MoveHistoryElement {
+                    original_state: State::Open,
+                    original_index: 3,
+                    new_index: 0,
+                },
+            ]
+        })];
+
+        let mut undo_use_case = given_undo_usecase_with(
+            Board::new(entities, vec![], history ));
+
+        // When
+        let result = undo_use_case.execute();
+        let_assert!(Ok(()) = result);
+
+        let stored_board = undo_use_case.storage.load();
+
+        for (index, expected_description, expected_state) in [
+                (0, "I finished this first", State::Done),
+                (1, "Lazy to do", State::Open),
+                (2, "I'm doing it now, A", State::Open),
+                (3, "I'm doing it now, B", State::Open) ] {
+            let issue = stored_board.get(stored_board.find_entity_id_by_index(index).unwrap());
+            check!(issue.description.as_str() == expected_description);
+            check!(issue.state == expected_state);
+        }
+
+        check!(stored_board.history() == [], "Expected history to have been cleared");
+        let_assert!(Some(presented_board) = undo_use_case.presenter.last_board_rendered, "Expected board to have been presented");
+
+        check_boards_are_equal(&stored_board, &presented_board);
     }
 
     impl Board<Issue> {
