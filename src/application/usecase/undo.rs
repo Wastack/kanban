@@ -316,7 +316,8 @@ pub(crate) mod tests {
             self
         }
         fn with_an_issue_deleted(mut self) -> Self {
-            self.mark_as_deleted(self.find_entity_id_by_index(2).unwrap());
+            let id = self.find_entity_id_by_index(2).unwrap();
+            self.mark_as_deleted(id);
             self.push_to_history(UndoableHistoryElement::Delete(
                 DeleteHistoryElements {
                     deletions: vec![
@@ -355,7 +356,8 @@ pub(crate) mod tests {
         }
 
         fn with_1_moved_from_done_to_open(mut self) -> Self {
-            self.get_mut(self.find_entity_id_by_index(1).unwrap()).state = State::Open;
+            let id = self.find_entity_id_by_index(1).unwrap();
+            self.get_mut(id).state = State::Open;
             self.push_to_history(UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![
                     MoveHistoryElement {
@@ -370,7 +372,8 @@ pub(crate) mod tests {
         }
 
         fn with_most_priority_issue_moved_to_review(mut self) -> Self {
-            self.get_mut(self.find_entity_id_by_index(0).unwrap()).state = State::Review;
+            let id = self.find_entity_id_by_index(0);
+            self.get_mut(id.unwrap()).state = State::Review;
 
             self.push_to_history(UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![
@@ -387,7 +390,10 @@ pub(crate) mod tests {
 
         fn with_inconsistent_delete_history(mut self) -> Self {
             // There is one less issue actually deleted compared to what history suggests
-            [1, 0].into_iter().for_each(|i| self.mark_as_deleted(self.find_entity_id_by_index(i).unwrap()));
+            [1, 0].into_iter().for_each(|i| {
+                let id = self.find_entity_id_by_index(i).unwrap();
+                self.mark_as_deleted(id)
+            });
             self.push_to_history(UndoableHistoryElement::Delete(
                 DeleteHistoryElements {
                     deletions: vec![

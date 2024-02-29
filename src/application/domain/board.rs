@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::ops::{Deref, DerefMut};
 use nonempty_collections::{NEVec};
 use uuid::Uuid;
 use crate::application::issue::{Entity, IdGenerator, Issue, UUidGenerator};
@@ -34,16 +35,110 @@ impl<T, IdGen: IdGenerator> Board<T, IdGen> {
             ..Default::default()
         }
     }
+
+    pub(crate) fn entities(&self) -> &[Entity<T>] {
+        &self.entities
+    }
+
+    pub(crate) fn entity_count(&self) -> usize {
+        self.entities.len()
+    }
+
+    /// Gets entity with id. Panics if used with a non-existing id
+    pub(crate) fn get(&self, id: Uuid) -> &Entity<T> {
+        self.entities.iter()
+            .find(|&entity| entity.id == id)
+            .unwrap()
+    }
+
+    pub(crate) fn get_mut(&mut self, id: Uuid) -> &mut Entity<T> {
+        self.entities.iter_mut()
+            .find(|entity| entity.id == id)
+            .unwrap()
+    }
+
+    /// Removes entity with id. Panics if used with a non-existing id.
+    pub(crate) fn remove(&mut self, id: Uuid) -> Entity<T> {
+        let index = self.entities.iter().position(|entity| entity.id == id).unwrap();
+        self.entities.remove(index)
+    }
+
+    pub(crate) fn mark_as_deleted(&mut self, id: Uuid) {
+        let index = self.entities.iter().position(|entity| entity.id == id).unwrap();
+        let entity = self.entities.remove(index);
+        self.deleted_entities.insert(0, entity);
+    }
+
+    pub(crate) fn remove_by_index(&mut self, index: usize) -> Entity<T> {
+        self.entities.remove(index)
+    }
+
+    pub fn find_entity_id_by_index(&self, index: usize) -> DomainResult<Uuid> {
+        self.entities.get(index)
+            .and_then(|e| Some(e.id))
+            .ok_or(DomainError::IndexOutOfRange(index))
+    }
+
+    pub fn find_entities_by_indices(&self, indices: &[usize]) -> DomainResultMultiError<Vec<Uuid>> {
+        let mut errors = indices
+            .iter()
+            .filter(|&&i| self.entities.len() <= i)
+            .map(|&i|DomainError::IndexOutOfRange(i));
+
+        if let Some(head) = errors.next() {
+            return Err(NEVec::from((head, errors.collect())));
+        }
+
+        Ok(indices.iter().map(|&order| self.entities[order].id).collect())
+    }
+
+    /// Adds a new issue to the board to first priority
+    pub fn append_entity(&mut self, issue: T) {
+        self.entities.insert(0, Entity::build(issue, &mut self.id_generator) );
+    }
+
+    pub fn insert(&mut self, index: usize, entity: Entity<T>) {
+        self.entities.insert(index, entity)
+    }
+
+    pub fn position(&self, id: Uuid) -> usize {
+        self.entities.iter().position(|e| e.id == id).unwrap()
+    }
+
+    /// Returns a list of the deleted issues. The first element of the list is the one most recently deleted.
+    pub fn get_deleted_entities(&self) -> &[Entity<T>] {
+        &self.deleted_entities
+    }
+
+    pub fn get_deleted_entities_mut(&mut self) -> &mut Vec<Entity<T>> {
+        &mut self.deleted_entities
+    }
 }
 
 
 #[derive(Debug, Clone)]
 pub struct HistorizedBoard<T: Historized, IdGen: IdGenerator = UUidGenerator> {
     pub board: Board<T, IdGen>,
+
+    /// Defines the history of the board as a stack, where the last element denotes the most recently performed action.
     pub history: Vec<T::HistoryType>,
 }
 
-/// Defines what is the type that is used to define history elements in the board.
+impl<T: Historized, IdGen: IdGenerator> Deref for HistorizedBoard<T, IdGen> {
+    type Target = Board<T, IdGen>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.board
+    }
+}
+
+impl<T: Historized, IdGen: IdGenerator> DerefMut for HistorizedBoard<T, IdGen> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.board
+    }
+}
+
+/// Defines what is the type that is used to define history elements in the board. Actions on the type becomes undo-able.
 pub trait Historized {
     type HistoryType;
 }
@@ -68,84 +163,6 @@ impl<T: Historized, IdGen: IdGenerator> HistorizedBoard<T, IdGen> {
         }
     }
 
-    pub(crate) fn entities(&self) -> &[Entity<T>] {
-        &self.board.entities
-    }
-
-    pub(crate) fn entity_count(&self) -> usize {
-        self.board.entities.len()
-    }
-
-    /// Gets entity with id. Panics if used with a non-existing id
-    pub(crate) fn get(&self, id: Uuid) -> &Entity<T> {
-        self.board.entities.iter()
-            .find(|&entity| entity.id == id)
-            .unwrap()
-    }
-
-    pub(crate) fn get_mut(&mut self, id: Uuid) -> &mut Entity<T> {
-        self.board.entities.iter_mut()
-            .find(|entity| entity.id == id)
-            .unwrap()
-    }
-
-    /// Removes entity with id. Panics if used with a non-existing id.
-    pub(crate) fn remove(&mut self, id: Uuid) -> Entity<T> {
-        let index = self.board.entities.iter().position(|entity| entity.id == id).unwrap();
-        self.board.entities.remove(index)
-    }
-
-    pub(crate) fn mark_as_deleted(&mut self, id: Uuid) {
-        let index = self.board.entities.iter().position(|entity| entity.id == id).unwrap();
-        let entity = self.board.entities.remove(index);
-        self.board.deleted_entities.insert(0, entity);
-    }
-
-    pub(crate) fn remove_by_index(&mut self, index: usize) -> Entity<T> {
-        self.board.entities.remove(index)
-    }
-
-    pub fn find_entity_id_by_index(&self, index: usize) -> DomainResult<Uuid> {
-        self.board.entities.get(index)
-            .and_then(|e| Some(e.id))
-            .ok_or(DomainError::IndexOutOfRange(index))
-    }
-
-    pub fn find_entities_by_indices(&self, indices: &[usize]) -> DomainResultMultiError<Vec<Uuid>> {
-        let mut errors = indices
-            .iter()
-            .filter(|&&i| self.board.entities.len() <= i)
-            .map(|&i|DomainError::IndexOutOfRange(i));
-
-        if let Some(head) = errors.next() {
-            return Err(NEVec::from((head, errors.collect())));
-        }
-
-        Ok(indices.iter().map(|&order| self.board.entities[order].id).collect())
-    }
-
-    /// Adds a new issue to the board to first priority
-    pub fn append_entity(&mut self, issue: T) {
-        self.board.entities.insert(0, Entity::build(issue, &mut self.board.id_generator) );
-    }
-
-    pub fn insert(&mut self, index: usize, entity: Entity<T>) {
-        self.board.entities.insert(index, entity)
-    }
-
-    pub fn position(&self, id: Uuid) -> usize {
-        self.board.entities.iter().position(|e| e.id == id).unwrap()
-    }
-
-    /// Returns a list of the deleted issues. The first element of the list is the one most recently deleted.
-    pub fn get_deleted_entities(&self) -> &[Entity<T>] {
-        &self.board.deleted_entities
-    }
-
-    pub fn get_deleted_entities_mut(&mut self) -> &mut Vec<Entity<T>> {
-        &mut self.board.deleted_entities
-    }
-
     pub fn push_to_history(&mut self, elem: T::HistoryType) {
         self.history.push(elem)
     }
@@ -157,16 +174,15 @@ impl<T: Historized, IdGen: IdGenerator> HistorizedBoard<T, IdGen> {
     pub fn pop_history(&mut self) -> Option<T::HistoryType> {
         self.history.pop()
     }
-
 }
 
-impl<IdGen: IdGenerator> HistorizedBoard<Issue, IdGen> {
+impl<IdGen: IdGenerator> Board<Issue, IdGen> {
     /// Changes the priority (order) of the issues, so that it becomes the most priority in
     /// its category (amongst issues with similar state).
     /// Returns the new position of the issue
     pub fn prio_top_in_category(&mut self, id: Uuid) -> usize {
         let state = self.get(id).state;
-        let most_prio_position = self.board.entities
+        let most_prio_position = self.entities
             .iter()
             .position(|i|i.state == state)
             .unwrap();
@@ -181,13 +197,13 @@ impl<IdGen: IdGenerator> HistorizedBoard<Issue, IdGen> {
     /// its category (amongst issues with similar state)
     pub fn prio_bottom_in_category(&mut self, id: Uuid) {
         let state = self.get(id).state;
-        let least_prio_position = self.board.entities
+        let least_prio_position = self.entities
             .iter()
             .rposition(|i|i.state == state)
             .unwrap();
 
         let issue = self.remove(id);
-        self.board.entities.insert(least_prio_position, issue);
+        self.entities.insert(least_prio_position, issue);
     }
 
     /// Changes the priority (order) of the issues, so that it becomes one more priority in
@@ -195,12 +211,12 @@ impl<IdGen: IdGenerator> HistorizedBoard<Issue, IdGen> {
     pub fn prio_up_in_category(&mut self, id: Uuid) {
         let state = self.get(id).state;
 
-        let entity_pos_reversed = self.board.entities
+        let entity_pos_reversed = self.entities
             .iter()
             .rev()
             .position(|i|i.id == id).unwrap();
 
-        let move_up_this_much = self.board.entities.iter()
+        let move_up_this_much = self.entities.iter()
             .rev()
             .skip(entity_pos_reversed+1)
             .position(|i|i.state == state);
@@ -220,7 +236,7 @@ impl<IdGen: IdGenerator> HistorizedBoard<Issue, IdGen> {
     pub fn prio_down_in_category(&mut self, id: Uuid) {
         let current_position =  self.position(id);
 
-        let steps_down = self.board.entities.iter()
+        let steps_down = self.entities.iter()
             .skip(current_position+1)
             .position(|x| x.state == self.get(id).state)
             .map(|steps| steps + 1 );
@@ -232,7 +248,7 @@ impl<IdGen: IdGenerator> HistorizedBoard<Issue, IdGen> {
         let issue = self.remove(id);
 
         // by removing an issue, all subsequent indices shift to the left. Thus, -1.
-        self.board.entities.insert(current_position + steps_down, issue);
+        self.entities.insert(current_position + steps_down, issue);
     }
 }
 
@@ -295,7 +311,8 @@ mod tests {
     #[test]
     fn test_prio_top_in_category_only_one_in_category() {
         let mut board = given_board_with_2_tasks(); // 0 in Open, 1 in Review
-        board.prio_top_in_category(board.find_entity_id_by_index(1).unwrap());
+        let id = board.find_entity_id_by_index(1).unwrap();
+        board.prio_top_in_category(id);
 
         check_compare_issues(board.entities(), &given_board_with_2_tasks().entities());
     }
@@ -324,21 +341,24 @@ mod tests {
     #[test]
     fn test_prio_bottom_in_category_solo_in_state() {
         let mut board = given_board_with_2_tasks(); // 0 in Open, 1 in Review
-        board.prio_bottom_in_category(board.find_entity_id_by_index(0).unwrap());
+        let id = board.find_entity_id_by_index(0).unwrap();
+        board.prio_bottom_in_category(id);
         check_compare_issues(board.entities(), &given_board_with_2_tasks().entities());
     }
 
     #[test]
     fn test_prio_up_in_category_solo_in_state() {
         let mut board = given_board_with_2_tasks(); // 0 in Open, 1 in Review
-        board.prio_up_in_category(board.find_entity_id_by_index(0).unwrap());
+        let id = board.find_entity_id_by_index(0).unwrap();
+        board.prio_up_in_category(id);
         check_compare_issues(board.entities(), &given_board_with_2_tasks().entities());
     }
 
     #[test]
     fn test_prio_down_in_category_solo_in_state() {
         let mut board = given_board_with_2_tasks(); // 0 in Open, 1 in Review
-        board.prio_down_in_category(board.find_entity_id_by_index(0).unwrap());
+        let id = board.find_entity_id_by_index(0).unwrap();
+        board.prio_down_in_category(id);
         check_compare_issues(board.entities(), &given_board_with_2_tasks().entities());
     }
 
