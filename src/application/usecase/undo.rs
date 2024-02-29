@@ -1,6 +1,7 @@
 use crate::{IssueStorage, Presenter};
 use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::domain::history::{UndoableHistoryElement};
+use crate::application::HistorizedBoard;
 
 #[derive(Default)]
 pub(crate) struct UndoUseCase<I, P> {
@@ -10,12 +11,13 @@ pub(crate) struct UndoUseCase<I, P> {
 
 impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
     pub(crate) fn execute(&mut self) -> DomainResult<()> {
-        let mut board = self.storage.load();
+        let HistorizedBoard {
+            mut board,
+            mut history,
+        } = self.storage.load();
 
-        let event_to_undo = board.history.last()
-            .ok_or(DomainError::EmptyHistory)?
-            // todo: if history was just an addendum, clone would not be needed, because only the non-historic board part would need to be mutable
-            .clone();
+        let event_to_undo = history.last()
+            .ok_or(DomainError::EmptyHistory)?;
 
         match event_to_undo {
             UndoableHistoryElement::Add => {
@@ -84,10 +86,15 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
             },
         }
 
-        board.history.pop();
+        history.pop();
 
-        self.storage.save(&board);
-        self.presenter.render_board(&board);
+        let historized_board = HistorizedBoard {
+            board,
+            history,
+        };
+
+        self.storage.save(&historized_board);
+        self.presenter.render_board(&historized_board);
 
         Ok(())
     }
