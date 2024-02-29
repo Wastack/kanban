@@ -40,7 +40,6 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
     fn undo(board: &mut Board<Issue>, history: &UndoableHistoryElement) -> DomainResult<()> {
         match history {
             UndoableHistoryElement::Add => {
-                // todo: test error branch
                 let id = board
                     .find_entity_id_by_index(0)
                     // In this case, we fail because the board was invalid, not because the user specified a wrong range
@@ -95,7 +94,6 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                         board.insert(h.original_index, issue);
                     }
 
-                    // todo: test error branch
                     let id = board.find_entity_id_by_index(h.original_index).map_err(
                         |e| DomainError::InvalidBoard(e.to_string())
                     )?;
@@ -283,6 +281,35 @@ pub(crate) mod tests {
         let err = undo_use_case.presenter.errors_presented.last().expect("Expected error");
         let_assert!(InvalidBoard(error_message) = err);
         check!(error_message.as_str() == "Index `0` is out of range");
+    }
+
+    #[test]
+    fn test_undo_invalid_move() {
+        // Given
+        let board = HistorizedBoard::new( vec![
+            Issue {
+                description: Description::from("One task"),
+                state: State::Open,
+                time_created: DEFAULT_FAKE_TIME,
+            }
+        ], vec![], vec![UndoableHistoryElement::Move(MoveHistoryElements{
+            moves: vec![MoveHistoryElement{
+                original_index: 1, // History suggests a non-existent second task was moved
+                original_state: State::Review,
+                new_index: 1,
+            }],
+        })]);
+
+        let mut undo_use_case = given_undo_usecase_with(board);
+
+        // When
+        let _ = undo_use_case.execute();
+
+        // then
+        let err = undo_use_case.presenter.errors_presented.last().expect("Expected error");
+        let_assert!(InvalidBoard(error_message) = err);
+        check!(error_message.as_str() == "Index `1` is out of range");
+
     }
 
     /// Testing undoing a command of complicated moves, where multiple issues are moved to done,
