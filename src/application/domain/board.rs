@@ -6,12 +6,41 @@ use crate::application::domain::error::{DomainError, DomainResult, DomainResultM
 
 
 #[derive(Debug, Clone)]
-pub struct Board<T: Historized, IdGen: IdGenerator = UUidGenerator> {
+pub struct Board<T, IdGen: IdGenerator = UUidGenerator> {
     entities: Vec<Entity<T>>,
     deleted_entities: Vec<Entity<T>>,
-    history: Vec<T::HistoryType>,
 
     id_generator: IdGen
+}
+
+impl<T, IdGen: IdGenerator> Default for Board<T, IdGen> {
+    fn default() -> Self {
+        Self {
+            entities: Default::default(),
+            deleted_entities: Default::default(),
+            id_generator: Default::default(),
+        }
+    }
+}
+
+impl<T, IdGen: IdGenerator> Board<T, IdGen> {
+    pub(crate) fn new(entities: Vec<T>, deleted_entities: Vec<T>) -> Self {
+        let mut id_generator = IdGen::default();
+
+        Self {
+            entities: entities.into_iter().map(|x| Entity::build(x, &mut id_generator)).collect(),
+            deleted_entities: deleted_entities.into_iter().map(|x| Entity::build(x, &mut id_generator)).collect(),
+
+            ..Default::default()
+        }
+    }
+}
+
+
+#[derive(Debug, Clone)]
+pub struct HistorizedBoard<T: Historized, IdGen: IdGenerator = UUidGenerator> {
+    pub board: Board<T, IdGen>,
+    pub history: Vec<T::HistoryType>,
 }
 
 /// Defines what is the type that is used to define history elements in the board.
@@ -19,70 +48,65 @@ pub trait Historized {
     type HistoryType;
 }
 
-impl<T: Historized, IdGen: IdGenerator> Default for Board<T, IdGen> {
+impl<T: Historized, IdGen: IdGenerator> Default for HistorizedBoard<T, IdGen> {
     // Because of the generic type, derive for `Default` didn't work
     fn default() -> Self {
         Self {
-            entities: Default::default(),
-            deleted_entities: Default::default(),
+            board: Board::default(),
+
             history: Default::default(),
-            id_generator: Default::default(),
         }
     }
 }
 
 
-impl<T: Historized, IdGen: IdGenerator> Board<T, IdGen> {
+impl<T: Historized, IdGen: IdGenerator> HistorizedBoard<T, IdGen> {
     pub(crate) fn new(entities: Vec<T>, deleted_entities: Vec<T>, history: Vec<T::HistoryType>) -> Self {
-        let mut id_generator = IdGen::default();
         Self {
-            entities: entities.into_iter().map(|x| Entity::build(x, &mut id_generator)).collect(),
-            deleted_entities: deleted_entities.into_iter().map(|x| Entity::build(x, &mut id_generator)).collect(),
+            board: Board::new(entities, deleted_entities),
             history,
-
-            ..Default::default()
         }
     }
 
     pub(crate) fn entities(&self) -> &[Entity<T>] {
-        &self.entities
+        &self.board.entities
     }
 
     pub(crate) fn entity_count(&self) -> usize {
-        self.entities.len()
+        self.board.entities.len()
     }
 
     /// Gets entity with id. Panics if used with a non-existing id
     pub(crate) fn get(&self, id: Uuid) -> &Entity<T> {
-        self.entities.iter()
+        self.board.entities.iter()
             .find(|&entity| entity.id == id)
             .unwrap()
     }
 
     pub(crate) fn get_mut(&mut self, id: Uuid) -> &mut Entity<T> {
-        self.entities.iter_mut()
+        self.board.entities.iter_mut()
             .find(|entity| entity.id == id)
             .unwrap()
     }
 
     /// Removes entity with id. Panics if used with a non-existing id.
     pub(crate) fn remove(&mut self, id: Uuid) -> Entity<T> {
-        let index = self.entities.iter().position(|entity| entity.id == id).unwrap();
-        self.entities.remove(index)
+        let index = self.board.entities.iter().position(|entity| entity.id == id).unwrap();
+        self.board.entities.remove(index)
     }
 
     pub(crate) fn mark_as_deleted(&mut self, id: Uuid) {
-        let index = self.entities.iter().position(|entity| entity.id == id).unwrap();
-        let entity = self.entities.remove(index);
-        self.deleted_entities.insert(0, entity);
+        let index = self.board.entities.iter().position(|entity| entity.id == id).unwrap();
+        let entity = self.board.entities.remove(index);
+        self.board.deleted_entities.insert(0, entity);
     }
 
     pub(crate) fn remove_by_index(&mut self, index: usize) -> Entity<T> {
-        self.entities.remove(index)
+        self.board.entities.remove(index)
     }
 
     pub fn find_entity_id_by_index(&self, index: usize) -> DomainResult<Uuid> {
-        self.entities.get(index)
+        self.board.entities.get(index)
             .and_then(|e| Some(e.id))
             .ok_or(DomainError::IndexOutOfRange(index))
     }
@@ -90,36 +114,36 @@ impl<T: Historized, IdGen: IdGenerator> Board<T, IdGen> {
     pub fn find_entities_by_indices(&self, indices: &[usize]) -> DomainResultMultiError<Vec<Uuid>> {
         let mut errors = indices
             .iter()
-            .filter(|&&i| self.entities.len() <= i)
+            .filter(|&&i| self.board.entities.len() <= i)
             .map(|&i|DomainError::IndexOutOfRange(i));
 
         if let Some(head) = errors.next() {
             return Err(NEVec::from((head, errors.collect())));
         }
 
-        Ok(indices.iter().map(|&order| self.entities[order].id).collect())
+        Ok(indices.iter().map(|&order| self.board.entities[order].id).collect())
     }
 
     /// Adds a new issue to the board to first priority
     pub fn append_entity(&mut self, issue: T) {
-        self.entities.insert(0, Entity::build(issue, &mut self.id_generator) );
+        self.board.entities.insert(0, Entity::build(issue, &mut self.board.id_generator) );
     }
 
     pub fn insert(&mut self, index: usize, entity: Entity<T>) {
-        self.entities.insert(index, entity)
+        self.board.entities.insert(index, entity)
     }
 
     pub fn position(&self, id: Uuid) -> usize {
-        self.entities.iter().position(|e| e.id == id).unwrap()
+        self.board.entities.iter().position(|e| e.id == id).unwrap()
     }
 
     /// Returns a list of the deleted issues. The first element of the list is the one most recently deleted.
     pub fn get_deleted_entities(&self) -> &[Entity<T>] {
-        &self.deleted_entities
+        &self.board.deleted_entities
     }
 
     pub fn get_deleted_entities_mut(&mut self) -> &mut Vec<Entity<T>> {
-        &mut self.deleted_entities
+        &mut self.board.deleted_entities
     }
 
     pub fn push_to_history(&mut self, elem: T::HistoryType) {
@@ -134,18 +158,15 @@ impl<T: Historized, IdGen: IdGenerator> Board<T, IdGen> {
         self.history.pop()
     }
 
-    pub fn history(&self) -> &[T::HistoryType] {
-        &self.history
-    }
 }
 
-impl<IdGen: IdGenerator> Board<Issue, IdGen> {
+impl<IdGen: IdGenerator> HistorizedBoard<Issue, IdGen> {
     /// Changes the priority (order) of the issues, so that it becomes the most priority in
     /// its category (amongst issues with similar state).
     /// Returns the new position of the issue
     pub fn prio_top_in_category(&mut self, id: Uuid) -> usize {
         let state = self.get(id).state;
-        let most_prio_position = self.entities
+        let most_prio_position = self.board.entities
             .iter()
             .position(|i|i.state == state)
             .unwrap();
@@ -160,13 +181,13 @@ impl<IdGen: IdGenerator> Board<Issue, IdGen> {
     /// its category (amongst issues with similar state)
     pub fn prio_bottom_in_category(&mut self, id: Uuid) {
         let state = self.get(id).state;
-        let least_prio_position = self.entities
+        let least_prio_position = self.board.entities
             .iter()
             .rposition(|i|i.state == state)
             .unwrap();
 
         let issue = self.remove(id);
-        self.entities.insert(least_prio_position, issue);
+        self.board.entities.insert(least_prio_position, issue);
     }
 
     /// Changes the priority (order) of the issues, so that it becomes one more priority in
@@ -174,12 +195,12 @@ impl<IdGen: IdGenerator> Board<Issue, IdGen> {
     pub fn prio_up_in_category(&mut self, id: Uuid) {
         let state = self.get(id).state;
 
-        let entity_pos_reversed = self.entities
+        let entity_pos_reversed = self.board.entities
             .iter()
             .rev()
             .position(|i|i.id == id).unwrap();
 
-        let move_up_this_much = self.entities.iter()
+        let move_up_this_much = self.board.entities.iter()
             .rev()
             .skip(entity_pos_reversed+1)
             .position(|i|i.state == state);
@@ -199,7 +220,7 @@ impl<IdGen: IdGenerator> Board<Issue, IdGen> {
     pub fn prio_down_in_category(&mut self, id: Uuid) {
         let current_position =  self.position(id);
 
-        let steps_down = self.entities.iter()
+        let steps_down = self.board.entities.iter()
             .skip(current_position+1)
             .position(|x| x.state == self.get(id).state)
             .map(|steps| steps + 1 );
@@ -211,7 +232,7 @@ impl<IdGen: IdGenerator> Board<Issue, IdGen> {
         let issue = self.remove(id);
 
         // by removing an issue, all subsequent indices shift to the left. Thus, -1.
-        self.entities.insert(current_position + steps_down, issue);
+        self.board.entities.insert(current_position + steps_down, issue);
     }
 }
 
@@ -263,7 +284,7 @@ mod tests {
 
     #[test]
     fn test_verify_indices_empty_board() {
-        let board: Board<Issue> = Board::default();
+        let board: HistorizedBoard<Issue> = HistorizedBoard::default();
         let indices = vec![0, 1, 2, 3];
         let validated = board.find_entities_by_indices(&indices);
 
@@ -424,8 +445,8 @@ mod tests {
         }
     }
 
-    fn given_board_with_2_tasks() -> Board<Issue, FixedIdGenerator> {
-        Board::new(vec![
+    fn given_board_with_2_tasks() -> HistorizedBoard<Issue, FixedIdGenerator> {
+        HistorizedBoard::new(vec![
             Issue {
                 description: Description::from("First task"),
                 state: State::Open,
@@ -442,7 +463,7 @@ mod tests {
     }
 
 
-    fn check_priorities<IdGen: IdGenerator + Debug>(expected: &[(&str, State)], actual: &Board<Issue, IdGen>) {
+    fn check_priorities<IdGen: IdGenerator + Debug>(expected: &[(&str, State)], actual: &HistorizedBoard<Issue, IdGen>) {
         expected.into_iter().enumerate().for_each(|(index, &(expected_description, expected_state))| {
             let entity = &actual.entities()[index];
             check!(entity.description == Description::from(expected_description), "Expected specific description for Issue at index '{}.\nBoard was: '{:?}'", index, actual);
@@ -451,8 +472,8 @@ mod tests {
     }
 
 
-    fn board_for_testing_priorities() -> Board<Issue, FixedIdGenerator> {
-        Board::new(
+    fn board_for_testing_priorities() -> HistorizedBoard<Issue, FixedIdGenerator> {
+        HistorizedBoard::new(
             vec![
                 Issue { description: Description::from("First open task"), state: State::Open, time_created: 0 },
                 Issue { description: Description::from("First done task"), state: State::Done, time_created: 0 },
@@ -470,10 +491,10 @@ pub(crate) mod test_utils {
     use std::ops::Deref;
     use assert2::check;
     use crate::adapters::time_providers::fake::DEFAULT_FAKE_TIME;
-    use crate::application::{Board, Issue, State};
+    use crate::application::{HistorizedBoard, Issue, State};
     use crate::application::issue::{Description, Entity};
 
-    impl Board<Issue> {
+    impl HistorizedBoard<Issue> {
         pub(crate) fn assert_issue_count(&self, num: usize) -> &Self {
             assert_eq!(self.entity_count(), num, "Expected board to have {} issues", num);
 
@@ -481,7 +502,7 @@ pub(crate) mod test_utils {
         }
 
         pub(crate) fn assert_has_original_issues(&self) -> &Self {
-            let original_board = Board::default().with_4_typical_issues();
+            let original_board = HistorizedBoard::default().with_4_typical_issues();
             check!(self.entity_count() >= original_board.entity_count(), "Expected board to have the 4 original issues");
 
             for issue in original_board.entities() {
@@ -510,9 +531,9 @@ pub(crate) mod test_utils {
         }
 
         pub(crate) fn with_4_typical_issues(self) -> Self {
-            Board::new(
-                [self.entities.into_iter().map(|x| x.content).collect::<Vec<_>>(), typical_4_issues()].concat(),
-                self.deleted_entities.into_iter().map(|x1| x1.content).collect(),
+            HistorizedBoard::new(
+                [self.board.entities.into_iter().map(|x| x.content).collect::<Vec<_>>(), typical_4_issues()].concat(),
+                self.board.deleted_entities.into_iter().map(|x1| x1.content).collect(),
                 self.history
             )
         }
@@ -557,10 +578,10 @@ pub(crate) mod test_utils {
             });
     }
 
-    pub(crate) fn check_boards_are_equal(actual: &Board<Issue>, expected: &Board<Issue>) {
+    pub(crate) fn check_boards_are_equal(actual: &HistorizedBoard<Issue>, expected: &HistorizedBoard<Issue>) {
         check_compare_issues(actual.entities(), expected.entities());
         check_compare_issues(actual.get_deleted_entities(), expected.get_deleted_entities());
-        check!(actual.history() == expected.history(), "Expected board to have the same history");
+        check!(actual.history == expected.history, "Expected board to have the same history");
 
     }
 }

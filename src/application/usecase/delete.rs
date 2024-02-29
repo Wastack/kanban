@@ -38,7 +38,7 @@ impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
 #[cfg(test)]
 mod tests {
     use assert2::let_assert;
-    use crate::application::{Board, Issue};
+    use crate::application::{HistorizedBoard, Issue};
     use crate::application::issue::{Description};
     use crate::{DeleteUseCase, IssueStorage};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
@@ -49,7 +49,7 @@ mod tests {
     #[test]
     fn test_execute_successful_deletion() {
         let mut sut = given_delete_use_case_with(
-            Board::default().with_4_typical_issues(),
+            HistorizedBoard::default().with_4_typical_issues(),
         );
 
         // When second, fourth and first issue are deleted
@@ -69,7 +69,7 @@ mod tests {
     #[test]
     fn test_deletion_index_out_of_range() {
         let mut delete_use_case = given_delete_use_case_with(
-            Board::default().with_4_typical_issues(),
+            HistorizedBoard::default().with_4_typical_issues(),
         );
 
         let result = delete_use_case.execute(&vec![1, 4, 5]);
@@ -110,7 +110,7 @@ mod tests {
     }
 
 
-    impl Board<Issue> {
+    impl HistorizedBoard<Issue> {
         fn assert_third_issue_is_the_only_one_left(&self) -> &Self {
             assert_eq!(self.entity_count(), 1, "Expected only 1 issue in board after deletion");
 
@@ -132,7 +132,7 @@ mod tests {
         }
     }
 
-    fn given_delete_use_case_with(board: Board<Issue>) -> DeleteUseCase<MemoryIssueStorage, NilPresenter> {
+    fn given_delete_use_case_with(board: HistorizedBoard<Issue>) -> DeleteUseCase<MemoryIssueStorage, NilPresenter> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 

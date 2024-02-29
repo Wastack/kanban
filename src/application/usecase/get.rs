@@ -19,7 +19,7 @@ impl<I: IssueStorage, P: Presenter> GetUseCase<I, P> {
 mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::application::{Board};
+    use crate::application::{HistorizedBoard};
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::usecase::get::GetUseCase;
 
@@ -27,7 +27,7 @@ mod tests {
     fn test_get_usecase_on_typical_board() {
         let mut get_use_case = GetUseCase::<_, NilPresenter> {
             storage: MemoryIssueStorage {
-                board: Board::default().with_4_typical_issues()
+                board: HistorizedBoard::default().with_4_typical_issues()
             },
 
             ..Default::default()
@@ -36,6 +36,6 @@ mod tests {
         get_use_case.execute();
 
         let presented_board = get_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
-        check_boards_are_equal(&presented_board, &Board::default().with_4_typical_issues());
+        check_boards_are_equal(&presented_board, &HistorizedBoard::default().with_4_typical_issues());
     }
 }

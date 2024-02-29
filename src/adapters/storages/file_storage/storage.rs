@@ -3,7 +3,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use home::home_dir;
 use crate::adapters::storages::file_storage::serde_resources::StoredBoard;
-use crate::application::{Board, Issue};
+use crate::application::{HistorizedBoard, Issue};
 use crate::IssueStorage;
 
 pub struct FileStorage {
@@ -20,12 +20,12 @@ impl Default for FileStorage {
 }
 
 impl IssueStorage for FileStorage {
-    fn load(&self) -> Board<Issue> {
+    fn load(&self) -> HistorizedBoard<Issue> {
         let file_contents = fs::read_to_string(&self.source)
             .unwrap_or_default();
 
         if file_contents.is_empty() {
-            return Board::default();
+            return HistorizedBoard::default();
         }
 
         let stored_board = serde_yaml::from_str::<StoredBoard>(&file_contents)
@@ -34,7 +34,7 @@ impl IssueStorage for FileStorage {
         stored_board.into()
     }
 
-    fn save(&mut self, board: &Board<Issue>) {
+    fn save(&mut self, board: &HistorizedBoard<Issue>) {
         let content = Self::board_to_yaml(board);
 
         let mut file = fs::File::create(&self.source).expect("cannot open file to write board");
@@ -43,7 +43,7 @@ impl IssueStorage for FileStorage {
 }
 
 impl FileStorage {
-    fn board_to_yaml(board: &Board<Issue>) -> String {
+    fn board_to_yaml(board: &HistorizedBoard<Issue>) -> String {
         let storable_board = StoredBoard::from(board);
         let content = serde_yaml::to_string(&storable_board)
             .expect("Internal error: cannot serialize board");
@@ -56,7 +56,7 @@ mod tests {
     use std::env::current_dir;
     use std::ops::Deref;
     use assert2::check;
-    use crate::application::{Board, Issue, State};
+    use crate::application::{HistorizedBoard, Issue, State};
     use crate::IssueStorage;
     use crate::adapters::storages::file_storage::FileStorage;
     use crate::application::board::test_utils::check_boards_are_equal;
@@ -73,7 +73,7 @@ mod tests {
         // Then
         check!(board.entity_count() == 2, "Expected board to have two issues");
         check!(board.get_deleted_entities().len() == 2, "Expected board to have 2 deleted issues");
-        check!(board.history().len() == 6, "Expected board to have a specific number of history elements");
+        check!(board.history.len() == 6, "Expected board to have a specific number of history elements");
         [
             Issue {
                 description: Description::from("Get a coffee"),
@@ -106,7 +106,7 @@ mod tests {
             UndoableHistoryElement::Add,
         ];
 
-        check!(board.history() == expected_history.as_slice(), "Expected specific history");
+        check!(board.history == expected_history.as_slice(), "Expected specific history");
     }
 
     #[test]
@@ -120,12 +120,12 @@ mod tests {
         let board = storage.load();
 
         // Then
-        check_boards_are_equal(&board, &Board::default())
+        check_boards_are_equal(&board, &HistorizedBoard::default())
     }
 
     #[test]
     fn test_typical_board_to_storage_yaml() {
-        let board = Board::default().with_4_typical_issues();
+        let board = HistorizedBoard::default().with_4_typical_issues();
         let formatted_output  = FileStorage::board_to_yaml(&board);
 
         assert_eq!(formatted_output,r#"---

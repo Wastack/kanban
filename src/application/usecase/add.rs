@@ -36,7 +36,7 @@ mod tests {
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::{AddUseCase, IssueStorage, State};
     use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TIME, FakeTimeProvider};
-    use crate::application::{Board, Issue};
+    use crate::application::{HistorizedBoard, Issue};
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::history::UndoableHistoryElement;
     use crate::application::issue::Description;
@@ -44,7 +44,7 @@ mod tests {
     #[test]
     fn test_successful_add_use_case() {
         let mut add_use_case = given_add_use_case_with(
-            Board::default().with_4_typical_issues(),
+            HistorizedBoard::default().with_4_typical_issues(),
         );
 
         add_use_case.execute("New task", State::Review);
@@ -60,7 +60,7 @@ mod tests {
         check_boards_are_equal(&presented_board, &stored_board);
     }
 
-    fn given_add_use_case_with(board: Board<Issue>) -> AddUseCase<MemoryIssueStorage, NilPresenter, FakeTimeProvider> {
+    fn given_add_use_case_with(board: HistorizedBoard<Issue>) -> AddUseCase<MemoryIssueStorage, NilPresenter, FakeTimeProvider> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
@@ -70,7 +70,7 @@ mod tests {
         }
     }
 
-    impl Board<Issue> {
+    impl HistorizedBoard<Issue> {
         fn assert_first_issue_content(&self) -> &Self {
             let issue = self.get(self.find_entity_id_by_index(0).unwrap());
             assert_eq!(issue.description, Description::from("New task"), "Expected specific description of added issue");

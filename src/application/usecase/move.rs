@@ -1,7 +1,7 @@
 use uuid::Uuid;
 use crate::application::domain::error::{DomainResultMultiError};
 use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
-use crate::application::{Board, Issue};
+use crate::application::{HistorizedBoard, Issue};
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::State;
@@ -33,7 +33,7 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
         Ok(())
     }
 
-    fn update_history(board: &mut Board<Issue>, history_elements: Vec<MoveHistoryElement>) {
+    fn update_history(board: &mut HistorizedBoard<Issue>, history_elements: Vec<MoveHistoryElement>) {
         if !history_elements.is_empty() {
             board.push_to_history(UndoableHistoryElement::Move(MoveHistoryElements {
                 moves: history_elements,
@@ -41,7 +41,7 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
         }
     }
 
-    fn move_issue(board: &mut Board<Issue>, id: Uuid, state: State) -> Option<MoveHistoryElement> {
+    fn move_issue(board: &mut HistorizedBoard<Issue>, id: Uuid, state: State) -> Option<MoveHistoryElement> {
         let issue = board.get_mut(id);
 
         if issue.state == state {
@@ -71,7 +71,7 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
 #[cfg(test)]
 mod tests {
     use assert2::{check, let_assert};
-    use crate::application::{Board, Issue};
+    use crate::application::{HistorizedBoard, Issue};
     use crate::{IssueStorage, MoveUseCase, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn test_successful_move_use_case() {
         let mut move_use_case = given_move_use_case_with(
-            Board::default().with_4_typical_issues(),
+            HistorizedBoard::default().with_4_typical_issues(),
         );
 
         let _ = move_use_case.execute(&vec![1, 0], State::Done);
@@ -114,7 +114,7 @@ mod tests {
     #[test]
     fn test_move_done_results_in_prio_top() {
         let mut move_use_case = given_move_use_case_with(
-            Board::default().with_4_typical_issues(),
+            HistorizedBoard::default().with_4_typical_issues(),
         );
 
         let _ = move_use_case.execute(&vec![3], State::Done);
@@ -169,7 +169,7 @@ mod tests {
     fn test_move_multiple_to_done_with_changing_priorities() {
         // Given
         let mut sut = given_move_use_case_with(
-            Board::new(vec![
+            HistorizedBoard::new(vec![
                 Issue { description: Description::from("I finished this first"), state: State::Done, time_created: 0 },
                 Issue { description: Description::from("Lazy to do"), state: State::Open, time_created: 0 },
                 Issue { description: Description::from("I'm doing it now, A"), state: State::Open, time_created: 0 }, // Move this second
@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn test_indices_out_of_range() {
         let mut move_use_case = given_move_use_case_with(
-            Board::default().with_4_typical_issues(),
+            HistorizedBoard::default().with_4_typical_issues(),
         );
 
         let result = move_use_case.execute(&vec![1, 4, 5], State::Done);
@@ -236,7 +236,7 @@ mod tests {
         ]))
     }
 
-    fn given_move_use_case_with(board: Board<Issue>) -> MoveUseCase<MemoryIssueStorage, NilPresenter> {
+    fn given_move_use_case_with(board: HistorizedBoard<Issue>) -> MoveUseCase<MemoryIssueStorage, NilPresenter> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 

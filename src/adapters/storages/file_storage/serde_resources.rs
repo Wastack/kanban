@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
-use crate::application::{Board, Issue, State};
+use crate::application::{HistorizedBoard, Issue, State};
 use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
 use crate::application::issue::{Description};
 
@@ -17,19 +17,19 @@ pub struct StoredBoard {
     history: Vec<StoredUndoableHistoryElement>,
 }
 
-impl From<&Board<Issue>> for StoredBoard {
-    fn from(b: &Board<Issue>) -> Self {
+impl From<&HistorizedBoard<Issue>> for StoredBoard {
+    fn from(b: &HistorizedBoard<Issue>) -> Self {
         Self {
             issues: b.entities().into_iter().map(|e| StoredIssue::from(e.deref())).collect(),
             deleted_issues: b.get_deleted_entities().into_iter().map(|e| StoredIssue::from(e.deref())).collect(),
-            history: b.history().iter().map(|x| x.into()).collect(),
+            history: b.history.iter().map(|x| x.into()).collect(),
         }
     }
 }
 
-impl Into<Board<Issue>> for StoredBoard {
-    fn into(self) -> Board<Issue> {
-        Board::new(
+impl Into<HistorizedBoard<Issue>> for StoredBoard {
+    fn into(self) -> HistorizedBoard<Issue> {
+        HistorizedBoard::new(
             self.issues.into_iter().map(|x| x.into()).collect(),
             self.deleted_issues.into_iter().map(|x| x.into()).collect(),
             self.history.into_iter().map(|x| x.into()).collect(),

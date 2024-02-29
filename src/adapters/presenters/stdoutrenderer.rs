@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::application::board::{Board};
+use crate::application::board::{HistorizedBoard};
 use crate::application::issue::{State};
 use crate::application::ports::presenter::Presenter;
 use colored::{ColoredString, Colorize};
@@ -35,7 +35,7 @@ impl MaybeFormattedString {
 impl<T: CurrentTimeProvider> Presenter for TabularTextRenderer<T> {
 
 
-    fn render_board(&mut self, board: &Board<Issue>) {
+    fn render_board(&mut self, board: &HistorizedBoard<Issue>) {
         let result = self.format_board(board);
 
         println!("{}", result)
@@ -47,14 +47,14 @@ impl<T: CurrentTimeProvider> Presenter for TabularTextRenderer<T> {
 }
 
 impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
-    fn format_board(&self, board: &Board<Issue>) -> String {
+    fn format_board(&self, board: &HistorizedBoard<Issue>) -> String {
         self.build_formatted_text_chunks(board)
             .into_iter()
             .map(|t| t.to_string())
             .join("\n")
     }
 
-    fn build_formatted_text_chunks<'a>(&'a self, board: &'a Board<Issue>) -> impl Iterator<Item = MaybeFormattedString> + 'a  {
+    fn build_formatted_text_chunks<'a>(&'a self, board: &'a HistorizedBoard<Issue>) -> impl Iterator<Item = MaybeFormattedString> + 'a  {
         let mut issues_categorised_by_state = board.entities().iter()
             .enumerate()
             .map(|(index, issue) | (issue.state, (index, issue)))
@@ -137,7 +137,7 @@ mod test {
     use std::ops::Deref;
     use crate::adapters::presenters::stdoutrenderer::{TabularTextRenderer};
     use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TIME, FakeTimeProvider};
-    use crate::application::{Board, Issue, State};
+    use crate::application::{HistorizedBoard, Issue, State};
     use crate::application::issue::Description;
     use assert2::{check};
     use colored::{Colorize};
@@ -145,7 +145,7 @@ mod test {
 
     #[test]
     fn test_format_empty_board() {
-        let board = Board::default();
+        let board = HistorizedBoard::default();
         let text_renderer = TabularTextRenderer::<FakeTimeProvider>::default();
 
         let mut formatted_chunks = text_renderer.build_formatted_text_chunks(&board);
@@ -194,8 +194,8 @@ mod test {
         check!(formatted_chunks.next() == None, "Expected not to have any more formatted output");
     }
 
-    fn given_board() -> Board<Issue> {
-        let board = Board::new(
+    fn given_board() -> HistorizedBoard<Issue> {
+        let board = HistorizedBoard::new(
             (0..5).into_iter().rev().map(|n| Issue {
                 description: Description::from(format!("Done issue number {}", n).deref()),
                 state: State::Done,

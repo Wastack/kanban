@@ -53,7 +53,7 @@ mod tests {
     use crate::{Editor, EditUseCase, IssueStorage, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::application::{Board, Issue};
+    use crate::application::{HistorizedBoard, Issue};
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::issue::Entity;
@@ -61,7 +61,7 @@ mod tests {
     #[test]
     fn test_execute_successful_editing() {
         let mut edit_use_case = given_edit_usecase_with::<TestEditor>(
-            Board::default().with_4_typical_issues(),
+            HistorizedBoard::default().with_4_typical_issues(),
         );
 
         let result = edit_use_case.execute(2);
@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn test_editing_issue_with_index_out_of_range() {
         let mut edit_use_case = given_edit_usecase_with::<TestEditor>(
-            Board::default().with_4_typical_issues(),
+            HistorizedBoard::default().with_4_typical_issues(),
         );
 
         let result = edit_use_case.execute(4);
@@ -95,7 +95,7 @@ mod tests {
     #[test]
     fn test_editor_closes_abruptly() {
         let mut edit_use_case = given_edit_usecase_with::<CloseAbruptlyEditor>(
-            Board::default().with_4_typical_issues(),
+            HistorizedBoard::default().with_4_typical_issues(),
         );
 
         let result = edit_use_case.execute(3);
@@ -108,11 +108,11 @@ mod tests {
         assert!(matches!(result, Err(DomainError::EditorError{ .. })), "Expected EditorError, got: {:?}", result)
     }
 
-    fn then_edited_board<E: Editor>(sut: &EditUseCase<MemoryIssueStorage, NilPresenter, E>) -> Board<Issue> {
+    fn then_edited_board<E: Editor>(sut: &EditUseCase<MemoryIssueStorage, NilPresenter, E>) -> HistorizedBoard<Issue> {
         sut.storage.load()
     }
 
-    fn then_stored_issue_of_the(board: &Board<Issue>) -> Entity<Issue> {
+    fn then_stored_issue_of_the(board: &HistorizedBoard<Issue>) -> Entity<Issue> {
         let issue = board.get(board.find_entity_id_by_index(2).unwrap());
         issue.clone()
     }
@@ -148,7 +148,7 @@ mod tests {
         }
     }
 
-    fn given_edit_usecase_with<E: Editor + Default>(board: Board<Issue>) -> EditUseCase<MemoryIssueStorage, NilPresenter, E> {
+    fn given_edit_usecase_with<E: Editor + Default>(board: HistorizedBoard<Issue>) -> EditUseCase<MemoryIssueStorage, NilPresenter, E> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 

@@ -98,7 +98,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
 #[cfg(test)]
 pub(crate) mod tests {
     use assert2::{check, let_assert};
-    use crate::application::{Board, Issue};
+    use crate::application::{HistorizedBoard, Issue};
     use crate::{IssueStorage, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
@@ -112,7 +112,7 @@ pub(crate) mod tests {
     #[test]
     fn test_undo_add() {
         let mut undo_use_case = given_undo_usecase_with(
-            Board::default()
+            HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_an_issue_added_additionally(),
         );
@@ -129,7 +129,7 @@ pub(crate) mod tests {
     #[test]
     fn test_undo_delete_one_issue() {
         let mut undo_use_case = given_undo_usecase_with(
-            Board::default()
+            HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_an_issue_deleted(),
         );
@@ -146,7 +146,7 @@ pub(crate) mod tests {
     #[test]
     fn test_undo_delete_multiple_issue() {
         let mut undo_use_case = given_undo_usecase_with(
-            Board::default()
+            HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_1_0_2_issues_deleted(),
         );
@@ -163,7 +163,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_undo_on_empty_board() {
-        let mut undo_use_case = given_undo_usecase_with( Board::default() );
+        let mut undo_use_case = given_undo_usecase_with( HistorizedBoard::default() );
         let result =undo_use_case.execute();
 
         assert!(matches!(result, Err(DomainError::EmptyHistory)));
@@ -172,7 +172,7 @@ pub(crate) mod tests {
     #[test]
     fn test_undo_move_simple() {
         let mut undo_use_case = given_undo_usecase_with(
-            Board::default()
+            HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_1_moved_from_done_to_open()
         );
@@ -190,7 +190,7 @@ pub(crate) mod tests {
     #[test]
     fn test_undo_move_with_prio_change() {
         let mut undo_use_case = given_undo_usecase_with(
-            Board::default()
+            HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_issue_moved_to_done()
         );
@@ -208,7 +208,7 @@ pub(crate) mod tests {
     #[test]
     fn test_2_undos_in_sequence() {
         let mut undo_use_case = given_undo_usecase_with(
-            Board::default()
+            HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_an_issue_added_additionally()
                 .with_most_priority_issue_moved_to_review(),
@@ -235,7 +235,7 @@ pub(crate) mod tests {
     #[test]
     fn test_undo_delete_inconsistent_board() {
         let mut undo_use_case = given_undo_usecase_with(
-            Board::default()
+            HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_inconsistent_delete_history()
         );
@@ -277,7 +277,7 @@ pub(crate) mod tests {
         })];
 
         let mut undo_use_case = given_undo_usecase_with(
-            Board::new(entities, vec![], history ));
+            HistorizedBoard::new(entities, vec![], history ));
 
         // When
         let result = undo_use_case.execute();
@@ -296,13 +296,13 @@ pub(crate) mod tests {
             check!(issue.state == expected_state);
         }
 
-        check!(stored_board.history() == [], "Expected history to have been cleared");
+        check!(stored_board.history == [], "Expected history to have been cleared");
         let_assert!(Some(presented_board) = undo_use_case.presenter.last_board_rendered, "Expected board to have been presented");
 
         check_boards_are_equal(&stored_board, &presented_board);
     }
 
-    impl Board<Issue> {
+    impl HistorizedBoard<Issue> {
         fn with_an_issue_added_additionally(mut self) -> Self {
             self.append_entity(
                 Issue{
@@ -444,11 +444,11 @@ pub(crate) mod tests {
 
     }
 
-    fn then_board_for(undo: &UndoUseCase<MemoryIssueStorage, NilPresenter>) -> Board<Issue> {
+    fn then_board_for(undo: &UndoUseCase<MemoryIssueStorage, NilPresenter>) -> HistorizedBoard<Issue> {
         undo.storage.load()
     }
 
-    fn given_undo_usecase_with(board: Board<Issue>) -> UndoUseCase<MemoryIssueStorage, NilPresenter> {
+    fn given_undo_usecase_with(board: HistorizedBoard<Issue>) -> UndoUseCase<MemoryIssueStorage, NilPresenter> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
