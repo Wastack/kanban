@@ -193,7 +193,6 @@ pub(crate) mod tests {
                 .with_1_moved_from_done_to_open()
         );
 
-        // todo: all results in this file should come from presenter, not return value
         let result = undo_use_case.execute();
 
         assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
@@ -251,14 +250,21 @@ pub(crate) mod tests {
 
     #[test]
     fn test_undo_delete_inconsistent_board() {
+        // Given
         let mut undo_use_case = given_undo_usecase_with(
             HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_inconsistent_delete_history()
         );
-        let result = undo_use_case.execute();
 
-        let_assert!(Err(DomainError::InvalidBoard(error_reason)) = result, "Expected InvalidBoard error");
+        // When
+        let _ = undo_use_case.execute();
+
+        // Then
+        let error = undo_use_case.presenter.errors_presented.last()
+            .expect("Expected error to have been presented");
+
+        let_assert!(InvalidBoard(error_reason) = error, "Expected InvalidBoard error");
         assert_eq!(error_reason, "has 2 deleted issues, and history suggests to restore 3 deleted issues", "expected specific reason for InvalidBoard error")
     }
 
@@ -267,17 +273,25 @@ pub(crate) mod tests {
         let mut undo_use_case = given_undo_usecase_with(
             HistorizedBoard::default()
         );
-        let result = undo_use_case.execute();
+        let _ = undo_use_case.execute();
 
-        let_assert!(Err(DomainError::EmptyHistory) = result, "Expected Empty History error");
+        // Then
+        let error = undo_use_case.presenter.errors_presented.last()
+            .expect("Expected error to have been presented");
+
+        let_assert!(DomainError::EmptyHistory = error, "Expected Empty History error");
     }
 
     #[test]
     fn test_undo_invalid_add() {
+        // Given
         let board = HistorizedBoard::new( vec![], vec![], vec![UndoableHistoryElement::Add]);
         let mut undo_use_case = given_undo_usecase_with(board);
 
+        // When
         let _ = undo_use_case.execute();
+
+        // Then
         let err = undo_use_case.presenter.errors_presented.last().expect("Expected error");
         let_assert!(InvalidBoard(error_message) = err);
         check!(error_message.as_str() == "Index `0` is out of range");
