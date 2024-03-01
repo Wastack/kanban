@@ -11,18 +11,21 @@ pub(crate) struct UndoUseCase<I, P> {
 }
 
 impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
-    pub(crate) fn execute(&mut self) -> DomainResult<()> {
+    pub(crate) fn execute(&mut self) {
+        let _ = self.execute_impl()
+            .inspect_err(|e| self.presenter.render_error(e));
+    }
+
+    fn execute_impl(&mut self) -> DomainResult<()> {
         let HistorizedBoard {
             mut board,
             mut history,
         } = self.storage.load();
 
         let event_to_undo = history.last()
-            .ok_or(DomainError::EmptyHistory)
-            .inspect_err(|e| self.presenter.render_error(e))?;
+            .ok_or(DomainError::EmptyHistory)?;
 
-        Self::undo(&mut board, event_to_undo)
-            .inspect_err(|e| self.presenter.render_error(e))?;
+        Self::undo(&mut board, event_to_undo)?;
 
         history.pop();
 
@@ -133,8 +136,7 @@ pub(crate) mod tests {
                 .with_an_issue_added_additionally(),
         );
 
-        let result = undo_use_case.execute();
-        assert!(matches!(result, Ok(())), "Expected undo usecase to succeed");
+        undo_use_case.execute();
 
         then_board_for(&undo_use_case)
             .assert_issue_count(4)
@@ -150,8 +152,7 @@ pub(crate) mod tests {
                 .with_an_issue_deleted(),
         );
 
-        let result = undo_use_case.execute();
-        assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
+        undo_use_case.execute();
 
         then_board_for(&undo_use_case)
             .assert_issue_count(4)
@@ -167,9 +168,7 @@ pub(crate) mod tests {
                 .with_1_0_2_issues_deleted(),
         );
 
-        let result = undo_use_case.execute();
-
-        assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
+        undo_use_case.execute();
 
         then_board_for(&undo_use_case)
             .assert_issue_count(4)
@@ -180,9 +179,11 @@ pub(crate) mod tests {
     #[test]
     fn test_undo_on_empty_board() {
         let mut undo_use_case = given_undo_usecase_with( HistorizedBoard::default() );
-        let result =undo_use_case.execute();
 
-        assert!(matches!(result, Err(DomainError::EmptyHistory)));
+        undo_use_case.execute();
+
+        let maybe_error = undo_use_case.presenter.errors_presented.last();
+        let_assert!(Some(DomainError::EmptyHistory) = maybe_error);
     }
 
     #[test]
@@ -193,9 +194,7 @@ pub(crate) mod tests {
                 .with_1_moved_from_done_to_open()
         );
 
-        let result = undo_use_case.execute();
-
-        assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
+        undo_use_case.execute();
 
         then_board_for(&undo_use_case)
             .assert_issue_count(4)
@@ -211,9 +210,7 @@ pub(crate) mod tests {
                 .with_issue_moved_to_done()
         );
 
-        let result = undo_use_case.execute();
-
-        assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
+        undo_use_case.execute();
 
         then_board_for(&undo_use_case)
             .assert_issue_count(4)
@@ -231,8 +228,7 @@ pub(crate) mod tests {
         );
 
         // When undoing move
-        let result = undo_use_case.execute();
-        assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
+        undo_use_case.execute();
 
         then_board_for(&undo_use_case)
             .assert_has_original_issues()
@@ -240,8 +236,7 @@ pub(crate) mod tests {
             .has_the_addition_in_history();
 
         // When undoing addition
-        let result = undo_use_case.execute();
-        assert!(matches!(result, Ok(())), "expected undo usecase to succeed");
+        undo_use_case.execute();
 
         then_board_for(&undo_use_case)
             .assert_has_original_issues()
@@ -258,7 +253,7 @@ pub(crate) mod tests {
         );
 
         // When
-        let _ = undo_use_case.execute();
+        undo_use_case.execute();
 
         // Then
         let error = undo_use_case.presenter.errors_presented.last()
@@ -273,7 +268,7 @@ pub(crate) mod tests {
         let mut undo_use_case = given_undo_usecase_with(
             HistorizedBoard::default()
         );
-        let _ = undo_use_case.execute();
+        undo_use_case.execute();
 
         // Then
         let error = undo_use_case.presenter.errors_presented.last()
@@ -289,7 +284,7 @@ pub(crate) mod tests {
         let mut undo_use_case = given_undo_usecase_with(board);
 
         // When
-        let _ = undo_use_case.execute();
+        undo_use_case.execute();
 
         // Then
         let err = undo_use_case.presenter.errors_presented.last().expect("Expected error");
@@ -317,7 +312,7 @@ pub(crate) mod tests {
         let mut undo_use_case = given_undo_usecase_with(board);
 
         // When
-        let _ = undo_use_case.execute();
+        undo_use_case.execute();
 
         // then
         let err = undo_use_case.presenter.errors_presented.last().expect("Expected error");
@@ -361,10 +356,9 @@ pub(crate) mod tests {
             HistorizedBoard::new(entities, vec![], history ));
 
         // When
-        let result = undo_use_case.execute();
+        undo_use_case.execute();
 
         // Then
-        let_assert!(Ok(()) = result);
         let stored_board = undo_use_case.storage.load();
 
         for (index, expected_description, expected_state) in [

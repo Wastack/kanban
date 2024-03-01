@@ -46,7 +46,7 @@ fn main() {
             let _ = PrioUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute(index, command);
         },
         Some(Command::Undo) => {
-            let _ = UndoUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute();
+            UndoUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute();
         },
         None => {
             GetUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute()
