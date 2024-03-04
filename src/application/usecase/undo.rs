@@ -12,11 +12,11 @@ pub(crate) struct UndoUseCase<I, P> {
 
 impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
     pub(crate) fn execute(&mut self) {
-        let _ = self.execute_impl()
+        let _ = self.try_execute()
             .inspect_err(|e| self.presenter.render_error(e));
     }
 
-    fn execute_impl(&mut self) -> DomainResult<()> {
+    fn try_execute(&mut self) -> DomainResult<()> {
         let HistorizedBoard {
             mut board,
             mut history,

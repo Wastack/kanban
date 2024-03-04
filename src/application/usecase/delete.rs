@@ -11,11 +11,15 @@ pub(crate) struct DeleteUseCase<I: IssueStorage, P: Presenter> {
 }
 
 impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
-    pub(crate) fn execute(&mut self, indices: &[usize]) -> DomainResultMultiError<()> {
+    pub(crate) fn execute(&mut self, indices: &[usize]) {
+        let _ = self.try_execute(indices)
+            .inspect_err(|errors| self.presenter.render_errors(errors));
+    }
+
+    fn try_execute(&mut self, indices: &[usize]) -> DomainResultMultiError<()> {
         let mut board = self.storage.load();
 
-        let ids = board.find_entities_by_indices(indices)
-            .inspect_err(|errors| self.presenter.render_errors(errors))?;
+        let ids = board.find_entities_by_indices(indices)?;
 
         for id in ids {
             board.mark_as_deleted(id);
@@ -44,7 +48,7 @@ mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::board::test_utils::check_boards_are_equal;
-    use crate::application::domain::error::{DomainError, DomainResultMultiError};
+    use crate::application::domain::error::{DomainError};
 
     #[test]
     fn test_execute_successful_deletion() {
@@ -72,43 +76,15 @@ mod tests {
             HistorizedBoard::default().with_4_typical_issues(),
         );
 
-        let result = delete_use_case.execute(&vec![1, 4, 5]);
+        delete_use_case.execute(&vec![1, 4, 5]);
 
-        then_deletion(&result)
-            .assert_two_errors_indicated_out_of_range();
-
-        let presented_errors = delete_use_case.presenter
-            .errors_presented;
-        assert!(matches!(presented_errors.as_slice(), [DomainError::IndexOutOfRange(4), DomainError::IndexOutOfRange(5)]),
-            "Expected two index out of range errors to be presented");
+        let errors = delete_use_case.presenter.errors_presented;
+        let_assert!([DomainError::IndexOutOfRange(4), DomainError::IndexOutOfRange(5)] = errors.as_slice());
 
         delete_use_case.storage.load()
             .assert_issue_count(4)
             .assert_has_original_issues();
     }
-
-    fn then_deletion(result: &DomainResultMultiError<()>) -> DeletionResult {
-        DeletionResult {
-            result,
-        }
-    }
-
-    struct DeletionResult<'a> {
-        result: &'a DomainResultMultiError<()>
-    }
-
-    impl DeletionResult<'_> {
-
-        fn assert_two_errors_indicated_out_of_range(&self) -> &Self {
-            let_assert!(Err(errors) = self.result);
-            assert_eq!(errors.len(), 2, "Expected 2 errors");
-            assert!(matches!(errors[0], DomainError::IndexOutOfRange(4)));
-            assert!(matches!(errors[1], DomainError::IndexOutOfRange(5)));
-
-            self
-        }
-    }
-
 
     impl HistorizedBoard<Issue> {
         fn assert_third_issue_is_the_only_one_left(&self) -> &Self {
