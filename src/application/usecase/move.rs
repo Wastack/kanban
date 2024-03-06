@@ -149,7 +149,6 @@ mod tests {
         check_boards_are_equal(&presented_board, &stored_board);
     }
 
-    // TODO: undo counterpart
     /// Open
     /// 1. Lazy to do
     /// 2. I'm doing it now, A
