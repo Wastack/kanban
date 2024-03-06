@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-use crate::application::board::{HistorizedBoard};
-use crate::application::issue::{State};
+use crate::application::issue::State;
 use crate::application::ports::presenter::Presenter;
 use colored::{ColoredString, Colorize};
 use crate::adapters::presenters::stdoutrenderer::MaybeFormattedString::{Formatted, NonFormatted};
@@ -9,6 +8,7 @@ use crate::application::domain::issue::IssueCategory;
 use crate::application::Issue;
 use crate::application::ports::time::CurrentTimeProvider;
 use itertools::Itertools;
+use crate::application::domain::historized_board::HistorizedBoard;
 
 #[derive(Default)]
 pub(crate) struct TabularTextRenderer<T: CurrentTimeProvider> {
@@ -135,13 +135,14 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
 #[cfg(test)]
 mod test {
     use std::ops::Deref;
-    use crate::adapters::presenters::stdoutrenderer::{TabularTextRenderer};
+    use crate::adapters::presenters::stdoutrenderer::TabularTextRenderer;
     use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TIME, FakeTimeProvider};
-    use crate::application::{HistorizedBoard, Issue, State};
+    use crate::application::{Issue, State};
     use crate::application::issue::Description;
-    use assert2::{check};
-    use colored::{Colorize};
+    use assert2::check;
+    use colored::Colorize;
     use crate::adapters::presenters::stdoutrenderer::MaybeFormattedString::{Formatted, NonFormatted};
+    use crate::application::domain::historized_board::HistorizedBoard;
 
     #[test]
     fn test_format_empty_board() {

@@ -1,8 +1,9 @@
 use crate::{IssueStorage, Presenter};
 use crate::application::board::Board;
 use crate::application::domain::error::{DomainError, DomainResult};
-use crate::application::domain::history::{UndoableHistoryElement};
-use crate::application::{HistorizedBoard, Issue};
+use crate::application::domain::history::UndoableHistoryElement;
+use crate::application::Issue;
+use crate::application::domain::historized_board::HistorizedBoard;
 
 #[derive(Default)]
 pub(crate) struct UndoUseCase<I, P> {
@@ -115,17 +116,17 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
 #[cfg(test)]
 pub(crate) mod tests {
     use assert2::{check, let_assert};
-    use crate::application::{HistorizedBoard, Issue};
+    use crate::application::Issue;
     use crate::{IssueStorage, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TIME};
-    use crate::application::board::{History};
+    use crate::adapters::time_providers::fake::DEFAULT_FAKE_TIME;
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::error::DomainError::InvalidBoard;
-    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
-    use crate::application::issue::{Description};
+    use crate::application::domain::historized_board::HistorizedBoard;
+    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, History, MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
+    use crate::application::issue::Description;
     use crate::application::usecase::undo::UndoUseCase;
 
     #[test]

@@ -1,5 +1,5 @@
 use nonempty_collections::NEVec;
-use crate::application::board::HistorizedBoard;
+use crate::application::domain::historized_board::HistorizedBoard;
 use crate::application::domain::error::DomainError;
 use crate::application::Issue;
 

@@ -1,6 +1,6 @@
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
-use crate::{Editor};
+use crate::Editor;
 use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::domain::history::{EditHistoryElement, UndoableHistoryElement};
 
@@ -18,7 +18,7 @@ impl<I: IssueStorage, P: Presenter, E: Editor> EditUseCase<I, P, E> {
             .inspect_err(|e| self.presenter.render_error(e));
     }
 
-    pub(crate) fn try_execute(&mut self, index: usize) -> DomainResult<()> {
+    fn try_execute(&mut self, index: usize) -> DomainResult<()> {
         let mut board = self.storage.load();
 
         let id = board.find_entity_id_by_index(index)?;
@@ -55,9 +55,10 @@ mod tests {
     use crate::{Editor, EditUseCase, IssueStorage, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::application::{HistorizedBoard, Issue};
+    use crate::application::Issue;
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
+    use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::issue::Entity;
 
     #[test]

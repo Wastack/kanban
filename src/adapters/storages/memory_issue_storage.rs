@@ -1,7 +1,8 @@
 #[cfg(test)]
 pub mod test {
-    use crate::application::{HistorizedBoard, Issue};
-    use crate::{IssueStorage};
+    use crate::application::Issue;
+    use crate::IssueStorage;
+    use crate::application::domain::historized_board::HistorizedBoard;
 
 
     #[derive(Default)]

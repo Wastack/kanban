@@ -1,7 +1,8 @@
 use uuid::Uuid;
-use crate::application::domain::error::{DomainResultMultiError};
+use crate::application::domain::error::DomainResultMultiError;
 use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
-use crate::application::{HistorizedBoard, Issue};
+use crate::application::Issue;
+use crate::application::domain::historized_board::HistorizedBoard;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::State;
@@ -14,11 +15,15 @@ pub(crate) struct MoveUseCase<I: IssueStorage, P: Presenter> {
 }
 
 impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
-    pub(crate) fn execute(&mut self, indices: &[usize], state: State) -> DomainResultMultiError<()> {
+    pub(crate) fn execute(&mut self, indices: &[usize], state: State) {
+        let _ = self.try_execute(indices, state)
+            .inspect_err(|e| self.presenter.render_errors(e));
+    }
+
+    fn try_execute(&mut self, indices: &[usize], state: State) -> DomainResultMultiError<()> {
         let mut board = self.storage.load();
 
-        let ids = board.find_entities_by_indices(indices)
-            .inspect_err(|errors| self.presenter.render_errors(errors))?;
+        let ids = board.find_entities_by_indices(indices)?;
 
         let history_for_undo = ids.into_iter()
             .map(|id| Self::move_issue(&mut board, id, state))
@@ -71,14 +76,15 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
 #[cfg(test)]
 mod tests {
     use assert2::{check, let_assert};
-    use crate::application::{HistorizedBoard, Issue};
+    use crate::application::Issue;
     use crate::{IssueStorage, MoveUseCase, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::board::test_utils::check_boards_are_equal;
-    use crate::application::domain::error::{DomainError, DomainResultMultiError};
+    use crate::application::domain::error::DomainError;
+    use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
-    use crate::application::issue::{Description};
+    use crate::application::issue::Description;
 
     #[test]
     fn test_successful_move_use_case() {
@@ -86,7 +92,7 @@ mod tests {
             HistorizedBoard::default().with_4_typical_issues(),
         );
 
-        let _ = move_use_case.execute(&vec![1, 0], State::Done);
+        move_use_case.execute(&vec![1, 0], State::Done);
 
         let stored_board = move_use_case.storage.load();
         for index in 0..1 {
@@ -117,7 +123,7 @@ mod tests {
             HistorizedBoard::default().with_4_typical_issues(),
         );
 
-        let _ = move_use_case.execute(&vec![3], State::Done);
+        move_use_case.execute(&vec![3], State::Done);
 
         let stored_board = move_use_case.storage.load();
 
@@ -178,7 +184,7 @@ mod tests {
         );
 
         // When
-        sut.execute(&[3, 2], State::Done).expect("Expected move to succeed");
+        sut.execute(&[3, 2], State::Done);
 
         // Then
         let stored_board = sut.storage.load();
@@ -220,20 +226,15 @@ mod tests {
             HistorizedBoard::default().with_4_typical_issues(),
         );
 
-        let result = move_use_case.execute(&vec![1, 4, 5], State::Done);
+        move_use_case.execute(&vec![1, 4, 5], State::Done);
 
-        then_moving(&result)
-            .assert_has_two_errors();
+        let errors = move_use_case.presenter.errors_presented;
+        let_assert!([DomainError::IndexOutOfRange(4), DomainError::IndexOutOfRange(5)] = errors.as_slice());
 
         let stored_board = move_use_case.storage.load();
         stored_board
             .assert_issue_count(4)
             .assert_has_original_issues();
-
-        assert!(matches!(move_use_case.presenter.errors_presented.as_slice(), [
-            DomainError::IndexOutOfRange(4),
-            DomainError::IndexOutOfRange(5),
-        ]))
     }
 
     fn given_move_use_case_with(board: HistorizedBoard<Issue>) -> MoveUseCase<MemoryIssueStorage, NilPresenter> {
@@ -245,26 +246,4 @@ mod tests {
             ..Default::default()
         }
     }
-
-    fn then_moving(result: &DomainResultMultiError<()>) -> MovingResult {
-        MovingResult {
-            result,
-        }
-    }
-
-    struct MovingResult<'a> {
-        result: &'a DomainResultMultiError<()>,
-    }
-
-    impl MovingResult<'_> {
-        fn assert_has_two_errors(&self) -> &Self {
-            let_assert!(Err(errors) = self.result);
-            assert_eq!(errors.len(), 2, "Expected 2 errors");
-            assert!(matches!(errors[0], DomainError::IndexOutOfRange(4)));
-            assert!(matches!(errors[1], DomainError::IndexOutOfRange(5)));
-
-            self
-        }
-    }
-
 }

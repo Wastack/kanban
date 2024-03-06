@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
-use crate::application::{HistorizedBoard, Issue, State};
+use crate::application::{Issue, State};
+use crate::application::domain::historized_board::HistorizedBoard;
 use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
-use crate::application::issue::{Description};
+use crate::application::issue::Description;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase")]

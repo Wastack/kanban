@@ -1,4 +1,4 @@
-use crate::application::domain::error::{DomainResultMultiError};
+use crate::application::domain::error::DomainResultMultiError;
 use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, UndoableHistoryElement};
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
@@ -42,13 +42,14 @@ impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
 #[cfg(test)]
 mod tests {
     use assert2::let_assert;
-    use crate::application::{HistorizedBoard, Issue};
-    use crate::application::issue::{Description};
+    use crate::application::Issue;
+    use crate::application::issue::Description;
     use crate::{DeleteUseCase, IssueStorage};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::board::test_utils::check_boards_are_equal;
-    use crate::application::domain::error::{DomainError};
+    use crate::application::domain::error::DomainError;
+    use crate::application::domain::historized_board::HistorizedBoard;
 
     #[test]
     fn test_execute_successful_deletion() {

@@ -47,3 +47,38 @@ pub enum UndoableHistoryElement {
     Prio(PrioHistoryElement),
     Edit(EditHistoryElement)
 }
+
+
+#[derive(Debug, Clone)]
+#[derive(PartialEq)]
+pub struct History<H> {
+    /// The top (last) element denotes the most recently performed action.
+    pub stack: Vec<H>
+}
+
+impl<H> Default for History<H> {
+    fn default() -> Self {
+        Self {
+            stack: Default::default(),
+        }
+    }
+}
+
+/// Defines what is the type that is used to define history elements in the board. Actions on the type becomes undo-able.
+pub trait Historized {
+    type HistoryType;
+}
+
+impl<H> History<H> {
+    pub fn add(&mut self, elem: H) {
+        self.stack.push(elem)
+    }
+
+    pub fn last(&self) -> Option<&H> {
+        self.stack.last()
+    }
+
+    pub fn pop(&mut self) -> Option<H> {
+        self.stack.pop()
+    }
+}

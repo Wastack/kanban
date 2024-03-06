@@ -1,7 +1,8 @@
 #[cfg(test)]
 pub(crate) mod test {
-    use crate::application::{HistorizedBoard, Issue};
+    use crate::application::Issue;
     use crate::application::domain::error::DomainError;
+    use crate::application::domain::historized_board::HistorizedBoard;
     use crate::Presenter;
 
 

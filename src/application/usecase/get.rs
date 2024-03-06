@@ -19,8 +19,8 @@ impl<I: IssueStorage, P: Presenter> GetUseCase<I, P> {
 mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::application::{HistorizedBoard};
     use crate::application::board::test_utils::check_boards_are_equal;
+    use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::usecase::get::GetUseCase;
 
     #[test]

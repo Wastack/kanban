@@ -1,11 +1,9 @@
 use std::fmt::Debug;
-use std::ops::{Deref, DerefMut};
-use nonempty_collections::{NEVec};
+use nonempty_collections::NEVec;
 use uuid::Uuid;
 use crate::application::issue::{Entity, IdGenerator, Issue, UUidGenerator};
 use crate::application::domain::error::{DomainError, DomainResult, DomainResultMultiError};
 
-// todo: slice this file
 
 #[derive(Debug, Clone)]
 pub struct Board<T, IdGen: IdGenerator = UUidGenerator> {
@@ -116,85 +114,6 @@ impl<T, IdGen: IdGenerator> Board<T, IdGen> {
     }
 }
 
-
-#[derive(Debug, Clone)]
-#[derive(PartialEq)]
-pub struct History<H> {
-    /// The top (last) element denotes the most recently performed action.
-    pub stack: Vec<H>
-}
-
-impl<H> Default for History<H> {
-    fn default() -> Self {
-        Self {
-            stack: Default::default(),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct HistorizedBoard<T: Historized, IdGen: IdGenerator = UUidGenerator> {
-    pub board: Board<T, IdGen>,
-
-    pub history: History<T::HistoryType>,
-}
-
-impl<T: Historized, IdGen: IdGenerator> Deref for HistorizedBoard<T, IdGen> {
-    type Target = Board<T, IdGen>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.board
-    }
-}
-
-impl<T: Historized, IdGen: IdGenerator> DerefMut for HistorizedBoard<T, IdGen> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.board
-    }
-}
-
-/// Defines what is the type that is used to define history elements in the board. Actions on the type becomes undo-able.
-pub trait Historized {
-    type HistoryType;
-}
-
-impl<T: Historized, IdGen: IdGenerator> Default for HistorizedBoard<T, IdGen> {
-    // Because of the generic type, derive for `Default` didn't work
-    fn default() -> Self {
-        Self {
-            board: Board::default(),
-
-            history: Default::default(),
-        }
-    }
-}
-
-
-impl<T: Historized, IdGen: IdGenerator> HistorizedBoard<T, IdGen> {
-    pub(crate) fn new(entities: Vec<T>, deleted_entities: Vec<T>, history: Vec<T::HistoryType>) -> Self {
-        Self {
-            board: Board::new(entities, deleted_entities),
-            history: History {
-                stack: history,
-            },
-        }
-    }
-}
-
-impl<H> History<H> {
-    pub fn add(&mut self, elem: H) {
-        self.stack.push(elem)
-    }
-
-    pub fn last(&self) -> Option<&H> {
-        self.stack.last()
-    }
-
-    pub fn pop(&mut self) -> Option<H> {
-        self.stack.pop()
-    }
-}
-
 impl<IdGen: IdGenerator> Board<Issue, IdGen> {
     /// Changes the priority (order) of the issues, so that it becomes the most priority in
     /// its category (amongst issues with similar state).
@@ -278,6 +197,7 @@ mod tests {
     use assert2::{check, let_assert};
     use uuid::uuid;
     use crate::application::board::test_utils::check_compare_issues;
+    use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::issue::State;
     use crate::application::issue::Description;
     use super::*;
@@ -530,7 +450,8 @@ pub(crate) mod test_utils {
     use std::ops::Deref;
     use assert2::check;
     use crate::adapters::time_providers::fake::DEFAULT_FAKE_TIME;
-    use crate::application::{HistorizedBoard, Issue, State};
+    use crate::application::{Issue, State};
+    use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::issue::{Description, Entity};
 
     impl HistorizedBoard<Issue> {

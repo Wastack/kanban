@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::hash::{Hash};
 use std::ops::{Deref, DerefMut};
 use uuid::Uuid;
-use crate::application::board::Historized;
+use crate::application::domain::history::Historized;
 use crate::application::domain::history::UndoableHistoryElement;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
