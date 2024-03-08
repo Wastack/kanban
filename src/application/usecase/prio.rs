@@ -63,14 +63,8 @@ mod test {
         assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
 
         let displayed_board = use_case.presenter.last_board_rendered.expect("Expected board to be displayed");
-        for (expected_index, expected_description) in [
-            (0, "Second Issue"),
-            (1, "First Issue")
-        ] {
-            let actual = displayed_board.get(displayed_board.find_entity_id_by_index(expected_index).expect("Expected to find issue with index"));
-            assert_eq!(actual.description, expected_description.into());
-        }
 
+        check_issues_are_swapped(&displayed_board);
         check_boards_are_equal(&displayed_board, &use_case.storage.load());
     }
 
@@ -88,8 +82,76 @@ mod test {
 
     #[test]
     fn test_prio_successful_no_order_change() {
-        todo!()
+        let mut use_case = given_prio_use_case_with(simple_board());
+
+        // when
+        use_case.execute(0, PrioCommand::Top);
+
+        // then
+        assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
+
+        let displayed_board = use_case.presenter.last_board_rendered.expect("Expected board to be displayed");
+
+        check_boards_are_equal(&simple_board(), &displayed_board); // remained the same
+        check_boards_are_equal(&displayed_board, &use_case.storage.load());
     }
+
+    #[test]
+    fn test_prio_bottom() {
+        let mut use_case = given_prio_use_case_with(simple_board());
+
+        // when
+        use_case.execute(0, PrioCommand::Bottom);
+
+        // then
+        assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
+
+        let displayed_board = use_case.presenter.last_board_rendered.expect("Expected board to be displayed");
+        check_issues_are_swapped(&displayed_board);
+        check_boards_are_equal(&displayed_board, &use_case.storage.load());
+    }
+    #[test]
+    fn test_prio_up() {
+        let mut use_case = given_prio_use_case_with(simple_board());
+
+        // when
+        use_case.execute(1, PrioCommand::Up);
+
+        // then
+        assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
+
+        let displayed_board = use_case.presenter.last_board_rendered.expect("Expected board to be displayed");
+
+        check_issues_are_swapped(&displayed_board);
+        check_boards_are_equal(&displayed_board, &use_case.storage.load());
+    }
+
+    #[test]
+    fn test_prio_down() {
+        let mut use_case = given_prio_use_case_with(simple_board());
+
+        // when
+        use_case.execute(0, PrioCommand::Down);
+
+        // then
+        assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
+
+        let displayed_board = use_case.presenter.last_board_rendered.expect("Expected board to be displayed");
+
+        check_issues_are_swapped(&displayed_board);
+        check_boards_are_equal(&displayed_board, &use_case.storage.load());
+    }
+
+    fn check_issues_are_swapped(displayed_board: &HistorizedBoard<Issue>) {
+        for (expected_index, expected_description) in [
+            (0, "Second Issue"),
+            (1, "First Issue")
+        ] {
+            let actual = displayed_board.get(displayed_board.find_entity_id_by_index(expected_index).expect("Expected to find issue with index"));
+            assert_eq!(actual.description, expected_description.into());
+        }
+    }
+
 
     fn simple_board() -> HistorizedBoard<Issue> {
         HistorizedBoard::new(
