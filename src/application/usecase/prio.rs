@@ -11,11 +11,15 @@ pub(crate) struct PrioUseCase<I: IssueStorage, P: Presenter> {
 }
 
 impl<I: IssueStorage, P: Presenter> PrioUseCase<I, P> {
-    pub(crate) fn execute(&mut self, index: usize, command: PrioCommand) -> DomainResult<()> {
+    pub(crate) fn execute(&mut self, index: usize, command: PrioCommand) {
+        let _ = self.try_execute(index, command)
+            .inspect_err(|e| self.presenter.render_error(e));
+    }
+
+    fn try_execute(&mut self, index: usize, command: PrioCommand) -> DomainResult<()> {
         let mut board = self.storage.load();
 
-        let id = board.find_entity_id_by_index(index)
-            .inspect_err(|e| self.presenter.render_error(e))?;
+        let id = board.find_entity_id_by_index(index)?;
 
         match command {
             PrioCommand::Top => { board.prio_top_in_category(id); },
@@ -51,7 +55,7 @@ mod test {
         let mut use_case = given_prio_use_case_with(simple_board());
 
         // when
-        use_case.execute(1, PrioCommand::Top).unwrap();
+        use_case.execute(1, PrioCommand::Top);
 
         // then
         assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
@@ -68,8 +72,15 @@ mod test {
         check_boards_are_equal(&displayed_board, &use_case.storage.load());
     }
 
-    // todo: test index out of range
-    // todo: test successful but didn't change order
+    #[test]
+    fn test_prio_index_out_of_range() {
+        todo!()
+    }
+
+    #[test]
+    fn test_prio_successful_no_order_change() {
+        todo!()
+    }
 
     fn simple_board() -> HistorizedBoard<Issue> {
         HistorizedBoard::new(
