@@ -33,6 +33,53 @@ impl<I: IssueStorage, P: Presenter> PrioUseCase<I, P> {
     }
 }
 
+
+#[cfg(test)]
+mod test {
+    use crate::adapters::controllers::PrioCommand;
+    use crate::adapters::presenters::nil_presenter::test::NilPresenter;
+    use crate::adapters::storages::IssueStorage;
+    use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
+    use crate::application::domain::historized_board::HistorizedBoard;
+    use crate::application::{Issue, State};
+    use crate::application::issue::Description;
+    use crate::application::usecase::prio::PrioUseCase;
+
+    #[test]
+    fn test_typical_prio() {
+        let mut use_case = given_prio_use_case_with(
+            // todo: clean up a bit?
+            HistorizedBoard::new(
+                [
+                    ("First Issue", State::Open),
+                    ("Second Issue", State::Open)
+                ].into_iter().map(|(d, state)| Issue { description: Description::from(d), state, time_created: 0, }).collect(),
+                vec![],
+                vec![]));
+
+
+        // when
+        use_case.execute(1, PrioCommand::Top).unwrap();
+
+        // then
+        // todo: assert:
+        // - moving happened
+        // - board stored and presented
+    }
+
+    // todo: test index out of range
+
+    fn given_prio_use_case_with(board: HistorizedBoard<Issue>) -> PrioUseCase<MemoryIssueStorage, NilPresenter> {
+        let mut storage = MemoryIssueStorage::default();
+        storage.save(&board);
+
+        PrioUseCase {
+            storage,
+            ..Default::default()
+        }
+    }
+}
+
 /*
 
 TODO: tests
