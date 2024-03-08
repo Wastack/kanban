@@ -42,32 +42,44 @@ mod test {
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::{Issue, State};
+    use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::issue::Description;
     use crate::application::usecase::prio::PrioUseCase;
 
     #[test]
-    fn test_typical_prio() {
-        let mut use_case = given_prio_use_case_with(
-            // todo: clean up a bit?
-            HistorizedBoard::new(
-                [
-                    ("First Issue", State::Open),
-                    ("Second Issue", State::Open)
-                ].into_iter().map(|(d, state)| Issue { description: Description::from(d), state, time_created: 0, }).collect(),
-                vec![],
-                vec![]));
-
+    fn test_prio_top() {
+        let mut use_case = given_prio_use_case_with(simple_board());
 
         // when
         use_case.execute(1, PrioCommand::Top).unwrap();
 
         // then
-        // todo: assert:
-        // - moving happened
-        // - board stored and presented
+        assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
+
+        let displayed_board = use_case.presenter.last_board_rendered.expect("Expected board to be displayed");
+        for (expected_index, expected_description) in [
+            (0, "Second Issue"),
+            (1, "First Issue")
+        ] {
+            let actual = displayed_board.get(displayed_board.find_entity_id_by_index(expected_index).expect("Expected to find issue with index"));
+            assert_eq!(actual.description, expected_description.into());
+        }
+
+        check_boards_are_equal(&displayed_board, &use_case.storage.load());
     }
 
     // todo: test index out of range
+    // todo: test successful but didn't change order
+
+    fn simple_board() -> HistorizedBoard<Issue> {
+        HistorizedBoard::new(
+            [
+                ("First Issue", State::Open),
+                ("Second Issue", State::Open)
+            ].into_iter().map(|(d, state)| Issue { description: Description::from(d), state, time_created: 0, }).collect(),
+            vec![],
+            vec![])
+    }
 
     fn given_prio_use_case_with(board: HistorizedBoard<Issue>) -> PrioUseCase<MemoryIssueStorage, NilPresenter> {
         let mut storage = MemoryIssueStorage::default();
@@ -79,12 +91,3 @@ mod test {
         }
     }
 }
-
-/*
-
-TODO: tests
-
-- Top, Bottom, Up, Down successful cases
-- Successful, but didn't change order (e.g. when calling top on an issue already there)
-- index out of range
- */
