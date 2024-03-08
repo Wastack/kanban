@@ -40,6 +40,7 @@ impl<I: IssueStorage, P: Presenter> PrioUseCase<I, P> {
 
 #[cfg(test)]
 mod test {
+    use assert2::let_assert;
     use crate::adapters::controllers::PrioCommand;
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::IssueStorage;
@@ -47,6 +48,7 @@ mod test {
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::{Issue, State};
     use crate::application::board::test_utils::check_boards_are_equal;
+    use crate::application::domain::error::DomainError;
     use crate::application::issue::Description;
     use crate::application::usecase::prio::PrioUseCase;
 
@@ -74,7 +76,14 @@ mod test {
 
     #[test]
     fn test_prio_index_out_of_range() {
-        todo!()
+        let mut use_case = given_prio_use_case_with(simple_board());
+
+        // when
+        use_case.execute(2, PrioCommand::Down);
+
+        // then
+        let error = use_case.presenter.errors_presented.last();
+        let_assert!(Some(DomainError::IndexOutOfRange(2)) = error);
     }
 
     #[test]
