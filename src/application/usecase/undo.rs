@@ -1,7 +1,7 @@
 use crate::adapters::storages::IssueStorage;
 use crate::application::board::Board;
 use crate::application::domain::error::{DomainError, DomainResult};
-use crate::application::domain::history::UndoableHistoryElement;
+use crate::application::domain::history::{PrioHistoryElement, UndoableHistoryElement};
 use crate::application::Issue;
 use crate::application::domain::historized_board::HistorizedBoard;
 use crate::application::ports::presenter::Presenter;
@@ -86,7 +86,10 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                 let deleted_issues = board.get_deleted_entities_mut();
                 deleted_issues.drain(0..indices_to_restore.len());
             },
-            UndoableHistoryElement::Prio(_) => {
+            UndoableHistoryElement::Prio(PrioHistoryElement{
+                                             original_index,
+                                             new_index
+                                         }) => {
                 return Err(DomainError::NotImplemented)
             },
             UndoableHistoryElement::Edit(_) => {
@@ -126,7 +129,7 @@ pub(crate) mod tests {
     use crate::application::domain::error::DomainError;
     use crate::application::domain::error::DomainError::InvalidBoard;
     use crate::application::domain::historized_board::HistorizedBoard;
-    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, History, MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
+    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, History, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
     use crate::application::usecase::undo::UndoUseCase;
 
@@ -377,6 +380,47 @@ pub(crate) mod tests {
         let_assert!(Some(presented_board) = undo_use_case.presenter.last_board_rendered, "Expected board to have been presented");
 
         check_boards_are_equal(&stored_board, &presented_board);
+    }
+
+    #[test]
+    fn test_undo_priority_upwards() {
+        // given:
+        let entities = ["This was originally second", "This was originally first"].map(|d|Issue {
+            description: Description::from(d),
+            state: State::Open,
+            time_created: 0,
+        }).to_vec();
+
+        let board = HistorizedBoard::new(entities, vec![], vec![
+            UndoableHistoryElement::Prio(PrioHistoryElement{
+                original_index: 1,
+                new_index: 0,
+            })
+        ]);
+
+        let mut use_case = given_undo_usecase_with(board);
+
+        // when
+        use_case.execute();
+
+        // then
+        let_assert!([] = use_case.presenter.errors_presented.as_slice(), "Expected errors not to have occurred");
+
+        let stored_board = use_case.storage.load();
+
+        for (index, expected_description) in [(0, "This was originally first"), (1, "This was originally second")] {
+            let actual_description = stored_board.get_entity_with_index(index).description.as_str();
+            check!(expected_description == actual_description);
+        }
+
+        let_assert!(None = stored_board.history.last(), "Expected history element to be removed after undo");
+
+        check_boards_are_equal(&stored_board, &use_case.presenter.last_board_rendered.expect("Expected board to be rendered"));
+    }
+
+    #[test]
+    fn test_undo_priority_downwards() {
+        todo!()
     }
 
     impl HistorizedBoard<Issue> {
