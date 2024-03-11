@@ -58,9 +58,11 @@ impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
 
         let original_index = board.position(id);
 
+        board.prio_top_in_category(id);
+
         // If issue is moved to done, I'd like to see it on the top
         let new_index = if state == State::Done {
-            board.prio_top_in_category(id)
+            board.position(id)
         } else {
             original_index
         };

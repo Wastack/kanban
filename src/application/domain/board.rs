@@ -118,7 +118,7 @@ impl<IdGen: IdGenerator> Board<Issue, IdGen> {
     /// Changes the priority (order) of the issues, so that it becomes the most priority in
     /// its category (amongst issues with similar state).
     /// Returns the new position of the issue
-    pub fn prio_top_in_category(&mut self, id: Uuid) -> usize {
+    pub fn prio_top_in_category(&mut self, id: Uuid) {
         let state = self.get(id).state;
         let most_prio_position = self.entities
             .iter()
@@ -127,8 +127,6 @@ impl<IdGen: IdGenerator> Board<Issue, IdGen> {
 
         let issue = self.remove(id);
         self.insert(most_prio_position, issue);
-
-        most_prio_position
     }
 
     /// Changes the priority (order) of the issues, so that it becomes the least priority in

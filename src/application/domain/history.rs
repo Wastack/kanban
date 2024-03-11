@@ -19,7 +19,8 @@ pub struct MoveHistoryElement {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PrioHistoryElement {
-    pub original_order: usize,
+    pub original_index: usize,
+    pub new_index: usize,
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -4,6 +4,7 @@ use crate::application::board::Board;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::application::domain::error::DomainResult;
+use crate::application::domain::history::{PrioHistoryElement, UndoableHistoryElement};
 use crate::application::Issue;
 
 pub(crate) trait PriorityModifier: Default {
@@ -66,7 +67,14 @@ impl<I: IssueStorage, P: Presenter, PM: PriorityModifier> PriorityUseCase<I, P, 
 
         PM::modify_priority(&mut historized_board.board, id);
 
-        // TODO: update history
+        let new_index = historized_board.position(id);
+
+        if index != new_index {
+            historized_board.history.add(UndoableHistoryElement::Prio(PrioHistoryElement{
+                original_index: index,
+                new_index,
+            }));
+        }
 
         self.storage.save(&historized_board);
         self.presenter.render_board(&historized_board);
@@ -86,6 +94,7 @@ mod test {
     use crate::application::{Issue, State};
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
+    use crate::application::domain::history::{PrioHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
     use crate::application::usecase::prio::{BottomPriority, DownPriority, PriorityModifier, PriorityUseCase, TopPriority, UpPriority};
 
@@ -94,15 +103,21 @@ mod test {
         let mut use_case = given_prio_use_case_with::<TopPriority>(simple_board());
 
         // when
-        use_case.execute(1, );
+        use_case.execute(1);
 
         // then
         assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
 
-        let displayed_board = use_case.presenter.last_board_rendered.expect("Expected board to be displayed");
+        let stored_board = use_case.storage.load();
 
-        check_issues_are_swapped(&displayed_board);
-        check_boards_are_equal(&displayed_board, &use_case.storage.load());
+        let history = stored_board.history.stack.as_slice();
+
+        let_assert!([UndoableHistoryElement::Prio( PrioHistoryElement{ original_index: 1, new_index: 0, } )] = history);
+
+        check_issues_are_swapped(&stored_board);
+        check_boards_are_equal(
+            &use_case.presenter.last_board_rendered.expect("Expected board to be displayed"),
+            &stored_board);
     }
 
     #[test]

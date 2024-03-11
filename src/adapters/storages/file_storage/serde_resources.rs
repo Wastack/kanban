@@ -125,11 +125,13 @@ impl Into<MoveHistoryElement> for StoredMoveHistoryElement {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct StoredPrioHistoryElement {
     pub original_order: usize,
+    pub new_index: usize,
 }
 impl From<&PrioHistoryElement> for StoredPrioHistoryElement {
     fn from(value: &PrioHistoryElement) -> Self {
         Self {
-            original_order: value.original_order,
+            original_order: value.original_index,
+            new_index: value.new_index
         }
     }
 }
@@ -137,7 +139,8 @@ impl From<&PrioHistoryElement> for StoredPrioHistoryElement {
 impl Into<PrioHistoryElement> for StoredPrioHistoryElement {
     fn into(self) -> PrioHistoryElement {
         PrioHistoryElement {
-            original_order: self.original_order,
+            original_index: self.original_order,
+            new_index: self.new_index,
         }
     }
 }

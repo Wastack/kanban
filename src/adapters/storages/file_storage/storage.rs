@@ -91,6 +91,7 @@ mod tests {
             assert_eq!(actual_issue.deref(), &expected_issue, "Expected specific loaded issues")
         });
 
+        // todo: an exhausting list of history elements
         let expected_history = vec![
             UndoableHistoryElement::Edit(EditHistoryElement{
                 original_description: String::from("Don't get a coffee"),
