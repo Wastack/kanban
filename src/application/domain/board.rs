@@ -96,6 +96,7 @@ impl<T, IdGen: IdGenerator> Board<T, IdGen> {
         self.entities.insert(0, Entity::build(issue, &mut self.id_generator) );
     }
 
+    // todo: try_insert, to make sure it doesn't panic
     pub fn insert(&mut self, index: usize, entity: Entity<T>) {
         self.entities.insert(index, entity)
     }

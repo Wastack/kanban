@@ -73,13 +73,13 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                 // Sort it, so that insertions happen at the right place
                 indices_to_restore.sort_unstable_by(|a, b| a.1.cmp(&b.1));
 
-                for &(deleted_index, orignial_index) in &indices_to_restore {
+                for &(deleted_index, original_index) in &indices_to_restore {
                     // remove from deleted
                     let deleted_issues = board.get_deleted_entities_mut();
                     let issue = deleted_issues[deleted_index].clone();
 
                     // restore
-                    board.insert(orignial_index, issue);
+                    board.insert(original_index, issue);
                 }
 
                 // clear deleted issues
@@ -90,7 +90,11 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                                              original_index,
                                              new_index
                                          }) => {
-                return Err(DomainError::NotImplemented)
+                let id = board.find_entity_id_by_index(*new_index)
+                    .map_err(|e| DomainError::InvalidBoard(e.to_string()))?;
+
+                let entity = board.remove(id);
+                board.insert(*original_index, entity);
             },
             UndoableHistoryElement::Edit(_) => {
                 return Err(DomainError::NotImplemented)
@@ -385,13 +389,7 @@ pub(crate) mod tests {
     #[test]
     fn test_undo_priority_upwards() {
         // given:
-        let entities = ["This was originally second", "This was originally first"].map(|d|Issue {
-            description: Description::from(d),
-            state: State::Open,
-            time_created: 0,
-        }).to_vec();
-
-        let board = HistorizedBoard::new(entities, vec![], vec![
+        let board = HistorizedBoard::new(given_swapped_entities(), vec![], vec![
             UndoableHistoryElement::Prio(PrioHistoryElement{
                 original_index: 1,
                 new_index: 0,
@@ -408,19 +406,49 @@ pub(crate) mod tests {
 
         let stored_board = use_case.storage.load();
 
-        for (index, expected_description) in [(0, "This was originally first"), (1, "This was originally second")] {
-            let actual_description = stored_board.get_entity_with_index(index).description.as_str();
-            check!(expected_description == actual_description);
-        }
-
+        check_priorities_unswapped(&stored_board);
         let_assert!(None = stored_board.history.last(), "Expected history element to be removed after undo");
-
         check_boards_are_equal(&stored_board, &use_case.presenter.last_board_rendered.expect("Expected board to be rendered"));
     }
 
     #[test]
     fn test_undo_priority_downwards() {
-        todo!()
+        // given:
+        let board = HistorizedBoard::new(given_swapped_entities(), vec![], vec![
+            UndoableHistoryElement::Prio(PrioHistoryElement{
+                original_index: 0,
+                new_index: 1,
+            })
+        ]);
+
+        let mut use_case = given_undo_usecase_with(board);
+
+        // when
+        use_case.execute();
+
+        // then
+        let_assert!([] = use_case.presenter.errors_presented.as_slice(), "Expected errors not to have occurred");
+
+        let stored_board = use_case.storage.load();
+
+        check_priorities_unswapped(&stored_board);
+        let_assert!(None = stored_board.history.last(), "Expected history element to be removed after undo");
+        check_boards_are_equal(&stored_board, &use_case.presenter.last_board_rendered.expect("Expected board to be rendered"));
+    }
+
+    fn check_priorities_unswapped(stored_board: &HistorizedBoard<Issue>) {
+        for (index, expected_description) in [(0, "This was originally first"), (1, "This was originally second")] {
+            let actual_description = stored_board.get_entity_with_index(index).description.as_str();
+            check!(expected_description == actual_description);
+        }
+    }
+
+    fn given_swapped_entities() -> Vec<Issue> {
+        ["This was originally second", "This was originally first"].map(|d| Issue {
+            description: Description::from(d),
+            state: State::Open,
+            time_created: 0,
+        }).to_vec()
     }
 
     impl HistorizedBoard<Issue> {
