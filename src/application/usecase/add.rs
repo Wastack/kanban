@@ -33,14 +33,15 @@ impl<I: IssueStorage, P: Presenter, T: CurrentTimeProvider> AddUseCase<I, P, T> 
 mod tests {
     use assert2::let_assert;
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
+    use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::{AddUseCase, IssueStorage, State};
     use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TIME, FakeTimeProvider};
-    use crate::application::Issue;
+    use crate::application::{Issue, State};
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::domain::history::UndoableHistoryElement;
     use crate::application::issue::Description;
+    use crate::application::usecase::add::AddUseCase;
 
     #[test]
     fn test_successful_add_use_case() {

@@ -3,7 +3,7 @@ pub(crate) mod test {
     use crate::application::Issue;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::historized_board::HistorizedBoard;
-    use crate::Presenter;
+    use crate::application::ports::presenter::Presenter;
 
 
     #[derive(Default)]

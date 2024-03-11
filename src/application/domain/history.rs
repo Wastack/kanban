@@ -1,4 +1,4 @@
-use crate::State;
+use crate::application::State;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct MoveHistoryElements {

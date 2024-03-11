@@ -3,9 +3,9 @@ use std::io::Write;
 use std::path::PathBuf;
 use home::home_dir;
 use crate::adapters::storages::file_storage::serde_resources::StoredBoard;
+use crate::adapters::storages::IssueStorage;
 use crate::application::Issue;
 use crate::application::domain::historized_board::HistorizedBoard;
-use crate::IssueStorage;
 
 pub struct FileStorage {
     pub source: PathBuf,
@@ -58,8 +58,8 @@ mod tests {
     use std::ops::Deref;
     use assert2::check;
     use crate::application::{Issue, State};
-    use crate::IssueStorage;
     use crate::adapters::storages::file_storage::FileStorage;
+    use crate::adapters::storages::IssueStorage;
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, UndoableHistoryElement};

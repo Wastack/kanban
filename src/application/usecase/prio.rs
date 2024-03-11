@@ -1,37 +1,75 @@
+use std::marker::PhantomData;
+use uuid::Uuid;
+use crate::application::board::Board;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
-use crate::{PrioCommand};
 use crate::application::domain::error::DomainResult;
+use crate::application::Issue;
 
-
-#[derive(Default)]
-pub(crate) struct PrioUseCase<I: IssueStorage, P: Presenter> {
-    storage: I,
-    presenter: P,
+pub(crate) trait PriorityModifier: Default {
+    fn modify_priority(board: &mut Board<Issue>, id: Uuid);
 }
 
-impl<I: IssueStorage, P: Presenter> PrioUseCase<I, P> {
-    pub(crate) fn execute(&mut self, index: usize, command: PrioCommand) {
-        let _ = self.try_execute(index, command)
+#[derive(Default)]
+pub(crate) struct TopPriority{}
+
+impl PriorityModifier for TopPriority {
+    fn modify_priority(board: &mut Board<Issue>, id: Uuid) {
+        board.prio_top_in_category(id);
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct BottomPriority{}
+
+impl PriorityModifier for BottomPriority {
+    fn modify_priority(board: &mut Board<Issue>, id: Uuid) {
+        board.prio_bottom_in_category(id);
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct UpPriority{}
+
+impl PriorityModifier for UpPriority {
+    fn modify_priority(board: &mut Board<Issue>, id: Uuid) {
+        board.prio_up_in_category(id);
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct DownPriority{}
+
+impl PriorityModifier for DownPriority {
+    fn modify_priority(board: &mut Board<Issue>, id: Uuid) {
+        board.prio_down_in_category(id);
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct PriorityUseCase<I: IssueStorage, P: Presenter, PM: PriorityModifier> {
+    storage: I,
+    presenter: P,
+
+    _priority_modifier: PhantomData<PM>
+}
+impl<I: IssueStorage, P: Presenter, PM: PriorityModifier> PriorityUseCase<I, P, PM> {
+    pub(crate) fn execute(&mut self, index: usize) {
+        let _ = self.try_execute(index)
             .inspect_err(|e| self.presenter.render_error(e));
     }
 
-    fn try_execute(&mut self, index: usize, command: PrioCommand) -> DomainResult<()> {
-        let mut board = self.storage.load();
+    fn try_execute(&mut self, index: usize) -> DomainResult<()> {
+        let mut historized_board = self.storage.load();
 
-        let id = board.find_entity_id_by_index(index)?;
+        let id = historized_board.find_entity_id_by_index(index)?;
 
-        match command {
-            PrioCommand::Top => { board.prio_top_in_category(id); },
-            PrioCommand::Bottom => board.prio_bottom_in_category(id),
-            PrioCommand::Up => board.prio_up_in_category(id),
-            PrioCommand::Down => board.prio_down_in_category(id),
-        }
+        PM::modify_priority(&mut historized_board.board, id);
 
-        // TODO: add history
+        // TODO: update history
 
-        self.storage.save(&board);
-        self.presenter.render_board(&board);
+        self.storage.save(&historized_board);
+        self.presenter.render_board(&historized_board);
 
         Ok(())
     }
@@ -41,7 +79,6 @@ impl<I: IssueStorage, P: Presenter> PrioUseCase<I, P> {
 #[cfg(test)]
 mod test {
     use assert2::let_assert;
-    use crate::adapters::controllers::PrioCommand;
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
@@ -50,14 +87,14 @@ mod test {
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::issue::Description;
-    use crate::application::usecase::prio::PrioUseCase;
+    use crate::application::usecase::prio::{BottomPriority, DownPriority, PriorityModifier, PriorityUseCase, TopPriority, UpPriority};
 
     #[test]
     fn test_prio_top() {
-        let mut use_case = given_prio_use_case_with(simple_board());
+        let mut use_case = given_prio_use_case_with::<TopPriority>(simple_board());
 
         // when
-        use_case.execute(1, PrioCommand::Top);
+        use_case.execute(1, );
 
         // then
         assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
@@ -70,10 +107,10 @@ mod test {
 
     #[test]
     fn test_prio_index_out_of_range() {
-        let mut use_case = given_prio_use_case_with(simple_board());
+        let mut use_case = given_prio_use_case_with::<TopPriority>(simple_board());
 
         // when
-        use_case.execute(2, PrioCommand::Down);
+        use_case.execute(2);
 
         // then
         let error = use_case.presenter.errors_presented.last();
@@ -82,10 +119,10 @@ mod test {
 
     #[test]
     fn test_prio_successful_no_order_change() {
-        let mut use_case = given_prio_use_case_with(simple_board());
+        let mut use_case = given_prio_use_case_with::<TopPriority>(simple_board());
 
         // when
-        use_case.execute(0, PrioCommand::Top);
+        use_case.execute(0);
 
         // then
         assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
@@ -98,10 +135,10 @@ mod test {
 
     #[test]
     fn test_prio_bottom() {
-        let mut use_case = given_prio_use_case_with(simple_board());
+        let mut use_case = given_prio_use_case_with::<BottomPriority>(simple_board());
 
         // when
-        use_case.execute(0, PrioCommand::Bottom);
+        use_case.execute(0);
 
         // then
         assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
@@ -112,10 +149,10 @@ mod test {
     }
     #[test]
     fn test_prio_up() {
-        let mut use_case = given_prio_use_case_with(simple_board());
+        let mut use_case = given_prio_use_case_with::<UpPriority>(simple_board());
 
         // when
-        use_case.execute(1, PrioCommand::Up);
+        use_case.execute(1);
 
         // then
         assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
@@ -128,10 +165,10 @@ mod test {
 
     #[test]
     fn test_prio_down() {
-        let mut use_case = given_prio_use_case_with(simple_board());
+        let mut use_case = given_prio_use_case_with::<DownPriority>(simple_board());
 
         // when
-        use_case.execute(0, PrioCommand::Down);
+        use_case.execute(0);
 
         // then
         assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
@@ -163,11 +200,11 @@ mod test {
             vec![])
     }
 
-    fn given_prio_use_case_with(board: HistorizedBoard<Issue>) -> PrioUseCase<MemoryIssueStorage, NilPresenter> {
+    fn given_prio_use_case_with<PM: PriorityModifier>(board: HistorizedBoard<Issue>) -> PriorityUseCase<MemoryIssueStorage, NilPresenter, PM> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
-        PrioUseCase {
+        PriorityUseCase {
             storage,
             ..Default::default()
         }

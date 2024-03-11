@@ -1,9 +1,10 @@
-use crate::{IssueStorage, Presenter};
+use crate::adapters::storages::IssueStorage;
 use crate::application::board::Board;
 use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::domain::history::UndoableHistoryElement;
 use crate::application::Issue;
 use crate::application::domain::historized_board::HistorizedBoard;
+use crate::application::ports::presenter::Presenter;
 
 #[derive(Default)]
 pub(crate) struct UndoUseCase<I, P> {
@@ -116,9 +117,9 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
 #[cfg(test)]
 pub(crate) mod tests {
     use assert2::{check, let_assert};
-    use crate::application::Issue;
-    use crate::{IssueStorage, State};
+    use crate::application::{Issue, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
+    use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::adapters::time_providers::fake::DEFAULT_FAKE_TIME;
     use crate::application::board::test_utils::check_boards_are_equal;

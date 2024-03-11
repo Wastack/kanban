@@ -1,6 +1,17 @@
 use std::str::FromStr;
 use clap::{Parser, Subcommand};
+use crate::adapters::editors::os_default_editor::OsDefaultEditor;
+use crate::adapters::presenters::stdoutrenderer::TabularTextRenderer;
+use crate::adapters::storages::FileStorage;
+use crate::adapters::time_providers::simple::SimpleTimeProvider;
 use crate::application::State;
+use crate::application::usecase::add::AddUseCase;
+use crate::application::usecase::delete::DeleteUseCase;
+use crate::application::usecase::edit::EditUseCase;
+use crate::application::usecase::get::GetUseCase;
+use crate::application::usecase::prio::{BottomPriority, DownPriority, PriorityUseCase, TopPriority, UpPriority};
+use crate::application::usecase::r#move::MoveUseCase;
+use crate::application::usecase::undo::UndoUseCase;
 
 /// Sema cli is a utility to tweak SEMA resources.
 #[derive(Parser)]
@@ -8,6 +19,57 @@ use crate::application::State;
 pub(crate) struct RootCli {
     #[clap(subcommand)]
     pub(crate) command: Option<Command>,
+}
+
+impl RootCli {
+    pub(crate) fn execute(self) {
+        match self.command {
+            Some(Command::Add{description, state}) => {
+                AddUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>, SimpleTimeProvider>::default().execute(
+                    &description,
+                    state.unwrap_or(State::Open));
+            },
+            Some(Command::Delete{index}) => {
+                DeleteUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute(&index);
+            },
+            Some(Command::Move{indices, state}) => {
+                MoveUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute(&indices, state);
+            },
+            Some(Command::Edit{index}) => {
+                EditUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>, OsDefaultEditor>::default().execute(index);
+            },
+            Some(Command::Prio{
+                     command: PrioCommand::Top,
+                     index
+                 }) => {
+                PriorityUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>, TopPriority>::default().execute(index);
+            },
+            Some(Command::Prio{
+                     command: PrioCommand::Bottom,
+                     index
+                 }) => {
+                PriorityUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>, BottomPriority>::default().execute(index);
+            },
+            Some(Command::Prio{
+                     command: PrioCommand::Up,
+                     index
+                 }) => {
+                PriorityUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>, UpPriority>::default().execute(index);
+            },
+            Some(Command::Prio{
+                     command: PrioCommand::Down,
+                     index
+                 }) => {
+                PriorityUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>, DownPriority>::default().execute(index);
+            },
+            Some(Command::Undo) => {
+                UndoUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute();
+            },
+            None => {
+                GetUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute()
+            },
+        }
+    }
 }
 
 #[derive(Subcommand, Clone)]

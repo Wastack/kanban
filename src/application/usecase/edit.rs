@@ -1,6 +1,6 @@
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
-use crate::Editor;
+use crate::application::ports::editor::Editor;
 use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::domain::history::{EditHistoryElement, UndoableHistoryElement};
 
@@ -52,14 +52,16 @@ impl<I: IssueStorage, P: Presenter, E: Editor> EditUseCase<I, P, E> {
 mod tests {
     use std::io::{Error, ErrorKind};
     use assert2::let_assert;
-    use crate::{Editor, EditUseCase, IssueStorage, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
+    use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::application::Issue;
+    use crate::application::{Issue, State};
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::issue::Entity;
+    use crate::application::ports::editor::Editor;
+    use crate::application::usecase::edit::EditUseCase;
 
     #[test]
     fn test_execute_successful_editing() {
