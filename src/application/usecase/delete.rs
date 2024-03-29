@@ -21,16 +21,19 @@ impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
 
         let ids = board.find_entities_by_indices(indices)?;
 
-        for id in ids {
+        let history_elements = ids.into_iter().map(|id| {
+            let original_index = board.position(id);
+
             board.mark_as_deleted(id);
-        }
+
+            DeleteHistoryElement { original_position_in_issues: original_index }
+        }).collect();
 
         board.history.add(UndoableHistoryElement::Delete(
-            DeleteHistoryElements {
-                deletions: indices.iter().map(|&i|DeleteHistoryElement {
-                    original_position_in_issues: i,
-                }).collect(),
-            }));
+                DeleteHistoryElements {
+                    deletions: history_elements,
+                },
+            ));
 
         self.presenter.render_board(&board);
         self.storage.save(&board);
@@ -50,6 +53,7 @@ mod tests {
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::historized_board::HistorizedBoard;
+    use crate::application::domain::history::{DeleteHistoryElement, UndoableHistoryElement};
     use crate::application::usecase::delete::DeleteUseCase;
 
     #[test]
@@ -67,6 +71,17 @@ mod tests {
         stored_board
             .assert_third_issue_is_the_only_one_left()
             .assert_deleted_issues_consists_of_three_deletions();
+
+        let stored_history = stored_board.history.last()
+            .expect("Expected a delete history");
+
+        let_assert!(UndoableHistoryElement::Delete(stored_delete_history_elements) = stored_history, "Expected history element to be a deletion");
+
+        let_assert!([
+                DeleteHistoryElement{ original_position_in_issues: 1 },
+                DeleteHistoryElement{ original_position_in_issues: 2 }, // decreased because of index shift
+                DeleteHistoryElement{ original_position_in_issues: 0 },
+            ]  = stored_delete_history_elements.deletions.as_slice());
 
         let presented_board = sut.presenter.last_board_rendered.expect("Expected a board to be presented");
         check_boards_are_equal(&presented_board, &stored_board);

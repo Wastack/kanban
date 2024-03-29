@@ -54,37 +54,26 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
             },
             UndoableHistoryElement::Delete(info) => {
                 if board.get_deleted_entities().len() < info.deletions.len() {
-                    return Err(DomainError::InvalidBoard(format!("has {} deleted issues, and history suggests to restore {} deleted issues",
+                    return Err(DomainError::InvalidBoard(format!("has {} deleted issues in file, and history suggests to restore {} number of entries",
                                                                  board.get_deleted_entities().len(),
                                                                  info.deletions.len())));
                 }
 
-                // The first number is the index that identifies the element to be restored from
-                // the list of deleted issues
-
-                // The second number is the original position of the issue before deletion
-                let mut indices_to_restore = info.deletions
-                    .to_owned()
-                    .into_iter()
-                    .enumerate()
-                    .map(|(index, d)| (info.deletions.len() - index - 1, d.original_position_in_issues) )
+                // Drain issue to be restored and take reversed order,
+                // so that indices stores in history denote the right place
+                let issues_to_restore = board.get_deleted_entities_mut()
+                    .drain(0..info.deletions.len())
                     .collect::<Vec<_>>();
 
-                // Sort it, so that insertions happen at the right place
-                indices_to_restore.sort_unstable_by(|a, b| a.1.cmp(&b.1));
 
-                for &(deleted_index, original_index) in &indices_to_restore {
-                    // remove from deleted
-                    let deleted_issues = board.get_deleted_entities_mut();
-                    let issue = deleted_issues[deleted_index].clone();
-
+                for (issue, history_element) in issues_to_restore.into_iter().zip(info.deletions.iter()
+                    // Take reverse, because in undo, we go backwards.
+                    // The first issue that needs restoring is the one that was deleted last
+                    .rev()) {
                     // restore
-                    board.insert(original_index, issue);
+                    board.try_insert(history_element.original_position_in_issues, issue)
+                        .map_err(|e| DomainError::InvalidBoard(e.to_string()))?;
                 }
-
-                // clear deleted issues
-                let deleted_issues = board.get_deleted_entities_mut();
-                deleted_issues.drain(0..indices_to_restore.len());
             },
             UndoableHistoryElement::Prio(PrioHistoryElement{
                                              original_index,
@@ -94,7 +83,8 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                     .map_err(|e| DomainError::InvalidBoard(e.to_string()))?;
 
                 let entity = board.remove(id);
-                board.insert(*original_index, entity);
+                board.try_insert(*original_index, entity)
+                    .map_err(|e| DomainError::InvalidBoard(e.to_string()))?;
             },
             UndoableHistoryElement::Edit(_) => {
                 return Err(DomainError::NotImplemented)
@@ -102,8 +92,12 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
             UndoableHistoryElement::Move(info) => {
                 for h in info.moves.iter().rev() {
                     if h.original_index != h.new_index {
-                        let issue = board.remove_by_index(h.new_index);
-                        board.insert(h.original_index, issue);
+                        let id_of_moved_issue = board.find_entity_id_by_index(h.new_index)
+                            .map_err(|e| DomainError::InvalidBoard(e.to_string()))?;
+
+                        let issue = board.remove(id_of_moved_issue);
+                        board.try_insert(h.original_index, issue)
+                            .map_err(|e| DomainError::InvalidBoard(e.to_string()))?;
                     }
 
                     let id = board.find_entity_id_by_index(h.original_index).map_err(
@@ -131,7 +125,6 @@ pub(crate) mod tests {
     use crate::adapters::time_providers::fake::DEFAULT_FAKE_TIME;
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
-    use crate::application::domain::error::DomainError::InvalidBoard;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, History, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
@@ -268,8 +261,8 @@ pub(crate) mod tests {
         let error = undo_use_case.presenter.errors_presented.last()
             .expect("Expected error to have been presented");
 
-        let_assert!(InvalidBoard(error_reason) = error, "Expected InvalidBoard error");
-        assert_eq!(error_reason, "has 2 deleted issues, and history suggests to restore 3 deleted issues", "expected specific reason for InvalidBoard error")
+        let_assert!(DomainError::InvalidBoard(error_reason) = error, "Expected InvalidBoard error");
+        assert_eq!(error_reason, "has 2 deleted issues in file, and history suggests to restore 3 number of entries", "expected specific reason for InvalidBoard error")
     }
 
     #[test]
@@ -297,12 +290,12 @@ pub(crate) mod tests {
 
         // Then
         let err = undo_use_case.presenter.errors_presented.last().expect("Expected error");
-        let_assert!(InvalidBoard(error_message) = err);
+        let_assert!(DomainError::InvalidBoard(error_message) = err);
         check!(error_message.as_str() == "Index `0` is out of range");
     }
 
     #[test]
-    fn test_undo_invalid_move() {
+    fn test_undo_move_invalid_original_index() {
         // Given
         let board = HistorizedBoard::new( vec![
             Issue {
@@ -323,9 +316,10 @@ pub(crate) mod tests {
         // When
         undo_use_case.execute();
 
+        // todo: better error message. Which index was wrong?
         // then
         let err = undo_use_case.presenter.errors_presented.last().expect("Expected error");
-        let_assert!(InvalidBoard(error_message) = err);
+        let_assert!(DomainError::InvalidBoard(error_message) = err);
         check!(error_message.as_str() == "Index `1` is out of range");
 
     }
@@ -366,6 +360,8 @@ pub(crate) mod tests {
 
         // When
         undo_use_case.execute();
+
+        let_assert!([] = undo_use_case.presenter.errors_presented.as_slice(), "Expected errors not to have occurred");
 
         // Then
         let stored_board = undo_use_case.storage.load();
@@ -436,6 +432,81 @@ pub(crate) mod tests {
         check_boards_are_equal(&stored_board, &use_case.presenter.last_board_rendered.expect("Expected board to be rendered"));
     }
 
+    #[test]
+    fn test_undo_priority_invalid_original_index() {
+        // given
+        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
+            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0, }
+        ], vec![], vec![
+            UndoableHistoryElement::Prio(PrioHistoryElement{ original_index: 1, new_index: 0 })
+        ]));
+
+        // when
+        use_case.execute();
+
+        let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
+        check!(error_message == "Index `1` is out of range"); // todo: signal whether original_index or new_index is the one that's wrong.
+    }
+
+    #[test]
+    fn test_undo_prority_invalid_new_index() {
+        // given
+        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
+            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0, }
+        ], vec![], vec![
+            UndoableHistoryElement::Prio(PrioHistoryElement{ original_index: 0, new_index: 1 })
+        ]));
+
+        // when
+        use_case.execute();
+
+        let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
+        check!(error_message == "Index `1` is out of range");
+    }
+
+    #[test]
+    fn test_undo_delete_invalid_original_index() {
+        // given
+        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
+            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0, }
+        ], vec![
+            Issue { description: Description::from("A deleted issue"), state: State::Review, time_created: 0, }
+        ], vec![
+            UndoableHistoryElement::Delete(DeleteHistoryElements{
+                deletions: vec![DeleteHistoryElement{ original_position_in_issues: 2 }],
+            })
+        ]));
+
+        // when
+        use_case.execute();
+
+        let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
+        check!(error_message == "Index `2` is out of range");
+    }
+
+    #[test]
+    fn test_undo_move_invalid_new_index() {
+        // given
+        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
+            Issue { description: Description::from("An issue"), state: State::Done, time_created: 0, }
+        ], vec![], vec![
+            UndoableHistoryElement::Move(MoveHistoryElements{
+                moves: vec![MoveHistoryElement{
+                    original_index: 0,
+                    original_state: State::Open,
+                    new_index: 123,
+                }],
+            })
+        ]));
+
+        // when
+        use_case.execute();
+
+        // todo: better error message. Which index was wrong?
+        let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
+        check!(error_message == "Index `123` is out of range");
+    }
+
     fn check_priorities_unswapped(stored_board: &HistorizedBoard<Issue>) {
         for (index, expected_description) in [(0, "This was originally first"), (1, "This was originally second")] {
             let actual_description = stored_board.get_entity_with_index(index).description.as_str();
@@ -495,8 +566,9 @@ pub(crate) mod tests {
                         DeleteHistoryElement{
                             original_position_in_issues: 0,
                         },
+                        // This would have been the second one, but 1, 0 already disappeared
                         DeleteHistoryElement{
-                            original_position_in_issues: 2,
+                            original_position_in_issues: 0,
                         },
                     ]
                 }));

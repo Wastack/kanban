@@ -68,10 +68,6 @@ impl<T, IdGen: IdGenerator> Board<T, IdGen> {
         self.deleted_entities.insert(0, entity);
     }
 
-    pub(crate) fn remove_by_index(&mut self, index: usize) -> Entity<T> {
-        self.entities.remove(index)
-    }
-
     pub fn find_entity_id_by_index(&self, index: usize) -> DomainResult<Uuid> {
         self.entities.get(index)
             .and_then(|e| Some(e.id))
@@ -99,6 +95,15 @@ impl<T, IdGen: IdGenerator> Board<T, IdGen> {
     // todo: try_insert, to make sure it doesn't panic
     pub fn insert(&mut self, index: usize, entity: Entity<T>) {
         self.entities.insert(index, entity)
+    }
+
+    pub fn try_insert(&mut self, index: usize, entity: Entity<T>) -> DomainResult<()> {
+        if index > self.entities.len() {
+            return Err(DomainError::IndexOutOfRange(index));
+        }
+
+        self.entities.insert(index, entity);
+        Ok(())
     }
 
     pub fn position(&self, id: Uuid) -> usize {
@@ -477,14 +482,11 @@ pub(crate) mod test_utils {
         }
 
         pub(crate) fn has_the_original_4_issues_in_order(&self) -> &Self {
-            typical_4_issues()
-                .into_iter()
-                .zip(self.entities()
-                    .iter()
-                    .map(|x|x.deref()))
-                .for_each(|(expected, actual)|{
-                    assert_eq!(actual, &expected, "Expected Issue to be the original one");
-                });
+            let actual_issues = self.entities().iter().map(|x|x.deref()).collect::<Vec<_>>();
+            let expected_issues = typical_4_issues();
+            let expected_issues_ref = expected_issues.iter().collect::<Vec<_>>();
+
+            check!(actual_issues == expected_issues_ref, "Expected Issue to be the original one");
 
             self
         }
