@@ -80,11 +80,11 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                                              new_index
                                          }) => {
                 let id = board.find_entity_id_by_index(*new_index)
-                    .map_err(|e| DomainError::InvalidBoard(e.to_string()))?;
+                    .map_err(|e| DomainError::InvalidBoard(format!("New index is out of range: {}", e )))?;
 
                 let entity = board.remove(id);
                 board.try_insert(*original_index, entity)
-                    .map_err(|e| DomainError::InvalidBoard(e.to_string()))?;
+                    .map_err(|e| DomainError::InvalidBoard(format!("Original index is out of range: {}", e )))?;
             },
             UndoableHistoryElement::Edit(_) => {
                 return Err(DomainError::NotImplemented)
@@ -93,7 +93,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                 for h in info.moves.iter().rev() {
                     if h.original_index != h.new_index {
                         let id_of_moved_issue = board.find_entity_id_by_index(h.new_index)
-                            .map_err(|e| DomainError::InvalidBoard(e.to_string()))?;
+                            .map_err(|e| DomainError::InvalidBoard(format!("New index is out of range: {}", e )))?;
 
                         let issue = board.remove(id_of_moved_issue);
                         board.try_insert(h.original_index, issue)
@@ -101,7 +101,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                     }
 
                     let id = board.find_entity_id_by_index(h.original_index).map_err(
-                        |e| DomainError::InvalidBoard(e.to_string())
+                        |e| DomainError::InvalidBoard(format!("Original index is out of range: {}", e ))
                     )?;
 
                     let entity = board.get_mut(id);
@@ -316,11 +316,10 @@ pub(crate) mod tests {
         // When
         undo_use_case.execute();
 
-        // todo: better error message. Which index was wrong?
         // then
         let err = undo_use_case.presenter.errors_presented.last().expect("Expected error");
         let_assert!(DomainError::InvalidBoard(error_message) = err);
-        check!(error_message.as_str() == "Index `1` is out of range");
+        check!(error_message.as_str() == "Original index is out of range: Index `1` is out of range");
 
     }
 
@@ -445,7 +444,7 @@ pub(crate) mod tests {
         use_case.execute();
 
         let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
-        check!(error_message == "Index `1` is out of range"); // todo: signal whether original_index or new_index is the one that's wrong.
+        check!(error_message == "Original index is out of range: Index `1` is out of range");
     }
 
     #[test]
@@ -461,7 +460,7 @@ pub(crate) mod tests {
         use_case.execute();
 
         let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
-        check!(error_message == "Index `1` is out of range");
+        check!(error_message == "New index is out of range: Index `1` is out of range");
     }
 
     #[test]
@@ -502,9 +501,8 @@ pub(crate) mod tests {
         // when
         use_case.execute();
 
-        // todo: better error message. Which index was wrong?
         let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
-        check!(error_message == "Index `123` is out of range");
+        check!(error_message == "New index is out of range: Index `123` is out of range");
     }
 
     fn check_priorities_unswapped(stored_board: &HistorizedBoard<Issue>) {
