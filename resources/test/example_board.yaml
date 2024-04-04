@@ -7,6 +7,7 @@ issues:
     state: done
     timeCreated: 1702298969
 history:
+  - Add
   - Edit:
       original_description: Don't get a coffee
       index: 0
@@ -16,8 +17,14 @@ history:
         - original_position_in_issues: 3
   - Add
   - Add
-  - Add
-  - Add
+  - Prio:
+      original_order: 1
+      new_index: 0
+  - Move:
+      moves:
+        - original_index: 1
+          new_index: 1
+          original_state: open
 deletedIssues:
   - description: deleted issue 1
     state: open

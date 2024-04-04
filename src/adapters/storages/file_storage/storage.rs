@@ -62,7 +62,7 @@ mod tests {
     use crate::adapters::storages::IssueStorage;
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::historized_board::HistorizedBoard;
-    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, UndoableHistoryElement};
+    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
 
     #[test]
@@ -75,7 +75,7 @@ mod tests {
         // Then
         check!(board.entity_count() == 2, "Expected board to have two issues");
         check!(board.get_deleted_entities().len() == 2, "Expected board to have 2 deleted issues");
-        check!(board.history.stack.len() == 6, "Expected board to have a specific number of history elements");
+        check!(board.history.stack.len() == 7, "Expected board to have a specific number of history elements");
         [
             Issue {
                 description: Description::from("Get a coffee"),
@@ -91,8 +91,8 @@ mod tests {
             assert_eq!(actual_issue.deref(), &expected_issue, "Expected specific loaded issues")
         });
 
-        // todo: an exhausting list of history elements
         let expected_history = vec![
+            UndoableHistoryElement::Add,
             UndoableHistoryElement::Edit(EditHistoryElement{
                 original_description: String::from("Don't get a coffee"),
                 index: 0,
@@ -105,8 +105,17 @@ mod tests {
             }),
             UndoableHistoryElement::Add,
             UndoableHistoryElement::Add,
-            UndoableHistoryElement::Add,
-            UndoableHistoryElement::Add,
+            UndoableHistoryElement::Prio(PrioHistoryElement{
+                original_index: 1,
+                new_index: 0,
+            }),
+            UndoableHistoryElement::Move(MoveHistoryElements{
+                moves: vec![MoveHistoryElement{
+                    original_index: 1,
+                    original_state: State::Open,
+                    new_index: 1,
+                }],
+            }),
         ];
 
         check!(board.history.stack == expected_history.as_slice(), "Expected specific history");
