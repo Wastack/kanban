@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use crate::application::{Issue, State};
 use crate::application::domain::historized_board::HistorizedBoard;
-use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
+use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, FlushHistoryElement, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
 use crate::application::issue::Description;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
@@ -168,6 +168,27 @@ impl Into<EditHistoryElement> for StoredEditHistoryElement {
         }
     }
 }
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct StoredFlushHistoryElement {
+    /// Number of issues moved to the deleted elements by the flush command.
+    pub number_of_issues_affected: usize,
+}
+
+impl From<&FlushHistoryElement> for StoredFlushHistoryElement {
+    fn from(value: &FlushHistoryElement) -> Self {
+        Self {
+            number_of_issues_affected: value.number_of_issues_affected,
+        }
+    }
+}
+
+impl Into<FlushHistoryElement> for StoredFlushHistoryElement {
+    fn into(self) -> FlushHistoryElement {
+        FlushHistoryElement {
+            number_of_issues_affected: self.number_of_issues_affected
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 pub struct StoredDeleteHistoryElements {
@@ -218,7 +239,8 @@ pub enum StoredUndoableHistoryElement {
     Delete(StoredDeleteHistoryElements),
     Move(StoredMoveHistoryElements),
     Prio(StoredPrioHistoryElement),
-    Edit(StoredEditHistoryElement)
+    Edit(StoredEditHistoryElement),
+    Flush(StoredFlushHistoryElement),
 }
 
 impl From<&UndoableHistoryElement> for StoredUndoableHistoryElement {
@@ -229,6 +251,7 @@ impl From<&UndoableHistoryElement> for StoredUndoableHistoryElement {
             UndoableHistoryElement::Move(e) => StoredUndoableHistoryElement::Move(e.into()),
             UndoableHistoryElement::Prio(e) => StoredUndoableHistoryElement::Prio(e.into()),
             UndoableHistoryElement::Edit(e) => StoredUndoableHistoryElement::Edit(e.into()),
+            UndoableHistoryElement::Flush(e) => StoredUndoableHistoryElement::Flush(e.into()),
         }
     }
 }
@@ -241,6 +264,7 @@ impl Into<UndoableHistoryElement> for StoredUndoableHistoryElement {
             StoredUndoableHistoryElement::Move(e) => UndoableHistoryElement::Move(e.into()),
             StoredUndoableHistoryElement::Prio(e) => UndoableHistoryElement::Prio(e.into()),
             StoredUndoableHistoryElement::Edit(e) => UndoableHistoryElement::Edit(e.into()),
+            StoredUndoableHistoryElement::Flush(e) => UndoableHistoryElement::Flush(e.into()),
         }
     }
 }

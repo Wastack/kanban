@@ -40,13 +40,20 @@ pub struct DeleteHistoryElement {
     pub(crate) original_position_in_issues: usize,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct FlushHistoryElement {
+    /// Number of issues moved to the deleted elements by the flush command.
+    pub(crate) number_of_issues_affected: usize,
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum UndoableHistoryElement {
     Add,
     Delete(DeleteHistoryElements),
     Move(MoveHistoryElements),
     Prio(PrioHistoryElement),
-    Edit(EditHistoryElement)
+    Edit(EditHistoryElement),
+    Flush(FlushHistoryElement),
 }
 
 

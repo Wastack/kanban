@@ -1,9 +1,10 @@
 use crate::adapters::storages::IssueStorage;
 use crate::application::board::Board;
 use crate::application::domain::error::{DomainError, DomainResult};
-use crate::application::domain::history::{PrioHistoryElement, UndoableHistoryElement};
+use crate::application::domain::history::{FlushHistoryElement, PrioHistoryElement, UndoableHistoryElement};
 use crate::application::Issue;
 use crate::application::domain::historized_board::HistorizedBoard;
+use crate::application::issue::Entity;
 use crate::application::ports::presenter::Presenter;
 
 #[derive(Default)]
@@ -108,6 +109,27 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                     entity.state = h.original_state;
                 }
             },
+            UndoableHistoryElement::Flush(
+                FlushHistoryElement{
+                    number_of_issues_affected
+                }
+            ) => {
+                if board.get_deleted_entities().len() < *number_of_issues_affected {
+                    return Err(DomainError::InvalidBoard(format!("unable to undo flush of {} number of issues, when the total number of issues in deleted entities is {}",
+                            number_of_issues_affected,
+                            board.get_deleted_entities().len()
+                    )))
+                }
+
+                let elements_to_restore = {
+                    let deleted_entities = board.get_deleted_entities_mut();
+                    deleted_entities.drain(..*number_of_issues_affected).collect::<Vec<Entity<Issue>>>()
+                };
+
+                for e in elements_to_restore.into_iter() {
+                    board.insert(0, e);
+                }
+            }
         };
 
         Ok(())
@@ -126,7 +148,7 @@ pub(crate) mod tests {
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::historized_board::HistorizedBoard;
-    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, History, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
+    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, FlushHistoryElement, History, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
     use crate::application::usecase::undo::UndoUseCase;
 
@@ -503,6 +525,58 @@ pub(crate) mod tests {
 
         let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
         check!(error_message == "New index is out of range: Index `123` is out of range");
+    }
+
+    #[test]
+    fn test_undo_flush_not_enough_deleted_items() {
+        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![], vec![
+            Issue { description: Description::from("First deleted issue"), state: State::Open, time_created: 0, },
+            Issue { description: Description::from("Second deleted issue"), state: State::Review, time_created: 0, },
+        ], vec![
+            UndoableHistoryElement::Flush(FlushHistoryElement{
+                number_of_issues_affected: 3,
+            })
+        ]));
+
+        // when
+        use_case.execute();
+
+        let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice());
+        check!(error_message == "unable to undo flush of 3 number of issues, when the total number of issues in deleted entities is 2");
+    }
+
+    #[test]
+    fn test_undo_flush() {
+        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
+            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0, }
+        ], vec![
+            Issue { description: Description::from("First deleted issue"), state: State::Open, time_created: 0, },
+            Issue { description: Description::from("Second deleted issue"), state: State::Review, time_created: 0, },
+            Issue { description: Description::from("Third deleted issue"), state: State::Open, time_created: 0, },
+            Issue { description: Description::from("Fourth deleted issue"), state: State::Done, time_created: 0, },
+        ], vec![
+            UndoableHistoryElement::Flush(FlushHistoryElement{
+                number_of_issues_affected: 3,
+            })
+        ]));
+
+        // when
+        use_case.execute();
+
+        let_assert!([] = use_case.presenter.errors_presented.as_slice());
+        let stored_board = use_case.storage.load();
+
+        check!(stored_board.entity_count() == 3 + 1);
+        for (expected_description, actual_entity) in [
+            "Third deleted issue",
+            "Second deleted issue",
+            "First deleted issue",
+            "An issue"].into_iter().zip(stored_board.entities()) {
+            check!(actual_entity.description == Description::from(expected_description));
+        }
+
+        let_assert!(Some(presented_board) = use_case.presenter.last_board_rendered, "Expected board to have been presented");
+        check_boards_are_equal(&stored_board, &presented_board);
     }
 
     fn check_priorities_unswapped(stored_board: &HistorizedBoard<Issue>) {
