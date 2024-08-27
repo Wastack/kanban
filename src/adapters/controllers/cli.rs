@@ -14,7 +14,7 @@ use crate::application::usecase::prio::{BottomPriority, DownPriority, PriorityUs
 use crate::application::usecase::r#move::MoveUseCase;
 use crate::application::usecase::undo::UndoUseCase;
 
-/// Sema cli is a utility to tweak SEMA resources.
+/// Kanban issue tracking. It manages your tasks and quickly gets out of the way.
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 pub(crate) struct RootCli {
