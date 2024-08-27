@@ -1,4 +1,5 @@
 use crate::adapters::storages::IssueStorage;
+use crate::application::domain::history::{FlushHistoryElement, UndoableHistoryElement};
 use crate::application::ports::presenter::Presenter;
 
 #[derive(Default)]
@@ -11,10 +12,11 @@ impl<I: IssueStorage, P: Presenter> FlushUseCase<I, P> {
     pub(crate) fn execute(&mut self) {
         let mut board = self.storage.load();
 
-        let _number_of_elements_affected = board.flush();
+        let number_of_issues_affected = board.flush();
 
-        // ToDo: add history element
-        //board.history.add(UndoableHistoryElement::Flush);
+        board.history.add(UndoableHistoryElement::Flush(FlushHistoryElement{
+            number_of_issues_affected,
+        }));
 
         self.storage.save(&board);
         self.presenter.render_board(&board)
@@ -30,6 +32,7 @@ mod tests {
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::historized_board::HistorizedBoard;
+    use crate::application::domain::history::{FlushHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
     use crate::application::usecase::flush::FlushUseCase;
 
@@ -57,8 +60,7 @@ mod tests {
         check!(deleted_entities[1].description == Description::from("Task inserted second"));
         check!(deleted_entities[2].description == Description::from("Task inserted fourth"));
 
-        // ToDo: assert added history element
-        // ToDo: integrate use-case with controller
+        let_assert!(Some(UndoableHistoryElement::Flush(FlushHistoryElement{ number_of_issues_affected: 3 })) = stored_board.history.last());
 
         let presented_board = sut.presenter.last_board_rendered.expect("Expected a board to be presented");
         check_boards_are_equal(&presented_board, &stored_board);

@@ -9,6 +9,7 @@ use crate::application::usecase::add::AddUseCase;
 use crate::application::usecase::delete::DeleteUseCase;
 use crate::application::usecase::edit::EditUseCase;
 use crate::application::usecase::get::GetUseCase;
+use crate::application::usecase::flush::FlushUseCase;
 use crate::application::usecase::prio::{BottomPriority, DownPriority, PriorityUseCase, TopPriority, UpPriority};
 use crate::application::usecase::r#move::MoveUseCase;
 use crate::application::usecase::undo::UndoUseCase;
@@ -65,6 +66,9 @@ impl RootCli {
             Some(Command::Undo) => {
                 UndoUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute();
             },
+            Some(Command::Flush) => {
+                FlushUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute();
+            },
             None => {
                 GetUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute()
             },
@@ -110,6 +114,8 @@ pub(crate) enum Command {
     },
     /// Undo last action that changed the state
     Undo,
+    /// Flush deletes every issues that are not done
+    Flush,
 }
 
 #[derive(Clone)]

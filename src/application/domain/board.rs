@@ -39,6 +39,7 @@ impl<T, IdGen: IdGenerator> Board<T, IdGen> {
         &self.entities
     }
 
+    #[cfg(test)]
     pub(crate) fn entity_count(&self) -> usize {
         self.entities.len()
     }
