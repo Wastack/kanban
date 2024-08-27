@@ -3,7 +3,7 @@ use nonempty_collections::NEVec;
 use uuid::Uuid;
 use crate::application::issue::{Entity, IdGenerator, Issue, UUidGenerator};
 use crate::application::domain::error::{DomainError, DomainResult, DomainResultMultiError};
-
+use crate::application::State;
 
 #[derive(Debug, Clone)]
 pub struct Board<T, IdGen: IdGenerator = UUidGenerator> {
@@ -190,6 +190,22 @@ impl<IdGen: IdGenerator> Board<Issue, IdGen> {
 
         // by removing an issue, all subsequent indices shift to the left. Thus, -1.
         self.entities.insert(current_position + steps_down, issue);
+    }
+
+    /// Flush will delete all issues which are not done, practically giving a clean slate for the
+    /// user. Flushed entities appear in the deleted issues, with reversed order (issue with index
+    /// 0 ends up at position 'n', where n is number of not done issues).
+    ///
+    /// Returns the number of issues affected.
+    pub fn flush(&mut self) -> usize {
+        let extracted_entities = self.entities.extract_if(|e| e.state != State::Done);
+        let mut count = 0;
+        for entity in extracted_entities.into_iter() {
+            count += 1;
+            self.deleted_entities.insert(0, entity)
+        }
+
+        count
     }
 }
 

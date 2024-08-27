@@ -1,4 +1,4 @@
-#![feature(result_option_inspect)]
+#![feature(extract_if)]
 
 extern crate core;
 
