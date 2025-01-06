@@ -515,6 +515,14 @@ pub(crate) mod test_utils {
             )
         }
 
+        pub(crate) fn with_issue(self, issue: Issue) -> Self {
+            HistorizedBoard::new(
+                [self.board.entities.into_iter().map(|x| x.content).collect::<Vec<_>>(), vec![issue]].concat(),
+                self.board.deleted_entities.into_iter().map(|x1| x1.content).collect(),
+                self.history.stack
+            )
+        }
+
 
         pub(crate) fn get_entity_with_index(&self, index: usize) -> &Entity<Issue> {
             &self.entities.get(index).expect("Expected entity to exist")

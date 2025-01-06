@@ -69,8 +69,8 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
         if let Some(done_issues) = issues_categorised_by_state.get_mut(&State::Done) {
             if done_issues.len() > 4 {
                 done_issues_truncated = true;
+                done_issues.drain(4..);
             }
-            done_issues.drain(4..);
         }
 
         let current_time = self.time_provider.now();
@@ -164,6 +164,33 @@ mod test {
 
         check!(formatted_chunks.next() == None, "Expected not to have any more formatted output");
 
+    }
+
+    #[test]
+    fn test_format_1_done_board() {
+        let board = HistorizedBoard::default()
+            .with_issue(Issue {
+                description: Description::from("An issue in done"),
+                state: State::Done,
+                time_created: DEFAULT_FAKE_TIME,
+            });
+        let text_renderer = TabularTextRenderer::<FakeTimeProvider>::default();
+
+        let mut formatted_chunks = text_renderer.build_formatted_text_chunks(&board);
+        [
+            Formatted("Open".bold()),
+            NonFormatted(String::default()),
+            Formatted("Review".bold()),
+            NonFormatted(String::default()),
+            Formatted("Done".bold()),
+            NonFormatted(String::from("0: An issue in done")),
+            NonFormatted(String::default()),
+        ].into_iter().for_each(|expected| {
+            let chunk = formatted_chunks.next().expect("Expected more chunks of formatted output");
+            check!(chunk == expected);
+        });
+
+        check!(formatted_chunks.next() == None, "Expected not to have any more formatted output");
     }
 
     #[test]
