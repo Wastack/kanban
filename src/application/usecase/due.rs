@@ -20,7 +20,7 @@ impl<I: IssueStorage, P: Presenter> DueUseCase<I, P> {
         let id = board.find_entity_id_by_index(index)?;
 
         // ToDo: implement empty argument (due reset)
-        board.get_mut(id).due_date = Some(String::from(date.expect("reset due date not implemented")));
+        board.get_mut(id).due_date = date.map(str::to_string);
 
         // ToDO: implement undo / history
 
@@ -86,7 +86,7 @@ mod test {
 
 
         let issue = stored_board.get(stored_board.find_entity_id_by_index(0).unwrap());
-        check!(issue.due_date == Some(String::from("1996-01-17")));
+        check!(issue.due_date == None);
     }
 
     fn given_due_usecase_with(board: HistorizedBoard<Issue>) -> DueUseCase<MemoryIssueStorage, NilPresenter> {
