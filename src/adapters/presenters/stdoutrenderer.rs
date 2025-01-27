@@ -102,7 +102,11 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
                         .map(move | (index, issue)|
                             {
                                 (
-                                    format!("{}: {}", index, issue.description),
+                                    if let Some(due) = &issue.due_date {
+                                        format!("{}: {}\t{}", index, issue.description, due)
+                                    } else {
+                                        format!("{}: {}", index, issue.description)
+                                    },
                                     issue.category(current_time)
                                 )
                             }
@@ -204,7 +208,7 @@ mod test {
         [
             Formatted("Open".bold()),
             Formatted("5: An open issue overdue".red()),
-            NonFormatted(String::from("6: An open issue not overdue")),
+            NonFormatted(String::from("6: An open issue not overdue\t2015-03-24")),
             NonFormatted(String::default()), // new line
             Formatted("Review".bold()),
             NonFormatted(String::from("7: An issue in review")),
@@ -243,6 +247,7 @@ mod test {
                             description: Description::from("An open issue not overdue"),
                             state: State::Open,
                             time_created: DEFAULT_FAKE_TIME,
+                            due_date: Some(String::from("2015-03-24")),
                             ..Default::default()
                         },
                         Issue {

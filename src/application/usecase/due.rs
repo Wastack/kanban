@@ -16,10 +16,8 @@ impl<I: IssueStorage, P: Presenter> DueUseCase<I, P> {
 
     fn try_execute(&mut self, index: usize, date: Option<&str>) -> DomainResult<()> {
         let mut board = self.storage.load();
-
         let id = board.find_entity_id_by_index(index)?;
 
-        // ToDo: implement empty argument (due reset)
         board.get_mut(id).due_date = date.map(str::to_string);
 
         // ToDO: implement undo / history
