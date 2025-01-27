@@ -21,6 +21,7 @@ impl<I: IssueStorage, P: Presenter, T: CurrentTimeProvider> AddUseCase<I, P, T> 
             description: Description::from(description),
             state,
             time_created: self.time_provider.now(),
+            due_date: None,
         });
         board.history.add(UndoableHistoryElement::Add);
 

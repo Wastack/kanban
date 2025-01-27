@@ -12,7 +12,13 @@ pub enum State {
     Done,
 }
 
-#[derive(Debug, PartialEq, Clone, Hash)]
+impl Default for State {
+    fn default() -> Self {
+        Self::Open
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Hash, Default)]
 pub struct Description(pub String);
 
 impl From<&str> for Description {
@@ -96,7 +102,7 @@ impl<T> Entity<T> {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Hash)]
+#[derive(Debug, PartialEq, Clone, Hash, Default)]
 pub struct Issue {
     /// Description (content) of the ticket
     pub(crate) description: Description,
@@ -107,6 +113,11 @@ pub struct Issue {
     /// For backwards compatibility, if the field is missing, we take it as if it was
     /// created just now.
     pub(crate) time_created: u64,
+
+    /// Due date of an issue
+    ///
+    /// ToDo: use date type
+    pub(crate) due_date: Option<String>,
 }
 
 impl Issue {

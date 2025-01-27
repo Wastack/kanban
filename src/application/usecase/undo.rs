@@ -324,6 +324,7 @@ pub(crate) mod tests {
                 description: Description::from("One task"),
                 state: State::Open,
                 time_created: DEFAULT_FAKE_TIME,
+                ..Default::default()
             }
         ], vec![], vec![UndoableHistoryElement::Move(MoveHistoryElements{
             moves: vec![MoveHistoryElement{
@@ -359,6 +360,7 @@ pub(crate) mod tests {
             description: Description::from(description),
             state,
             time_created: DEFAULT_FAKE_TIME,
+            ..Default::default()
         }).collect();
 
         let history = vec![UndoableHistoryElement::Move(MoveHistoryElements {
@@ -457,7 +459,9 @@ pub(crate) mod tests {
     fn test_undo_priority_invalid_original_index() {
         // given
         let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
-            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0, }
+            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0,
+                ..Default::default()
+            }
         ], vec![], vec![
             UndoableHistoryElement::Prio(PrioHistoryElement{ original_index: 1, new_index: 0 })
         ]));
@@ -473,7 +477,9 @@ pub(crate) mod tests {
     fn test_undo_prority_invalid_new_index() {
         // given
         let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
-            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0, }
+            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0,
+                ..Default::default()
+            }
         ], vec![], vec![
             UndoableHistoryElement::Prio(PrioHistoryElement{ original_index: 0, new_index: 1 })
         ]));
@@ -489,9 +495,13 @@ pub(crate) mod tests {
     fn test_undo_delete_invalid_original_index() {
         // given
         let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
-            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0, }
+            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0,
+                ..Default::default()
+            }
         ], vec![
-            Issue { description: Description::from("A deleted issue"), state: State::Review, time_created: 0, }
+            Issue { description: Description::from("A deleted issue"), state: State::Review, time_created: 0,
+                ..Default::default()
+            }
         ], vec![
             UndoableHistoryElement::Delete(DeleteHistoryElements{
                 deletions: vec![DeleteHistoryElement{ original_position_in_issues: 2 }],
@@ -509,7 +519,9 @@ pub(crate) mod tests {
     fn test_undo_move_invalid_new_index() {
         // given
         let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
-            Issue { description: Description::from("An issue"), state: State::Done, time_created: 0, }
+            Issue { description: Description::from("An issue"), state: State::Done, time_created: 0,
+                ..Default::default()
+            }
         ], vec![], vec![
             UndoableHistoryElement::Move(MoveHistoryElements{
                 moves: vec![MoveHistoryElement{
@@ -530,8 +542,12 @@ pub(crate) mod tests {
     #[test]
     fn test_undo_flush_not_enough_deleted_items() {
         let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![], vec![
-            Issue { description: Description::from("First deleted issue"), state: State::Open, time_created: 0, },
-            Issue { description: Description::from("Second deleted issue"), state: State::Review, time_created: 0, },
+            Issue { description: Description::from("First deleted issue"), state: State::Open, time_created: 0,
+                ..Default::default()
+            },
+            Issue { description: Description::from("Second deleted issue"), state: State::Review, time_created: 0,
+                ..Default::default()
+            },
         ], vec![
             UndoableHistoryElement::Flush(FlushHistoryElement{
                 number_of_issues_affected: 3,
@@ -548,12 +564,22 @@ pub(crate) mod tests {
     #[test]
     fn test_undo_flush() {
         let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
-            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0, }
+            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0,
+                ..Default::default()
+            }
         ], vec![
-            Issue { description: Description::from("First deleted issue"), state: State::Open, time_created: 0, },
-            Issue { description: Description::from("Second deleted issue"), state: State::Review, time_created: 0, },
-            Issue { description: Description::from("Third deleted issue"), state: State::Open, time_created: 0, },
-            Issue { description: Description::from("Fourth deleted issue"), state: State::Done, time_created: 0, },
+            Issue { description: Description::from("First deleted issue"), state: State::Open, time_created: 0,
+                ..Default::default()
+            },
+            Issue { description: Description::from("Second deleted issue"), state: State::Review, time_created: 0,
+                ..Default::default()
+            },
+            Issue { description: Description::from("Third deleted issue"), state: State::Open, time_created: 0,
+                ..Default::default()
+            },
+            Issue { description: Description::from("Fourth deleted issue"), state: State::Done, time_created: 0,
+                ..Default::default()
+            },
         ], vec![
             UndoableHistoryElement::Flush(FlushHistoryElement{
                 number_of_issues_affected: 3,
@@ -591,6 +617,7 @@ pub(crate) mod tests {
             description: Description::from(d),
             state: State::Open,
             time_created: 0,
+            ..Default::default()
         }).to_vec()
     }
 
@@ -601,6 +628,7 @@ pub(crate) mod tests {
                     description: Description::from("Additional Issue"),
                     state: State::Open,
                     time_created: 0,
+                    ..Default::default()
                 }
             );
             self.history.add(UndoableHistoryElement::Add);

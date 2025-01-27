@@ -430,13 +430,13 @@ mod tests {
                 description: Description::from("First task"),
                 state: State::Open,
                 time_created: 1698397489,
-
+                ..Default::default()
             },
             Issue {
                 description: Description::from("Second task"),
                 state: State::Review,
                 time_created: 1698397490,
-
+                ..Default::default()
             },
         ], vec![], vec![])
     }
@@ -454,11 +454,21 @@ mod tests {
     fn board_for_testing_priorities() -> HistorizedBoard<Issue, FixedIdGenerator> {
         HistorizedBoard::new(
             vec![
-                Issue { description: Description::from("First open task"), state: State::Open, time_created: 0 },
-                Issue { description: Description::from("First done task"), state: State::Done, time_created: 0 },
-                Issue { description: Description::from("First review task"), state: State::Review, time_created: 0 },
-                Issue { description: Description::from("Second open task"), state: State::Open, time_created: 0 },
-                Issue { description: Description::from("Third open task"), state: State::Open, time_created: 0 },
+                Issue { description: Description::from("First open task"), state: State::Open, time_created: 0,
+                    ..Default::default()
+                },
+                Issue { description: Description::from("First done task"), state: State::Done, time_created: 0,
+                    ..Default::default()
+                },
+                Issue { description: Description::from("First review task"), state: State::Review, time_created: 0,
+                    ..Default::default()
+                },
+                Issue { description: Description::from("Second open task"), state: State::Open, time_created: 0,
+                    ..Default::default()
+                },
+                Issue { description: Description::from("Third open task"), state: State::Open, time_created: 0,
+                    ..Default::default()
+                },
             ],
             vec![],
             vec![])
@@ -536,25 +546,28 @@ pub(crate) mod test_utils {
                 description: Description::from("Task inserted fourth"),
                 state: State::Open,
                 time_created: DEFAULT_FAKE_TIME,
+                ..Default::default()
             },
             // index 1
             Issue {
                 description: Description::from("Task inserted third"),
                 state: State::Done,
                 time_created: 1698397491,
+                ..Default::default()
             },
             // index 2
             Issue {
                 description: Description::from("Task inserted second"),
                 state: State::Review,
                 time_created: 1698397490,
+                ..Default::default()
             },
             // index 3
             Issue {
                 description: Description::from("Task inserted first"),
                 state: State::Open,
                 time_created: 1698397489,
-
+                ..Default::default()
             },
         ]
     }

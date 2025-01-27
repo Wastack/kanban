@@ -7,6 +7,7 @@ use crate::adapters::time_providers::simple::SimpleTimeProvider;
 use crate::application::State;
 use crate::application::usecase::add::AddUseCase;
 use crate::application::usecase::delete::DeleteUseCase;
+use crate::application::usecase::due::DueUseCase;
 use crate::application::usecase::edit::EditUseCase;
 use crate::application::usecase::get::GetUseCase;
 use crate::application::usecase::flush::FlushUseCase;
@@ -69,6 +70,12 @@ impl RootCli {
             Some(Command::Flush) => {
                 FlushUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute();
             },
+            Some(Command::Due {
+                     index,
+                     date
+                 }) => {
+                DueUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute(index, date.as_deref());
+            }
             None => {
                 GetUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute()
             },
@@ -79,6 +86,7 @@ impl RootCli {
 #[derive(Subcommand, Clone)]
 pub(crate) enum Command {
     /// Add new issue
+    /// ToDo: ability to add issue with due date
     Add {
         /// A text that describes the issue
         description: String,
@@ -116,6 +124,22 @@ pub(crate) enum Command {
     Undo,
     /// Flush deletes every issues that are not done
     Flush,
+
+    /// Set a due date for an already existing issue.
+    Due {
+        /// Index of the issue for which due date is to be set.
+        index: usize,
+
+        /// Date in the format of `yyyy-mm-dd`  or `mm--dd` or `dd` or "tomorrow" or "tom" or
+        ///
+        /// You can also use "m" "tu", "w", "th", "f", "sa", "su" for the next occurrence of that weekday (excluding today).
+        ///
+        /// ToDo: first version: unprocessed string instead of actual date
+        /// ToDo: support for relative time (tomorrow)
+        /// ToDo: support for next occurrence weekday
+        /// ToDo: make gray if it's too far in the future? Make red if it's coming to an end and it's not done?
+        date: Option<String>,
+    }
 }
 
 #[derive(Clone)]

@@ -173,6 +173,7 @@ mod test {
                 description: Description::from("An issue in done"),
                 state: State::Done,
                 time_created: DEFAULT_FAKE_TIME,
+                ..Default::default()
             });
         let text_renderer = TabularTextRenderer::<FakeTimeProvider>::default();
 
@@ -228,6 +229,7 @@ mod test {
                 description: Description::from(format!("Done issue number {}", n).deref()),
                 state: State::Done,
                 time_created: 0,
+                ..Default::default()
             })
                 .chain(
                     vec![
@@ -235,16 +237,19 @@ mod test {
                             description: Description::from("An open issue overdue"),
                             state: State::Open,
                             time_created: 1698397491,
+                            ..Default::default()
                         },
                         Issue {
                             description: Description::from("An open issue not overdue"),
                             state: State::Open,
                             time_created: DEFAULT_FAKE_TIME,
+                            ..Default::default()
                         },
                         Issue {
                             description: Description::from("An issue in review"),
                             state: State::Review,
                             time_created: 1698397491,
+                            ..Default::default()
                         },
 
                     ].into_iter()

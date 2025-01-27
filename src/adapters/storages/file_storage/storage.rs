@@ -81,11 +81,13 @@ mod tests {
                 description: Description::from("Get a coffee"),
                 state: State::Open,
                 time_created: 1706727855,
+                ..Default::default()
             },
             Issue {
                 description: Description::from("Take a break"),
                 state: State::Done,
                 time_created: 1702298969,
+                ..Default::default()
             },
         ].into_iter().zip(board.entities().iter()).for_each(|(expected_issue, actual_issue)| {
             assert_eq!(actual_issue.deref(), &expected_issue, "Expected specific loaded issues")
@@ -145,15 +147,19 @@ issues:
   - description: Task inserted fourth
     state: open
     timeCreated: 1706727855
+    dueDate: ~
   - description: Task inserted third
     state: done
     timeCreated: 1698397491
+    dueDate: ~
   - description: Task inserted second
     state: review
     timeCreated: 1698397490
+    dueDate: ~
   - description: Task inserted first
     state: open
     timeCreated: 1698397489
+    dueDate: ~
 deletedIssues: []
 history: []
 "#);

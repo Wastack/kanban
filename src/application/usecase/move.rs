@@ -178,10 +178,18 @@ mod tests {
         // Given
         let mut sut = given_move_use_case_with(
             HistorizedBoard::new(vec![
-                Issue { description: Description::from("I finished this first"), state: State::Done, time_created: 0 },
-                Issue { description: Description::from("Lazy to do"), state: State::Open, time_created: 0 },
-                Issue { description: Description::from("I'm doing it now, A"), state: State::Open, time_created: 0 }, // Move this second
-                Issue { description: Description::from("I'm doing it now, B"), state: State::Open, time_created: 0 }, // Move this first
+                Issue { description: Description::from("I finished this first"), state: State::Done, time_created: 0,
+                    ..Default::default()
+                },
+                Issue { description: Description::from("Lazy to do"), state: State::Open, time_created: 0,
+                    ..Default::default()
+                },
+                Issue { description: Description::from("I'm doing it now, A"), state: State::Open, time_created: 0,
+                    ..Default::default()
+                }, // Move this second
+                Issue { description: Description::from("I'm doing it now, B"), state: State::Open, time_created: 0,
+                    ..Default::default()
+                }, // Move this first
             ], vec![], vec![])
         );
 
