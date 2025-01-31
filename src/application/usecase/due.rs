@@ -1,3 +1,5 @@
+use time::Date;
+use time::macros::format_description;
 use crate::adapters::storages::IssueStorage;
 use crate::application::domain::error::{DomainResult};
 use crate::application::ports::presenter::Presenter;
@@ -18,7 +20,11 @@ impl<I: IssueStorage, P: Presenter> DueUseCase<I, P> {
         let mut board = self.storage.load();
         let id = board.find_entity_id_by_index(index)?;
 
-        board.get_mut(id).due_date = date.map(str::to_string);
+
+        let format = format_description!("[year]-[month]-[day]");
+        let parsed_date = date.map(|d| Date::parse(d, format)).transpose()?;
+        // ToDo: finish parsing
+        board.get_mut(id).due_date = parsed_date;
 
         // ToDO: implement undo / history
 
@@ -32,6 +38,7 @@ impl<I: IssueStorage, P: Presenter> DueUseCase<I, P> {
 #[cfg(test)]
 mod test {
     use assert2::{check, let_assert};
+    use time::macros::date;
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
@@ -55,7 +62,7 @@ mod test {
         check_boards_are_equal(&presented_board, &stored_board);
 
         let stored_due_issue = stored_board.get(stored_board.find_entity_id_by_index(1).unwrap());
-        check!(stored_due_issue.due_date == Some(String::from("2025-01-26")));
+        check!(stored_due_issue.due_date == Some(date!(2025-01-26)));
     }
 
     #[test]
@@ -72,7 +79,7 @@ mod test {
             HistorizedBoard::default().with_issue(Issue {
                 description: Description::from("due issue"),
                 state: State::Open,
-                due_date: Some(String::from("1996-01-16")),
+                due_date: Some(date!(1996-01-16)),
                 ..Default::default()
             }),
         );

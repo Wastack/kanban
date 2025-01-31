@@ -15,6 +15,7 @@ tempfile = "3.4.0"
 nonempty-collections = "0.1.1"
 thiserror = { version = "1.0.56", features = [] }
 itertools = { version = "0.12.1", features = [] }
+time = { version = "0.3.37", features = ["macros", "parsing", "serde-human-readable"] }
 
 [dependencies.uuid]
 version = "1.7.0"

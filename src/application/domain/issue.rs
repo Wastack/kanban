@@ -115,9 +115,7 @@ pub struct Issue {
     pub(crate) time_created: u64,
 
     /// Due date of an issue
-    ///
-    /// ToDo: use date type
-    pub(crate) due_date: Option<String>,
+    pub(crate) due_date: Option<time::Date>,
 }
 
 impl Issue {

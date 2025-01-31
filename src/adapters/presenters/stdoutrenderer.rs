@@ -147,6 +147,7 @@ mod test {
     use colored::Colorize;
     use crate::adapters::presenters::stdoutrenderer::MaybeFormattedString::{Formatted, NonFormatted};
     use crate::application::domain::historized_board::HistorizedBoard;
+    use time::macros::date;
 
     #[test]
     fn test_format_empty_board() {
@@ -247,7 +248,7 @@ mod test {
                             description: Description::from("An open issue not overdue"),
                             state: State::Open,
                             time_created: DEFAULT_FAKE_TIME,
-                            due_date: Some(String::from("2015-03-24")),
+                            due_date: Some(date!(2015-03-24)),
                             ..Default::default()
                         },
                         Issue {

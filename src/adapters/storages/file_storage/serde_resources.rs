@@ -49,7 +49,7 @@ pub struct StoredIssue {
     time_created: u64,
 
     /// Date when the issue is due
-    due_date: Option<String>,
+    due_date: Option<time::Date>,
 }
 
 impl Into<Issue> for StoredIssue {
@@ -69,7 +69,7 @@ impl From<&Issue> for StoredIssue {
             description: issue.description.to_string(),
             state: issue.state.into(),
             time_created: issue.time_created,
-            due_date: issue.due_date.clone(),
+            due_date: issue.due_date,
         }
     }
 }

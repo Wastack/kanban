@@ -1,6 +1,7 @@
 use std::{io};
 use nonempty_collections::NEVec;
 use thiserror::Error;
+use time::error;
 
 pub type DomainResult<T> = Result<T, DomainError>;
 pub type DomainResultMultiError<T> = Result<T, NEVec<DomainError>>;
@@ -22,7 +23,16 @@ pub enum DomainError {
     EmptyHistory,
 
     #[error("Not implemented")]
-    NotImplemented
+    NotImplemented,
+
+    #[error("Parse error: {0}")]
+    ParseError(error::Parse),
+}
+
+impl From<error::Parse> for DomainError {
+    fn from(value: error::Parse) -> Self {
+        Self::ParseError(value)
+    }
 }
 
 #[cfg(test)]
@@ -41,6 +51,7 @@ mod tests {
                 DomainError::InvalidBoard(e) => DomainError::InvalidBoard(e.clone()),
                 DomainError::EmptyHistory => DomainError::EmptyHistory,
                 DomainError::NotImplemented => DomainError::NotImplemented,
+                DomainError::ParseError(e) => DomainError::ParseError(e.clone()),
             }
         }
     }
