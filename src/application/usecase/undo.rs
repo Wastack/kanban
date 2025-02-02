@@ -1,7 +1,7 @@
 use crate::adapters::storages::IssueStorage;
 use crate::application::board::Board;
 use crate::application::domain::error::{DomainError, DomainResult};
-use crate::application::domain::history::{FlushHistoryElement, PrioHistoryElement, UndoableHistoryElement};
+use crate::application::domain::history::{DueHistoryElement, FlushHistoryElement, PrioHistoryElement, UndoableHistoryElement};
 use crate::application::Issue;
 use crate::application::domain::historized_board::HistorizedBoard;
 use crate::application::issue::Entity;
@@ -28,8 +28,9 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
         let event_to_undo = history.last()
             .ok_or(DomainError::EmptyHistory)?;
 
-        Self::undo(&mut board, event_to_undo)?;
+        Self::undo_event(&mut board, event_to_undo)?;
 
+        // When successful, we need to remove the history element that has been undone.
         history.pop();
 
         let historized_board = HistorizedBoard {
@@ -43,7 +44,8 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
         Ok(())
     }
 
-    fn undo(board: &mut Board<Issue>, history: &UndoableHistoryElement) -> DomainResult<()> {
+    /// Undoes and event based on the history element. It does not mutate the history.
+    fn undo_event(board: &mut Board<Issue>, history: &UndoableHistoryElement) -> DomainResult<()> {
         match history {
             UndoableHistoryElement::Add => {
                 let id = board
@@ -129,6 +131,16 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                 for e in elements_to_restore.into_iter() {
                     board.insert(0, e);
                 }
+            },
+            UndoableHistoryElement::Due(
+              DueHistoryElement{
+                  index, previous_due
+              }
+            ) => {
+                let id = board.find_entity_id_by_index(*index)?;
+                let mut issue = board.get_mut(id);
+
+                issue.due_date = previous_due.clone();
             }
         };
 

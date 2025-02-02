@@ -46,6 +46,12 @@ pub struct FlushHistoryElement {
     pub(crate) number_of_issues_affected: usize,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct DueHistoryElement {
+    pub(crate) index: usize,
+    pub(crate) previous_due: Option<time::Date>,
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum UndoableHistoryElement {
     Add,
@@ -54,6 +60,7 @@ pub enum UndoableHistoryElement {
     Prio(PrioHistoryElement),
     Edit(EditHistoryElement),
     Flush(FlushHistoryElement),
+    Due(DueHistoryElement),
 }
 
 

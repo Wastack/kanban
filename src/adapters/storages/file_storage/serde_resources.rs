@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use crate::application::{Issue, State};
 use crate::application::domain::historized_board::HistorizedBoard;
-use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, FlushHistoryElement, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
+use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, DueHistoryElement, EditHistoryElement, FlushHistoryElement, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
 use crate::application::issue::Description;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
@@ -239,6 +239,30 @@ impl Into<DeleteHistoryElement> for StoredDeleteHistoryElement {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct StoredDueHistoryElement {
+    pub(crate) index: usize,
+    pub(crate) previous_due: Option<time::Date>,
+}
+
+impl From<&DueHistoryElement> for StoredDueHistoryElement {
+    fn from(value: &DueHistoryElement) -> Self {
+        Self {
+            index: value.index,
+            previous_due: value.previous_due,
+        }
+    }
+}
+
+impl Into<DueHistoryElement> for StoredDueHistoryElement {
+    fn into(self) -> DueHistoryElement {
+        DueHistoryElement {
+            index: self.index,
+            previous_due: None,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum StoredUndoableHistoryElement {
     Add,
     Delete(StoredDeleteHistoryElements),
@@ -246,6 +270,7 @@ pub enum StoredUndoableHistoryElement {
     Prio(StoredPrioHistoryElement),
     Edit(StoredEditHistoryElement),
     Flush(StoredFlushHistoryElement),
+    Due(StoredDueHistoryElement),
 }
 
 impl From<&UndoableHistoryElement> for StoredUndoableHistoryElement {
@@ -257,6 +282,7 @@ impl From<&UndoableHistoryElement> for StoredUndoableHistoryElement {
             UndoableHistoryElement::Prio(e) => StoredUndoableHistoryElement::Prio(e.into()),
             UndoableHistoryElement::Edit(e) => StoredUndoableHistoryElement::Edit(e.into()),
             UndoableHistoryElement::Flush(e) => StoredUndoableHistoryElement::Flush(e.into()),
+            UndoableHistoryElement::Due(e) => StoredUndoableHistoryElement::Due(e.into()),
         }
     }
 }
@@ -270,6 +296,7 @@ impl Into<UndoableHistoryElement> for StoredUndoableHistoryElement {
             StoredUndoableHistoryElement::Prio(e) => UndoableHistoryElement::Prio(e.into()),
             StoredUndoableHistoryElement::Edit(e) => UndoableHistoryElement::Edit(e.into()),
             StoredUndoableHistoryElement::Flush(e) => UndoableHistoryElement::Flush(e.into()),
+            StoredUndoableHistoryElement::Due(e) => UndoableHistoryElement::Due(e.into()),
         }
     }
 }
