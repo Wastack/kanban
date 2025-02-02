@@ -138,7 +138,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
               }
             ) => {
                 let id = board.find_entity_id_by_index(*index)?;
-                let mut issue = board.get_mut(id);
+                let issue = board.get_mut(id);
 
                 issue.due_date = previous_due.clone();
             }

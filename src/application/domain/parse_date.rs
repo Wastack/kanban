@@ -3,12 +3,11 @@ use time::macros::format_description;
 use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::ports::time::TodayProvider;
 
-#[derive(Default)]
-pub struct DateParser<T : TodayProvider + Default>{
-    today_provider: T,
+pub struct DateParser<'a, T: TodayProvider> {
+    pub today_provider: &'a T,
 }
 
-impl<T: TodayProvider + Default> DateParser<T> {
+impl<T: TodayProvider> DateParser<'_, T> {
     /// Parse a date.
     ///
     /// The following formats are accepted:
@@ -16,7 +15,7 @@ impl<T: TodayProvider + Default> DateParser<T> {
     ///   + 0 padding is accepted for years, months, days
     /// - "today", "tomorrow"
     /// - "m" "tu", "w", "th", "f", "sa", "su" for the next occurrence of that weekday (excluding today).
-    fn parse(&self, text: &str) -> DomainResult<time::Date> {
+    pub(crate) fn parse(&self, text: &str) -> DomainResult<time::Date> {
         self.parse_as_relative_day(text)
             .or(self.parse_as_relative_weekday(text))
             .or(self.parse_as_date(text))
@@ -43,11 +42,10 @@ impl<T: TodayProvider + Default> DateParser<T> {
         let mut text = String::from(text);
         let parts = text.chars().filter(|c| *c == '-').count() + 1;
         if parts < 3 {
-            let today = self.today_provider.today();
             if parts == 2 {
-                text = format!("{}-{}", today.year(), text)
+                text = format!("{}-{}", self.today_provider.today().year(), text)
             } else if parts == 1 {
-                text = format!("{}-{}-{}", today.year(), today.month(), text)
+                text = format!("{}-{}-{}", self.today_provider.today().year(), self.today_provider.today().month(), text)
             }
         }
         let format = format_description!("[year]-[month]-[day]");
@@ -83,8 +81,11 @@ mod tests {
 
     #[test]
     fn test_parse_date() {
-        // 2025-02-22 is today, saturday
-        let date_parser = DateParser::<FakeTodayProvider>::default();
+        // date!(2025-02-22) // saturday
+        let fake_pr = FakeTodayProvider::default();
+        let date_parser = DateParser {
+            today_provider: &fake_pr,
+        };
 
         let test_table_success = [
             ("2026-02-03", date!(2026-02-03)),

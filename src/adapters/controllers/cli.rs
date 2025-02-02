@@ -74,7 +74,7 @@ impl RootCli {
                      index,
                      date
                  }) => {
-                DueUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute(index, date.as_deref());
+                DueUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>, SimpleTimeProvider>::default().execute(index, date.as_deref());
             }
             None => {
                 GetUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute()

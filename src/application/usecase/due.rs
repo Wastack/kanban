@@ -1,17 +1,18 @@
-use time::Date;
-use time::macros::format_description;
 use crate::adapters::storages::IssueStorage;
 use crate::application::domain::error::{DomainResult};
 use crate::application::domain::history::{DueHistoryElement, UndoableHistoryElement};
+use crate::application::domain::parse_date::DateParser;
 use crate::application::ports::presenter::Presenter;
+use crate::application::ports::time::TodayProvider;
 
 #[derive(Default)]
-pub(crate) struct DueUseCase<I: IssueStorage, P: Presenter> {
+pub(crate) struct DueUseCase<I: IssueStorage, P: Presenter, T: TodayProvider> {
     pub(crate) storage: I,
     presenter: P,
+    today_provider: T,
 }
 
-impl<I: IssueStorage, P: Presenter> DueUseCase<I, P> {
+impl<I: IssueStorage, P: Presenter, T:TodayProvider> DueUseCase<I, P, T> {
     pub(crate) fn execute(&mut self, index: usize, date: Option<&str>) {
         let _ = self.try_execute(index, date)
             .inspect_err(|e| self.presenter.render_error(e));
@@ -21,10 +22,11 @@ impl<I: IssueStorage, P: Presenter> DueUseCase<I, P> {
         let mut board = self.storage.load();
         let id = board.find_entity_id_by_index(index)?;
 
+        let date_parser = DateParser {
+            today_provider: &self.today_provider,
+        };
 
-        // ToDo: other parsable formats
-        let format = format_description!("[year]-[month]-[day]");
-        let parsed_date = date.map(|d| Date::parse(d, format)).transpose()?;
+        let parsed_date = date.map(|d| date_parser.parse(d)).transpose()?;
 
         let previous_due = board.get(id).due_date;
         board.get_mut(id).due_date = parsed_date;
@@ -50,6 +52,7 @@ mod test {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
+    use crate::adapters::time_providers::fake::FakeTodayProvider;
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::historized_board::HistorizedBoard;
@@ -81,7 +84,7 @@ mod test {
 
     #[test]
     fn test_index_error() {
-        let mut use_case = DueUseCase::<MemoryIssueStorage, NilPresenter>::default();
+        let mut use_case = DueUseCase::<MemoryIssueStorage, NilPresenter, FakeTodayProvider>::default();
         use_case.execute(1, None);
         let error = use_case.presenter.errors_presented.first().expect("error to be presented");
         let_assert!(DomainError::IndexOutOfRange(1) = error);
@@ -112,7 +115,7 @@ mod test {
         })));
     }
 
-    fn given_due_usecase_with(board: HistorizedBoard<Issue>) -> DueUseCase<MemoryIssueStorage, NilPresenter> {
+    fn given_due_usecase_with(board: HistorizedBoard<Issue>) -> DueUseCase<MemoryIssueStorage, NilPresenter, FakeTodayProvider> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
@@ -121,4 +124,6 @@ mod test {
             ..Default::default()
         }
     }
+
+    // ToDo add usecase test with fancy date input, e.g. tomorrow
 }
