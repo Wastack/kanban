@@ -27,6 +27,9 @@ pub enum DomainError {
 
     #[error("Parse error: {0}")]
     ParseError(error::Parse),
+
+    #[error("Internal error: {0}")]
+    InternalError(String),
 }
 
 impl From<error::Parse> for DomainError {
@@ -52,6 +55,7 @@ mod tests {
                 DomainError::EmptyHistory => DomainError::EmptyHistory,
                 DomainError::NotImplemented => DomainError::NotImplemented,
                 DomainError::ParseError(e) => DomainError::ParseError(e.clone()),
+                DomainError::InternalError(e) => DomainError::InternalError(e.clone()),
             }
         }
     }
