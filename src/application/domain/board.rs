@@ -566,7 +566,7 @@ pub(crate) mod test_utils {
                 description: Description::from("Task inserted second"),
                 state: State::Review,
                 time_created: date!(2025-02-12),
-                due_date: None
+                due_date: Some(date!(2025-02-16)),
             },
             // index 3
             Issue {

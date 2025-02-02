@@ -143,7 +143,6 @@ mod tests {
         let board = HistorizedBoard::default().with_4_typical_issues();
         let formatted_output  = FileStorage::board_to_yaml(&board);
 
-        // ToDo: add dates
         assert_eq!(formatted_output,r#"---
 issues:
   - description: Task inserted fourth
@@ -157,7 +156,7 @@ issues:
   - description: Task inserted second
     state: review
     timeCreated: 2025-02-12
-    dueDate: ~
+    dueDate: 2025-02-16
   - description: Task inserted first
     state: open
     timeCreated: 2025-02-13
