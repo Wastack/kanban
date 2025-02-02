@@ -129,7 +129,7 @@ mod tests {
 
         fn assert_other_issues_did_not_change(&self) -> &Self {
             assert_eq!(self.state, State::Review);
-            assert_eq!(self.time_created, Some(date!(2025-02-12)));
+            assert_eq!(self.time_created, date!(2025-02-12));
             self
         }
     }

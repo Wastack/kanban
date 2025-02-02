@@ -81,14 +81,14 @@ mod tests {
             Issue {
                 description: Description::from("Get a coffee"),
                 state: State::Open,
-                time_created: Some(date!(2024-01-31)),
-                ..Default::default()
+                time_created: date!(2024-01-31),
+                due_date: None,
             },
             Issue {
                 description: Description::from("Take a break"),
                 state: State::Done,
-                time_created: Some(date!(2023-12-11)),
-                ..Default::default()
+                time_created: date!(2023-12-11),
+                due_date: None,
             },
         ].into_iter().zip(board.entities().iter()).for_each(|(expected_issue, actual_issue)| {
             assert_eq!(actual_issue.deref(), &expected_issue, "Expected specific loaded issues")

@@ -90,6 +90,7 @@ mod test {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
+    use crate::adapters::time_providers::fake::DEFAULT_FAKE_TODAY;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::{Issue, State};
     use crate::application::board::test_utils::check_boards_are_equal;
@@ -211,7 +212,8 @@ mod test {
                 ("First Issue", State::Open),
                 ("Second Issue", State::Open)
             ].into_iter().map(|(d, state)| Issue { description: Description::from(d), state,
-                ..Default::default()
+                time_created: DEFAULT_FAKE_TODAY,
+                due_date: None,
             }).collect(),
             vec![],
             vec![])

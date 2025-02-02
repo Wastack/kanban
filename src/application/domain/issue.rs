@@ -103,7 +103,7 @@ impl<T> Entity<T> {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Hash, Default)]
+#[derive(Debug, PartialEq, Clone, Hash)]
 pub struct Issue {
     /// Description (content) of the ticket
     pub(crate) description: Description,
@@ -113,8 +113,7 @@ pub struct Issue {
     ///
     /// For backwards compatibility, if the field is missing, we take it as if it was
     /// created just now.
-    /// ToDo: make this field mandatory?
-    pub(crate) time_created: Option<time::Date>,
+    pub(crate) time_created: time::Date,
 
     /// Due date of an issue
     pub(crate) due_date: Option<time::Date>,
@@ -123,14 +122,12 @@ pub struct Issue {
 impl Issue {
 
     pub fn category(&self, today: time::Date) -> IssueCategory {
-        if let Some(time_created) = &self.time_created {
-            let duration = today - time_created.clone();
-            if duration > Duration::days(13) {
-                return IssueCategory::Overdue
-            }
+        let duration = today - self.time_created;
+        if duration > Duration::days(13) {
+            IssueCategory::Overdue
+        } else {
+            IssueCategory::Normal
         }
-
-        IssueCategory::Normal
     }
 }
 

@@ -430,14 +430,14 @@ mod tests {
             Issue {
                 description: Description::from("First task"),
                 state: State::Open,
-                time_created: Some(DEFAULT_FAKE_TODAY),
-                ..Default::default()
+                time_created: DEFAULT_FAKE_TODAY,
+                due_date: None,
             },
             Issue {
                 description: Description::from("Second task"),
                 state: State::Review,
-                time_created: Some(DEFAULT_FAKE_TODAY),
-                ..Default::default()
+                time_created: DEFAULT_FAKE_TODAY,
+                due_date: None,
             },
         ], vec![], vec![])
     }
@@ -456,19 +456,24 @@ mod tests {
         HistorizedBoard::new(
             vec![
                 Issue { description: Description::from("First open task"), state: State::Open,
-                    ..Default::default()
+                    time_created: DEFAULT_FAKE_TODAY,
+                    due_date: None,
                 },
                 Issue { description: Description::from("First done task"), state: State::Done,
-                    ..Default::default()
+                    time_created: DEFAULT_FAKE_TODAY,
+                    due_date: None,
                 },
                 Issue { description: Description::from("First review task"), state: State::Review,
-                    ..Default::default()
+                    time_created: DEFAULT_FAKE_TODAY,
+                    due_date: None,
                 },
                 Issue { description: Description::from("Second open task"), state: State::Open,
-                    ..Default::default()
+                    time_created: DEFAULT_FAKE_TODAY,
+                    due_date: None,
                 },
                 Issue { description: Description::from("Third open task"), state: State::Open,
-                    ..Default::default()
+                    time_created: DEFAULT_FAKE_TODAY,
+                    due_date: None,
                 },
             ],
             vec![],
@@ -546,29 +551,29 @@ pub(crate) mod test_utils {
             Issue {
                 description: Description::from("Task inserted fourth"),
                 state: State::Open,
-                time_created: Some(date!(2025-02-10)),
-                ..Default::default()
+                time_created: date!(2025-02-10),
+                due_date: None
             },
             // index 1
             Issue {
                 description: Description::from("Task inserted third"),
                 state: State::Done,
-                time_created: Some(date!(2025-02-03)),
-                ..Default::default()
+                time_created: date!(2025-02-03),
+                due_date: None
             },
             // index 2
             Issue {
                 description: Description::from("Task inserted second"),
                 state: State::Review,
-                time_created: Some(date!(2025-02-12)),
-                ..Default::default()
+                time_created: date!(2025-02-12),
+                due_date: None
             },
             // index 3
             Issue {
                 description: Description::from("Task inserted first"),
                 state: State::Open,
-                time_created: Some(date!(2025-02-13)),
-                ..Default::default()
+                time_created: date!(2025-02-13),
+                due_date: None
             },
         ]
     }

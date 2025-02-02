@@ -177,8 +177,8 @@ mod test {
             .with_issue(Issue {
                 description: Description::from("An issue in done"),
                 state: State::Done,
-                time_created: Some(DEFAULT_FAKE_TODAY),
-                ..Default::default()
+                time_created: DEFAULT_FAKE_TODAY,
+                due_date: None,
             });
         let text_renderer = TabularTextRenderer::<FakeTodayProvider>::default();
 
@@ -233,28 +233,28 @@ mod test {
             (0..5).into_iter().rev().map(|n| Issue {
                 description: Description::from(format!("Done issue number {}", n).deref()),
                 state: State::Done,
-                ..Default::default()
+                time_created: DEFAULT_FAKE_TODAY,
+                due_date: None
             })
                 .chain(
                     vec![
                         Issue {
                             description: Description::from("An open issue overdue"),
                             state: State::Open,
-                            time_created: Some(date!(2024-02-02)),
-                            ..Default::default()
+                            time_created: date!(2024-02-02),
+                            due_date: None,
                         },
                         Issue {
                             description: Description::from("An open issue not overdue"),
                             state: State::Open,
-                            time_created: Some(date!(2025-02-09)),
+                            time_created: date!(2025-02-09),
                             due_date: Some(date!(2015-03-24)),
-                            ..Default::default()
                         },
                         Issue {
                             description: Description::from("An issue in review"),
                             state: State::Review,
-                            time_created: Some(DEFAULT_FAKE_TODAY),
-                            ..Default::default()
+                            time_created: DEFAULT_FAKE_TODAY,
+                            due_date: None,
                         },
 
                     ].into_iter()

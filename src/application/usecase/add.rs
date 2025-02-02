@@ -20,7 +20,7 @@ impl<I: IssueStorage, P: Presenter, T: TodayProvider> AddUseCase<I, P, T> {
         board.append_entity(Issue{
             description: Description::from(description),
             state,
-            time_created: Some(self.time_provider.today()),
+            time_created: self.time_provider.today(),
             due_date: None,
         });
         board.history.add(UndoableHistoryElement::Add);
@@ -78,7 +78,7 @@ mod tests {
             let issue = self.get(self.find_entity_id_by_index(0).unwrap());
             assert_eq!(issue.description, Description::from("New task"), "Expected specific description of added issue");
             assert_eq!(issue.state, State::Review, "Expected specific state of added issue");
-            assert_eq!(issue.time_created, Some(DEFAULT_FAKE_TODAY), "Expected creation time to have been set");
+            assert_eq!(issue.time_created, DEFAULT_FAKE_TODAY, "Expected creation time to have been set");
 
             self
         }
