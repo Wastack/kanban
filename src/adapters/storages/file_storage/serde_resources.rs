@@ -46,7 +46,7 @@ pub struct StoredIssue {
     /// State of the ticket
     state: StoredState,
     /// Time in seconds since the issue was created
-    time_created: u64,
+    time_created: Option<time::Date>,
 
     /// Date when the issue is due
     due_date: Option<time::Date>,

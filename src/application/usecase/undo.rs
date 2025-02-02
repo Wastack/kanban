@@ -156,7 +156,7 @@ pub(crate) mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::adapters::time_providers::fake::DEFAULT_FAKE_TIME;
+    use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TODAY};
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::historized_board::HistorizedBoard;
@@ -335,7 +335,7 @@ pub(crate) mod tests {
             Issue {
                 description: Description::from("One task"),
                 state: State::Open,
-                time_created: DEFAULT_FAKE_TIME,
+                time_created: Some(DEFAULT_FAKE_TODAY),
                 ..Default::default()
             }
         ], vec![], vec![UndoableHistoryElement::Move(MoveHistoryElements{
@@ -371,7 +371,7 @@ pub(crate) mod tests {
         ].into_iter().map(|(state, description)| Issue {
             description: Description::from(description),
             state,
-            time_created: DEFAULT_FAKE_TIME,
+            time_created: Some(DEFAULT_FAKE_TODAY),
             ..Default::default()
         }).collect();
 
@@ -471,7 +471,7 @@ pub(crate) mod tests {
     fn test_undo_priority_invalid_original_index() {
         // given
         let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
-            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0,
+            Issue { description: Description::from("An issue"), state: State::Open,
                 ..Default::default()
             }
         ], vec![], vec![
@@ -489,7 +489,7 @@ pub(crate) mod tests {
     fn test_undo_prority_invalid_new_index() {
         // given
         let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
-            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0,
+            Issue { description: Description::from("An issue"), state: State::Open,
                 ..Default::default()
             }
         ], vec![], vec![
@@ -507,11 +507,11 @@ pub(crate) mod tests {
     fn test_undo_delete_invalid_original_index() {
         // given
         let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
-            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0,
+            Issue { description: Description::from("An issue"), state: State::Open,
                 ..Default::default()
             }
         ], vec![
-            Issue { description: Description::from("A deleted issue"), state: State::Review, time_created: 0,
+            Issue { description: Description::from("A deleted issue"), state: State::Review,
                 ..Default::default()
             }
         ], vec![
@@ -531,7 +531,7 @@ pub(crate) mod tests {
     fn test_undo_move_invalid_new_index() {
         // given
         let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
-            Issue { description: Description::from("An issue"), state: State::Done, time_created: 0,
+            Issue { description: Description::from("An issue"), state: State::Done,
                 ..Default::default()
             }
         ], vec![], vec![
@@ -554,10 +554,10 @@ pub(crate) mod tests {
     #[test]
     fn test_undo_flush_not_enough_deleted_items() {
         let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![], vec![
-            Issue { description: Description::from("First deleted issue"), state: State::Open, time_created: 0,
+            Issue { description: Description::from("First deleted issue"), state: State::Open,
                 ..Default::default()
             },
-            Issue { description: Description::from("Second deleted issue"), state: State::Review, time_created: 0,
+            Issue { description: Description::from("Second deleted issue"), state: State::Review,
                 ..Default::default()
             },
         ], vec![
@@ -576,20 +576,20 @@ pub(crate) mod tests {
     #[test]
     fn test_undo_flush() {
         let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
-            Issue { description: Description::from("An issue"), state: State::Open, time_created: 0,
+            Issue { description: Description::from("An issue"), state: State::Open,
                 ..Default::default()
             }
         ], vec![
-            Issue { description: Description::from("First deleted issue"), state: State::Open, time_created: 0,
+            Issue { description: Description::from("First deleted issue"), state: State::Open,
                 ..Default::default()
             },
-            Issue { description: Description::from("Second deleted issue"), state: State::Review, time_created: 0,
+            Issue { description: Description::from("Second deleted issue"), state: State::Review,
                 ..Default::default()
             },
-            Issue { description: Description::from("Third deleted issue"), state: State::Open, time_created: 0,
+            Issue { description: Description::from("Third deleted issue"), state: State::Open,
                 ..Default::default()
             },
-            Issue { description: Description::from("Fourth deleted issue"), state: State::Done, time_created: 0,
+            Issue { description: Description::from("Fourth deleted issue"), state: State::Done,
                 ..Default::default()
             },
         ], vec![
@@ -628,7 +628,6 @@ pub(crate) mod tests {
         ["This was originally second", "This was originally first"].map(|d| Issue {
             description: Description::from(d),
             state: State::Open,
-            time_created: 0,
             ..Default::default()
         }).to_vec()
     }
@@ -639,7 +638,6 @@ pub(crate) mod tests {
                 Issue{
                     description: Description::from("Additional Issue"),
                     state: State::Open,
-                    time_created: 0,
                     ..Default::default()
                 }
             );

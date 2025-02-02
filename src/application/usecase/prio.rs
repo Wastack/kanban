@@ -210,7 +210,7 @@ mod test {
             [
                 ("First Issue", State::Open),
                 ("Second Issue", State::Open)
-            ].into_iter().map(|(d, state)| Issue { description: Description::from(d), state, time_created: 0,
+            ].into_iter().map(|(d, state)| Issue { description: Description::from(d), state,
                 ..Default::default()
             }).collect(),
             vec![],

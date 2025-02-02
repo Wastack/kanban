@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash};
 use std::ops::{Deref, DerefMut};
+use time::Duration;
 use uuid::Uuid;
 use crate::application::domain::history::Historized;
 use crate::application::domain::history::UndoableHistoryElement;
@@ -112,7 +113,8 @@ pub struct Issue {
     ///
     /// For backwards compatibility, if the field is missing, we take it as if it was
     /// created just now.
-    pub(crate) time_created: u64,
+    /// ToDo: make this field mandatory?
+    pub(crate) time_created: Option<time::Date>,
 
     /// Due date of an issue
     pub(crate) due_date: Option<time::Date>,
@@ -120,11 +122,12 @@ pub struct Issue {
 
 impl Issue {
 
-    pub fn category(&self, time_since_epoch: u64) -> IssueCategory {
-        let two_weeks_in_secs = 60 * 60 * 24 * 14;
-
-        if time_since_epoch - self.time_created >= two_weeks_in_secs && self.state == State::Open {
-            return IssueCategory::Overdue;
+    pub fn category(&self, today: time::Date) -> IssueCategory {
+        if let Some(time_created) = &self.time_created {
+            let duration = today - time_created.clone();
+            if duration > Duration::days(13) {
+                return IssueCategory::Overdue
+            }
         }
 
         IssueCategory::Normal

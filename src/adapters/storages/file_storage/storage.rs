@@ -57,6 +57,7 @@ mod tests {
     use std::env::current_dir;
     use std::ops::Deref;
     use assert2::check;
+    use time::macros::date;
     use crate::application::{Issue, State};
     use crate::adapters::storages::file_storage::FileStorage;
     use crate::adapters::storages::IssueStorage;
@@ -80,13 +81,13 @@ mod tests {
             Issue {
                 description: Description::from("Get a coffee"),
                 state: State::Open,
-                time_created: 1706727855,
+                time_created: Some(date!(2024-01-31)),
                 ..Default::default()
             },
             Issue {
                 description: Description::from("Take a break"),
                 state: State::Done,
-                time_created: 1702298969,
+                time_created: Some(date!(2023-12-11)),
                 ..Default::default()
             },
         ].into_iter().zip(board.entities().iter()).for_each(|(expected_issue, actual_issue)| {
@@ -142,23 +143,24 @@ mod tests {
         let board = HistorizedBoard::default().with_4_typical_issues();
         let formatted_output  = FileStorage::board_to_yaml(&board);
 
+        // ToDo: add dates
         assert_eq!(formatted_output,r#"---
 issues:
   - description: Task inserted fourth
     state: open
-    timeCreated: 1706727855
+    timeCreated: 2025-02-10
     dueDate: ~
   - description: Task inserted third
     state: done
-    timeCreated: 1698397491
+    timeCreated: 2025-02-03
     dueDate: ~
   - description: Task inserted second
     state: review
-    timeCreated: 1698397490
+    timeCreated: 2025-02-12
     dueDate: ~
   - description: Task inserted first
     state: open
-    timeCreated: 1698397489
+    timeCreated: 2025-02-13
     dueDate: ~
 deletedIssues: []
 history: []

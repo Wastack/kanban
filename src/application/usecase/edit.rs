@@ -52,6 +52,7 @@ impl<I: IssueStorage, P: Presenter, E: Editor> EditUseCase<I, P, E> {
 mod tests {
     use std::io::{Error, ErrorKind};
     use assert2::let_assert;
+    use time::macros::date;
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
@@ -128,7 +129,7 @@ mod tests {
 
         fn assert_other_issues_did_not_change(&self) -> &Self {
             assert_eq!(self.state, State::Review);
-            assert_eq!(self.time_created, 1698397490);
+            assert_eq!(self.time_created, Some(date!(2025-02-12)));
             self
         }
     }

@@ -6,12 +6,12 @@ use crate::adapters::presenters::stdoutrenderer::MaybeFormattedString::{Formatte
 use crate::application::domain::error::DomainError;
 use crate::application::domain::issue::IssueCategory;
 use crate::application::Issue;
-use crate::application::ports::time::CurrentTimeProvider;
+use crate::application::ports::time::{TodayProvider};
 use itertools::Itertools;
 use crate::application::domain::historized_board::HistorizedBoard;
 
 #[derive(Default)]
-pub(crate) struct TabularTextRenderer<T: CurrentTimeProvider> {
+pub(crate) struct TabularTextRenderer<T: TodayProvider> {
     time_provider: T,
 }
 
@@ -32,7 +32,7 @@ impl MaybeFormattedString {
 }
 
 
-impl<T: CurrentTimeProvider> Presenter for TabularTextRenderer<T> {
+impl<T: TodayProvider> Presenter for TabularTextRenderer<T> {
 
 
     fn render_board(&mut self, board: &HistorizedBoard<Issue>) {
@@ -46,7 +46,7 @@ impl<T: CurrentTimeProvider> Presenter for TabularTextRenderer<T> {
     }
 }
 
-impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
+impl<T: TodayProvider> TabularTextRenderer<T> {
     fn format_board(&self, board: &HistorizedBoard<Issue>) -> String {
         self.build_formatted_text_chunks(board)
             .into_iter()
@@ -73,7 +73,7 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
             }
         }
 
-        let current_time = self.time_provider.now();
+        let today = self.time_provider.today();
 
         vec![
             State::Open,
@@ -82,7 +82,7 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
         ]
             .into_iter()
             .map(move |tab| {
-                let current_time = current_time; // capture to force closure to be FnOnce
+                let today = today; // capture to force closure to be FnOnce
                 vec![
                     // Header
                     Formatted((match &tab {
@@ -107,7 +107,7 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
                                     } else {
                                         format!("{}: {}", index, issue.description)
                                     },
-                                    issue.category(current_time)
+                                    issue.category(today)
                                 )
                             }
                         )
@@ -140,7 +140,7 @@ impl<T: CurrentTimeProvider> TabularTextRenderer<T> {
 mod test {
     use std::ops::Deref;
     use crate::adapters::presenters::stdoutrenderer::TabularTextRenderer;
-    use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TIME, FakeTimeProvider};
+    use crate::adapters::time_providers::fake::{FakeTodayProvider, DEFAULT_FAKE_TODAY};
     use crate::application::{Issue, State};
     use crate::application::issue::Description;
     use assert2::check;
@@ -152,7 +152,7 @@ mod test {
     #[test]
     fn test_format_empty_board() {
         let board = HistorizedBoard::default();
-        let text_renderer = TabularTextRenderer::<FakeTimeProvider>::default();
+        let text_renderer = TabularTextRenderer::<FakeTodayProvider>::default();
 
         let mut formatted_chunks = text_renderer.build_formatted_text_chunks(&board);
         [
@@ -177,10 +177,10 @@ mod test {
             .with_issue(Issue {
                 description: Description::from("An issue in done"),
                 state: State::Done,
-                time_created: DEFAULT_FAKE_TIME,
+                time_created: Some(DEFAULT_FAKE_TODAY),
                 ..Default::default()
             });
-        let text_renderer = TabularTextRenderer::<FakeTimeProvider>::default();
+        let text_renderer = TabularTextRenderer::<FakeTodayProvider>::default();
 
         let mut formatted_chunks = text_renderer.build_formatted_text_chunks(&board);
         [
@@ -202,7 +202,7 @@ mod test {
     #[test]
     fn test_formatted_text_chunks() {
         let board = given_board();
-        let text_renderer = TabularTextRenderer::<FakeTimeProvider>::default();
+        let text_renderer = TabularTextRenderer::<FakeTodayProvider>::default();
 
         let mut formatted_chunks = text_renderer.build_formatted_text_chunks(&board);
 
@@ -233,7 +233,6 @@ mod test {
             (0..5).into_iter().rev().map(|n| Issue {
                 description: Description::from(format!("Done issue number {}", n).deref()),
                 state: State::Done,
-                time_created: 0,
                 ..Default::default()
             })
                 .chain(
@@ -241,20 +240,20 @@ mod test {
                         Issue {
                             description: Description::from("An open issue overdue"),
                             state: State::Open,
-                            time_created: 1698397491,
+                            time_created: Some(date!(2024-02-02)),
                             ..Default::default()
                         },
                         Issue {
                             description: Description::from("An open issue not overdue"),
                             state: State::Open,
-                            time_created: DEFAULT_FAKE_TIME,
+                            time_created: Some(date!(2025-02-09)),
                             due_date: Some(date!(2015-03-24)),
                             ..Default::default()
                         },
                         Issue {
                             description: Description::from("An issue in review"),
                             state: State::Review,
-                            time_created: 1698397491,
+                            time_created: Some(DEFAULT_FAKE_TODAY),
                             ..Default::default()
                         },
 

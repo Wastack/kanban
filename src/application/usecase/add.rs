@@ -3,24 +3,24 @@ use crate::application::domain::history::UndoableHistoryElement;
 use crate::application::issue::Description;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
-use crate::application::ports::time::CurrentTimeProvider;
+use crate::application::ports::time::{TodayProvider};
 
 
 #[derive(Default)]
-pub(crate) struct AddUseCase<I: IssueStorage, P: Presenter, T: CurrentTimeProvider> {
+pub(crate) struct AddUseCase<I: IssueStorage, P: Presenter, T: TodayProvider> {
     pub(crate) storage: I,
     presenter: P,
     time_provider: T,
 }
 
-impl<I: IssueStorage, P: Presenter, T: CurrentTimeProvider> AddUseCase<I, P, T> {
+impl<I: IssueStorage, P: Presenter, T: TodayProvider> AddUseCase<I, P, T> {
     pub(crate) fn execute(&mut self, description: &str, state: State) {
         let mut board = self.storage.load();
 
         board.append_entity(Issue{
             description: Description::from(description),
             state,
-            time_created: self.time_provider.now(),
+            time_created: Some(self.time_provider.today()),
             due_date: None,
         });
         board.history.add(UndoableHistoryElement::Add);
@@ -36,7 +36,7 @@ mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TIME, FakeTimeProvider};
+    use crate::adapters::time_providers::fake::{FakeTodayProvider, DEFAULT_FAKE_TODAY};
     use crate::application::{Issue, State};
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::historized_board::HistorizedBoard;
@@ -63,7 +63,7 @@ mod tests {
         check_boards_are_equal(&presented_board, &stored_board);
     }
 
-    fn given_add_use_case_with(board: HistorizedBoard<Issue>) -> AddUseCase<MemoryIssueStorage, NilPresenter, FakeTimeProvider> {
+    fn given_add_use_case_with(board: HistorizedBoard<Issue>) -> AddUseCase<MemoryIssueStorage, NilPresenter, FakeTodayProvider> {
         let mut storage = MemoryIssueStorage::default();
         storage.save(&board);
 
@@ -78,7 +78,7 @@ mod tests {
             let issue = self.get(self.find_entity_id_by_index(0).unwrap());
             assert_eq!(issue.description, Description::from("New task"), "Expected specific description of added issue");
             assert_eq!(issue.state, State::Review, "Expected specific state of added issue");
-            assert_eq!(issue.time_created, DEFAULT_FAKE_TIME, "Expected creation time to have been set");
+            assert_eq!(issue.time_created, Some(DEFAULT_FAKE_TODAY), "Expected creation time to have been set");
 
             self
         }

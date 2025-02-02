@@ -216,6 +216,7 @@ impl<IdGen: IdGenerator> Board<Issue, IdGen> {
 mod tests {
     use assert2::{check, let_assert};
     use uuid::uuid;
+    use crate::adapters::time_providers::fake::DEFAULT_FAKE_TODAY;
     use crate::application::board::test_utils::check_compare_issues;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::issue::State;
@@ -429,13 +430,13 @@ mod tests {
             Issue {
                 description: Description::from("First task"),
                 state: State::Open,
-                time_created: 1698397489,
+                time_created: Some(DEFAULT_FAKE_TODAY),
                 ..Default::default()
             },
             Issue {
                 description: Description::from("Second task"),
                 state: State::Review,
-                time_created: 1698397490,
+                time_created: Some(DEFAULT_FAKE_TODAY),
                 ..Default::default()
             },
         ], vec![], vec![])
@@ -454,19 +455,19 @@ mod tests {
     fn board_for_testing_priorities() -> HistorizedBoard<Issue, FixedIdGenerator> {
         HistorizedBoard::new(
             vec![
-                Issue { description: Description::from("First open task"), state: State::Open, time_created: 0,
+                Issue { description: Description::from("First open task"), state: State::Open,
                     ..Default::default()
                 },
-                Issue { description: Description::from("First done task"), state: State::Done, time_created: 0,
+                Issue { description: Description::from("First done task"), state: State::Done,
                     ..Default::default()
                 },
-                Issue { description: Description::from("First review task"), state: State::Review, time_created: 0,
+                Issue { description: Description::from("First review task"), state: State::Review,
                     ..Default::default()
                 },
-                Issue { description: Description::from("Second open task"), state: State::Open, time_created: 0,
+                Issue { description: Description::from("Second open task"), state: State::Open,
                     ..Default::default()
                 },
-                Issue { description: Description::from("Third open task"), state: State::Open, time_created: 0,
+                Issue { description: Description::from("Third open task"), state: State::Open,
                     ..Default::default()
                 },
             ],
@@ -479,7 +480,7 @@ mod tests {
 pub(crate) mod test_utils {
     use std::ops::Deref;
     use assert2::check;
-    use crate::adapters::time_providers::fake::DEFAULT_FAKE_TIME;
+    use time::macros::date;
     use crate::application::{Issue, State};
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::issue::{Description, Entity};
@@ -545,28 +546,28 @@ pub(crate) mod test_utils {
             Issue {
                 description: Description::from("Task inserted fourth"),
                 state: State::Open,
-                time_created: DEFAULT_FAKE_TIME,
+                time_created: Some(date!(2025-02-10)),
                 ..Default::default()
             },
             // index 1
             Issue {
                 description: Description::from("Task inserted third"),
                 state: State::Done,
-                time_created: 1698397491,
+                time_created: Some(date!(2025-02-03)),
                 ..Default::default()
             },
             // index 2
             Issue {
                 description: Description::from("Task inserted second"),
                 state: State::Review,
-                time_created: 1698397490,
+                time_created: Some(date!(2025-02-12)),
                 ..Default::default()
             },
             // index 3
             Issue {
                 description: Description::from("Task inserted first"),
                 state: State::Open,
-                time_created: 1698397489,
+                time_created: Some(date!(2025-02-13)),
                 ..Default::default()
             },
         ]
