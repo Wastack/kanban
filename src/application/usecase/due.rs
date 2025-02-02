@@ -2,6 +2,7 @@ use time::Date;
 use time::macros::format_description;
 use crate::adapters::storages::IssueStorage;
 use crate::application::domain::error::{DomainResult};
+use crate::application::domain::history::{DueHistoryElement, UndoableHistoryElement};
 use crate::application::ports::presenter::Presenter;
 
 #[derive(Default)]
@@ -21,12 +22,19 @@ impl<I: IssueStorage, P: Presenter> DueUseCase<I, P> {
         let id = board.find_entity_id_by_index(index)?;
 
 
+        // ToDo: other parsable formats
         let format = format_description!("[year]-[month]-[day]");
         let parsed_date = date.map(|d| Date::parse(d, format)).transpose()?;
-        // ToDo: finish parsing
+
+        let previous_due = board.get(id).due_date;
         board.get_mut(id).due_date = parsed_date;
 
-        // ToDO: implement undo / history
+        let undo_item = UndoableHistoryElement::Due(DueHistoryElement{
+            index,
+            previous_due,
+        });
+
+        board.history.add(undo_item);
 
         self.storage.save(&board);
         self.presenter.render_board(&board);
@@ -46,6 +54,7 @@ mod test {
     use crate::application::domain::error::DomainError;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::{Issue, State};
+    use crate::application::domain::history::{DueHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
     use crate::application::usecase::due::DueUseCase;
 
@@ -63,6 +72,11 @@ mod test {
 
         let stored_due_issue = stored_board.get(stored_board.find_entity_id_by_index(1).unwrap());
         check!(stored_due_issue.due_date == Some(date!(2025-01-26)));
+
+        check!(stored_board.history.stack.last() == Some(&UndoableHistoryElement::Due(DueHistoryElement{
+            index: 1,
+            previous_due: None,
+        })));
     }
 
     #[test]
@@ -89,9 +103,13 @@ mod test {
         let presented_board = use_case.presenter.last_board_rendered.expect("board to be presented");
         check_boards_are_equal(&presented_board, &stored_board);
 
-
         let issue = stored_board.get(stored_board.find_entity_id_by_index(0).unwrap());
         check!(issue.due_date == None);
+
+        check!(stored_board.history.stack.last() == Some(&UndoableHistoryElement::Due(DueHistoryElement{
+            index: 0,
+            previous_due: Some(date!(1996-01-16)),
+        })));
     }
 
     fn given_due_usecase_with(board: HistorizedBoard<Issue>) -> DueUseCase<MemoryIssueStorage, NilPresenter> {
