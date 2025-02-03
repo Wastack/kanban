@@ -1,0 +1,11 @@
+[package]
+name = "internal_macros"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+syn = { version = "2", features = ["full"] }
+quote = "1"
+
+[lib]
+proc-macro = true
