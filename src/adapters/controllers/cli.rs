@@ -87,7 +87,6 @@ impl RootCli {
 #[derive(Subcommand, Clone)]
 pub(crate) enum Command {
     /// Add new issue
-    /// ToDo: ability to add issue with due date
     Add {
         /// A text that describes the issue
         description: String,
@@ -139,8 +138,7 @@ pub(crate) enum Command {
         ///
         /// You can also use "m" "tu", "w", "th", "f", "sa", "su" for the next occurrence of that weekday (excluding today).
         ///
-        /// ToDo: Don't show due if it's done
-        /// ToDo: make gray if it's too far in the future? Make red if it's coming to an end and it's not done?
+        /// ToDo(dev): Don't show due date if it's done
         date: Option<String>,
     }
 }
