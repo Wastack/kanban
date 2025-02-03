@@ -45,6 +45,7 @@ impl<I: IssueStorage, P: Presenter, T:TodayProvider> DueUseCase<I, P, T> {
     }
 }
 
+
 #[cfg(test)]
 mod test {
     use assert2::{check, let_assert};
@@ -59,7 +60,7 @@ mod test {
     use crate::application::{Issue, State};
     use crate::application::domain::history::{DueHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
-    use crate::application::usecase::due::DueUseCase;
+    use crate::application::usecase::due::{DueUseCase, IssueStorageHolder, PresenterHolder};
 
     #[test]
     fn test_typical_due() {
