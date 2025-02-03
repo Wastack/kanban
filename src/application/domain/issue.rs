@@ -122,16 +122,60 @@ pub struct Issue {
 impl Issue {
 
     pub fn category(&self, today: time::Date) -> IssueCategory {
-        let duration = today - self.time_created;
-        if duration > Duration::days(13) {
+        let time_since_creation = today - self.time_created;
+        let time_since_due = self.due_date.map(|due_date| due_date - today);
+
+        if time_since_creation > Duration::days(13)
+                || time_since_due.is_some_and(|d| d < Duration::default()) {
             IssueCategory::Overdue
+        } else if time_since_due.is_some_and(|d| d == Duration::default()) {
+            IssueCategory::DueToday
         } else {
             IssueCategory::Normal
         }
     }
 }
 
+#[derive(Debug, PartialEq, Clone, Hash)]
 pub enum IssueCategory {
     Normal,
     Overdue,
+    DueToday
+}
+
+#[cfg(test)]
+mod tests {
+    use assert2::{check};
+    use time::Date;
+    use time::macros::date;
+    use super::*;
+
+    #[test]
+    fn test_category_normal() {
+        let today = date!(2021 - 9 - 9);
+
+        for (actual_creation_date, actual_due_date, expected_category) in
+            [
+                (date!(2021 - 9 - 8), Some(date!(2021 - 9 - 11)), IssueCategory::Normal),
+                (date!(2021 - 8 - 25), None, IssueCategory::Overdue),
+                (date!(2021 - 9 - 8), Some(date!(2021 - 9 - 9)), IssueCategory::DueToday),
+                (date!(2021 - 9 - 8), Some(date!(2021 - 9 - 8)), IssueCategory::Overdue),
+            ] {
+            let issue = given_issue_with(actual_creation_date, actual_due_date);
+
+            let category = issue.category(today);
+            check!(category == expected_category,
+                "creation_date = {:?}, due_date = {:?}", actual_creation_date, actual_due_date);
+        }
+    }
+
+    fn given_issue_with(time_created: Date, due_date: Option<Date>) -> Issue {
+        let issue = Issue {
+            description: Description::from("an issue"),
+            state: State::Open,
+            time_created,
+            due_date,
+        };
+        issue
+    }
 }

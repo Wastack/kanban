@@ -117,6 +117,7 @@ impl<T: TodayProvider> TabularTextRenderer<T> {
                             match category {
                                 IssueCategory::Overdue => Formatted(text.red()),
                                 IssueCategory::Normal => NonFormatted(text),
+                                IssueCategory::DueToday => Formatted(text.yellow()),
                             }
                         )
 
@@ -209,7 +210,7 @@ mod test {
         [
             Formatted("Open".bold()),
             Formatted("5: An open issue overdue".red()),
-            NonFormatted(String::from("6: An open issue not overdue\t2015-03-24")),
+            NonFormatted(String::from("6: An open issue not overdue\t2025-03-24")),
             NonFormatted(String::default()), // new line
             Formatted("Review".bold()),
             NonFormatted(String::from("7: An issue in review")),
@@ -248,7 +249,7 @@ mod test {
                             description: Description::from("An open issue not overdue"),
                             state: State::Open,
                             time_created: date!(2025-02-09),
-                            due_date: Some(date!(2015-03-24)),
+                            due_date: Some(date!(2025-03-24)),
                         },
                         Issue {
                             description: Description::from("An issue in review"),
