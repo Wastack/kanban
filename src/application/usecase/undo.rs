@@ -159,7 +159,6 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::cmp::PartialEq;
     use assert2::{check, let_assert};
     use crate::application::{Issue, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;

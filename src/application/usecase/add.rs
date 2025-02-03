@@ -1,5 +1,7 @@
 use crate::application::{Issue, State};
+use crate::application::domain::error::DomainResult;
 use crate::application::domain::history::UndoableHistoryElement;
+use crate::application::domain::parse_date::DateParser;
 use crate::application::issue::Description;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
@@ -14,25 +16,40 @@ pub(crate) struct AddUseCase<I: IssueStorage, P: Presenter, T: TodayProvider> {
 }
 
 impl<I: IssueStorage, P: Presenter, T: TodayProvider> AddUseCase<I, P, T> {
-    pub(crate) fn execute(&mut self, description: &str, state: State) {
+    pub(crate) fn execute(&mut self, description: &str, state: State, due_date: Option<String>) {
+        let _ = self.try_execute(description, state, due_date)
+            .inspect_err(|e| self.presenter.render_error(e));
+    }
+
+    pub(crate) fn try_execute(&mut self, description: &str, state: State, due_date: Option<String>) -> DomainResult<()> {
         let mut board = self.storage.load();
+
+        let date_parser = DateParser {
+            today_provider: &self.time_provider,
+        };
+
+        let due_date = due_date.map(|due_text| date_parser.parse(due_text.as_str()))
+            .transpose()?;
 
         board.append_entity(Issue{
             description: Description::from(description),
             state,
             time_created: self.time_provider.today(),
-            due_date: None,
+            due_date,
         });
         board.history.add(UndoableHistoryElement::Add);
 
         self.storage.save(&board);
-        self.presenter.render_board(&board)
+        self.presenter.render_board(&board);
+
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use assert2::let_assert;
+    use assert2::{check, let_assert};
+    use time::macros::date;
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
@@ -50,7 +67,7 @@ mod tests {
             HistorizedBoard::default().with_4_typical_issues(),
         );
 
-        add_use_case.execute("New task", State::Review);
+        add_use_case.execute("New task", State::Review, Some(String::from("2023-01-02")));
 
         let stored_board = add_use_case.storage.load();
 
@@ -76,9 +93,10 @@ mod tests {
     impl HistorizedBoard<Issue> {
         fn assert_first_issue_content(&self) -> &Self {
             let issue = self.get(self.find_entity_id_by_index(0).unwrap());
-            assert_eq!(issue.description, Description::from("New task"), "Expected specific description of added issue");
-            assert_eq!(issue.state, State::Review, "Expected specific state of added issue");
-            assert_eq!(issue.time_created, DEFAULT_FAKE_TODAY, "Expected creation time to have been set");
+            check!(issue.description == Description::from("New task"), "Expected specific description of added issue");
+            check!(issue.state == State::Review, "Expected specific state of added issue");
+            check!(issue.time_created == DEFAULT_FAKE_TODAY, "Expected creation time to have been set");
+            check!(issue.due_date == Some(date!(2023-01-02)));
 
             self
         }

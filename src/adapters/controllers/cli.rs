@@ -26,10 +26,11 @@ pub(crate) struct RootCli {
 impl RootCli {
     pub(crate) fn execute(self) {
         match self.command {
-            Some(Command::Add{description, state}) => {
+            Some(Command::Add{description, state, due}) => {
                 AddUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>, SimpleTimeProvider>::default().execute(
                     &description,
-                    state.unwrap_or(State::Open));
+                    state.unwrap_or(State::Open),
+                    due);
             },
             Some(Command::Delete{index}) => {
                 DeleteUseCase::<FileStorage, TabularTextRenderer<SimpleTimeProvider>>::default().execute(&index);
@@ -93,6 +94,10 @@ pub(crate) enum Command {
 
         /// Initial state of the ticket
         state: Option<State>,
+
+        /// Assign due date for the new issue
+        #[arg(short, long)]
+        due: Option<String>,
     },
     /// Deletes an issue. This makes the indexes reassigned!
     Delete {
