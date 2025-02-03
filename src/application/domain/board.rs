@@ -538,11 +538,6 @@ pub(crate) mod test_utils {
                 self.history.stack
             )
         }
-
-
-        pub(crate) fn get_entity_with_index(&self, index: usize) -> &Entity<Issue> {
-            &self.entities.get(index).expect("Expected entity to exist")
-        }
     }
 
     fn typical_4_issues() -> Vec<Issue> {

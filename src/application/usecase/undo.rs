@@ -1,10 +1,11 @@
+use uuid::Uuid;
 use crate::adapters::storages::IssueStorage;
 use crate::application::board::Board;
 use crate::application::domain::error::{DomainError, DomainResult};
-use crate::application::domain::history::{DueHistoryElement, FlushHistoryElement, PrioHistoryElement, UndoableHistoryElement};
+use crate::application::domain::history::{DueHistoryElement, EditHistoryElement, FlushHistoryElement, PrioHistoryElement, UndoableHistoryElement};
 use crate::application::Issue;
 use crate::application::domain::historized_board::HistorizedBoard;
-use crate::application::issue::Entity;
+use crate::application::issue::{Description, Entity};
 use crate::application::ports::presenter::Presenter;
 
 #[derive(Default)]
@@ -82,30 +83,31 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                                              original_index,
                                              new_index
                                          }) => {
-                let id = board.find_entity_id_by_index(*new_index)
-                    .map_err(|e| DomainError::InvalidBoard(format!("New index is out of range: {}", e )))?;
+                let id = Self::try_get_id_or_invalid_board(board, *new_index)?;
 
                 let entity = board.remove(id);
                 board.try_insert(*original_index, entity)
                     .map_err(|e| DomainError::InvalidBoard(format!("Original index is out of range: {}", e )))?;
             },
-            UndoableHistoryElement::Edit(_) => {
-                return Err(DomainError::NotImplemented)
+            UndoableHistoryElement::Edit(EditHistoryElement {
+                                             original_description,
+                                             index }) => {
+                let id = Self::try_get_id_or_invalid_board(board, *index)?;
+                let issue = board.get_mut(id);
+
+                issue.description = Description::from(original_description.as_str());
             },
             UndoableHistoryElement::Move(info) => {
                 for h in info.moves.iter().rev() {
                     if h.original_index != h.new_index {
-                        let id_of_moved_issue = board.find_entity_id_by_index(h.new_index)
-                            .map_err(|e| DomainError::InvalidBoard(format!("New index is out of range: {}", e )))?;
+                        let moved_issue_id = Self::try_get_id_or_invalid_board(board, h.new_index)?;
 
-                        let issue = board.remove(id_of_moved_issue);
+                        let issue = board.remove(moved_issue_id);
                         board.try_insert(h.original_index, issue)
                             .map_err(|e| DomainError::InvalidBoard(e.to_string()))?;
                     }
 
-                    let id = board.find_entity_id_by_index(h.original_index).map_err(
-                        |e| DomainError::InvalidBoard(format!("Original index is out of range: {}", e ))
-                    )?;
+                    let id = Self::try_get_id_or_invalid_board(board, h.original_index)?;
 
                     let entity = board.get_mut(id);
                     entity.state = h.original_state;
@@ -137,7 +139,7 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
                   index, previous_due
               }
             ) => {
-                let id = board.find_entity_id_by_index(*index)?;
+                let id = Self::try_get_id_or_invalid_board(board, *index)?;
                 let issue = board.get_mut(id);
 
                 issue.due_date = previous_due.clone();
@@ -146,11 +148,18 @@ impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
 
         Ok(())
     }
+
+    fn try_get_id_or_invalid_board(board: &mut Board<Issue>, index: usize) -> Result<Uuid, DomainError> {
+        let id = board.find_entity_id_by_index(index)
+            .map_err(|e| DomainError::InvalidBoard(format!("Index is out of range: {}", e)))?;
+        Ok(id)
+    }
 }
 
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use std::cmp::PartialEq;
     use assert2::{check, let_assert};
     use crate::application::{Issue, State};
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
@@ -160,7 +169,7 @@ pub(crate) mod tests {
     use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::historized_board::HistorizedBoard;
-    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, FlushHistoryElement, History, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
+    use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, FlushHistoryElement, History, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
     use crate::application::usecase::undo::UndoUseCase;
 
@@ -354,7 +363,7 @@ pub(crate) mod tests {
         // then
         let err = undo_use_case.presenter.errors_presented.last().expect("Expected error");
         let_assert!(DomainError::InvalidBoard(error_message) = err);
-        check!(error_message.as_str() == "Original index is out of range: Index `1` is out of range");
+        check!(error_message.as_str() == "Index is out of range: Index `1` is out of range");
 
     }
 
@@ -502,7 +511,7 @@ pub(crate) mod tests {
         use_case.execute();
 
         let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
-        check!(error_message == "New index is out of range: Index `1` is out of range");
+        check!(error_message == "Index is out of range: Index `1` is out of range");
     }
 
     #[test]
@@ -553,7 +562,7 @@ pub(crate) mod tests {
         use_case.execute();
 
         let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
-        check!(error_message == "New index is out of range: Index `123` is out of range");
+        check!(error_message == "Index is out of range: Index `123` is out of range");
     }
 
     #[test]
@@ -629,9 +638,33 @@ pub(crate) mod tests {
         check_boards_are_equal(&stored_board, &presented_board);
     }
 
+    #[test]
+    fn test_undo_edit() {
+        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
+            Issue { description: Description::from("An edited issue"), state: State::Open, time_created: DEFAULT_FAKE_TODAY, due_date: None }
+        ], vec![], vec![
+            UndoableHistoryElement::Edit(EditHistoryElement{
+                original_description: String::from("An issue"),
+                index: 0,
+            })
+        ]));
+
+        // when
+        use_case.execute();
+
+        let stored_board = use_case.storage.load();
+        let_assert!(Some(presented_board) = use_case.presenter.last_board_rendered, "Expected board to have been presented");
+        check_boards_are_equal(&stored_board, &presented_board);
+
+        let description = &stored_board.entities().first().expect("Expected entity to be present").description;
+        check!(description == &Description::from("An issue"));
+
+        check!(stored_board.history.stack == []);
+    }
+
     fn check_priorities_unswapped(stored_board: &HistorizedBoard<Issue>) {
         for (index, expected_description) in [(0, "This was originally first"), (1, "This was originally second")] {
-            let actual_description = stored_board.get_entity_with_index(index).description.as_str();
+            let actual_description = stored_board.get(stored_board.find_entity_id_by_index(index).expect("entity to exist")).description.as_str();
             check!(expected_description == actual_description);
         }
     }
