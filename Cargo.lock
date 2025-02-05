@@ -274,6 +274,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "internal_macros"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 2.0.48",
+]
+
+[[package]]
 name = "io-lifetimes"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -317,6 +325,7 @@ dependencies = [
  "clap",
  "colored",
  "home",
+ "internal_macros",
  "itertools",
  "nonempty-collections",
  "serde",

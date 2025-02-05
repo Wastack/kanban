@@ -484,9 +484,10 @@ mod tests {
 #[cfg(test)]
 pub(crate) mod test_utils {
     use std::ops::Deref;
-    use assert2::check;
+    use assert2::{check, let_assert};
     use time::macros::date;
     use crate::application::{Issue, State};
+    use crate::application::domain::error::DomainResult;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::issue::{Description, Entity};
 
@@ -495,6 +496,13 @@ pub(crate) mod test_utils {
             assert_eq!(self.entity_count(), num, "Expected board to have {} issues", num);
 
             self
+        }
+
+        pub(crate) fn get_with_index(&self, index: usize) -> &Entity<Issue> {
+            let result = self.find_entity_id_by_index(index);
+            let_assert!(Ok(id) = result);
+
+            self.get(id)
         }
 
         pub(crate) fn assert_has_original_issues(&self) -> &Self {

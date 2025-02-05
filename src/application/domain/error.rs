@@ -22,9 +22,6 @@ pub enum DomainError {
     #[error("History is empty")]
     EmptyHistory,
 
-    #[error("Not implemented")]
-    NotImplemented,
-
     #[error("Parse error: {0}")]
     ParseError(error::Parse),
 
@@ -53,7 +50,6 @@ mod tests {
                 },
                 DomainError::InvalidBoard(e) => DomainError::InvalidBoard(e.clone()),
                 DomainError::EmptyHistory => DomainError::EmptyHistory,
-                DomainError::NotImplemented => DomainError::NotImplemented,
                 DomainError::ParseError(e) => DomainError::ParseError(e.clone()),
                 DomainError::InternalError(e) => DomainError::InternalError(e.clone()),
             }

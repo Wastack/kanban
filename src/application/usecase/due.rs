@@ -1,11 +1,13 @@
+use internal_macros::{PresenterHolder, StorageHolder};
 use crate::adapters::storages::IssueStorage;
 use crate::application::domain::error::{DomainResult};
 use crate::application::domain::history::{DueHistoryElement, UndoableHistoryElement};
 use crate::application::domain::parse_date::DateParser;
 use crate::application::ports::presenter::Presenter;
 use crate::application::ports::time::TodayProvider;
+use crate::application::usecase::usecase::{HasPresenter, HasStorage};
 
-#[derive(Default)]
+#[derive(Default, PresenterHolder, StorageHolder)]
 pub(crate) struct DueUseCase<I: IssueStorage, P: Presenter, T: TodayProvider> {
     pub(crate) storage: I,
     presenter: P,
@@ -49,6 +51,7 @@ impl<I: IssueStorage, P: Presenter, T:TodayProvider> DueUseCase<I, P, T> {
 #[cfg(test)]
 mod test {
     use assert2::{check, let_assert};
+    use time::Date;
     use time::macros::date;
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::IssueStorage;
@@ -60,7 +63,9 @@ mod test {
     use crate::application::{Issue, State};
     use crate::application::domain::history::{DueHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
-    use crate::application::usecase::due::{DueUseCase, IssueStorageHolder, PresenterHolder};
+    use crate::application::usecase::due::{DueUseCase};
+    use crate::application::usecase::test_utils::get_stored_and_presented_board;
+    use crate::application::usecase::usecase::HasPresenter;
 
     #[test]
     fn test_typical_due() {
@@ -70,14 +75,11 @@ mod test {
 
         use_case.execute(1, Some("2025-01-26"));
 
-        let stored_board = use_case.storage.load();
-        let presented_board = use_case.presenter.last_board_rendered.expect("board to be presented");
-        check_boards_are_equal(&presented_board, &stored_board);
+        let board = get_stored_and_presented_board(&use_case);
+        let issue = board.get_with_index(1);
 
-        let stored_due_issue = stored_board.get(stored_board.find_entity_id_by_index(1).unwrap());
-        check!(stored_due_issue.due_date == Some(date!(2025-01-26)));
-
-        check!(stored_board.history.stack.last() == Some(&UndoableHistoryElement::Due(DueHistoryElement{
+        check!(issue.due_date == Some(date!(2025-01-26)));
+        check!(board.history.stack.last() == Some(&UndoableHistoryElement::Due(DueHistoryElement{
             index: 1,
             previous_due: None,
         })));
@@ -87,33 +89,52 @@ mod test {
     fn test_index_error() {
         let mut use_case = DueUseCase::<MemoryIssueStorage, NilPresenter, FakeTodayProvider>::default();
         use_case.execute(1, None);
-        let error = use_case.presenter.errors_presented.first().expect("error to be presented");
+        let error = use_case.presenter_ref().errors_presented.first().expect("error to be presented");
         let_assert!(DomainError::IndexOutOfRange(1) = error);
     }
 
     #[test]
     fn test_clear_due() {
         let mut use_case = given_due_usecase_with(
-            HistorizedBoard::default().with_issue(Issue {
-                description: Description::from("due issue"),
-                state: State::Open,
-                due_date: Some(date!(1996-01-16)),
-                time_created: DEFAULT_FAKE_TODAY,
-            }),
+            HistorizedBoard::default().with_issue(due_issue()),
         );
         use_case.execute(0, None);
 
-        let stored_board = use_case.storage.load();
-        let presented_board = use_case.presenter.last_board_rendered.expect("board to be presented");
-        check_boards_are_equal(&presented_board, &stored_board);
+        let stored_board = get_stored_and_presented_board(&use_case);
+        let issue = stored_board.get_with_index(0);
 
-        let issue = stored_board.get(stored_board.find_entity_id_by_index(0).unwrap());
         check!(issue.due_date == None);
-
         check!(stored_board.history.stack.last() == Some(&UndoableHistoryElement::Due(DueHistoryElement{
             index: 0,
             previous_due: Some(date!(1996-01-16)),
         })));
+    }
+
+    #[test]
+    fn test_overwrite_due_with_tomorrow() {
+        let mut use_case = given_due_usecase_with(
+            HistorizedBoard::default().with_issue(due_issue()),
+        );
+        use_case.execute(0, Some("tomorrow"));
+
+        let stored_board = get_stored_and_presented_board(&use_case);
+        let issue = stored_board.get_with_index(0);
+
+        check!(issue.due_date == Some(date!(2025-02-23)));
+        check!(stored_board.history.stack.last() == Some(&UndoableHistoryElement::Due(DueHistoryElement{
+            index: 0,
+            previous_due: Some(date!(1996-01-16)),
+        })));
+
+    }
+
+    fn due_issue() -> Issue {
+        Issue {
+            description: Description::from("due issue"),
+            state: State::Open,
+            due_date: Some(date!(1996-01-16)),
+            time_created: DEFAULT_FAKE_TODAY,
+        }
     }
 
     fn given_due_usecase_with(board: HistorizedBoard<Issue>) -> DueUseCase<MemoryIssueStorage, NilPresenter, FakeTodayProvider> {
@@ -126,5 +147,4 @@ mod test {
         }
     }
 
-    // ToDo add usecase test with fancy date input, e.g. tomorrow
 }
