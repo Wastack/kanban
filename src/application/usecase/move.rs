@@ -1,16 +1,14 @@
 use internal_macros::{PresenterHolder, StorageHolder};
 use uuid::Uuid;
-use crate::application::domain::error::DomainResultMultiError;
 use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
 use crate::application::Issue;
 use crate::application::domain::historized_board::HistorizedBoard;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::application::State;
-use crate::application::usecase::usecase::{HasStorage, HasPresenter};
+use crate::application::usecase::usecase::{HasStorage, HasPresenter, with_board_saved_and_presented_multi_error};
 
 
-// ToDo: use use-case traits
 #[derive(Default, StorageHolder, PresenterHolder)]
 pub(crate) struct MoveUseCase<I: IssueStorage, P: Presenter> {
     storage: I,
@@ -19,26 +17,18 @@ pub(crate) struct MoveUseCase<I: IssueStorage, P: Presenter> {
 
 impl<I: IssueStorage, P: Presenter> MoveUseCase<I, P> {
     pub(crate) fn execute(&mut self, indices: &[usize], state: State) {
-        let _ = self.try_execute(indices, state)
-            .inspect_err(|e| self.presenter.render_errors(e));
-    }
+        with_board_saved_and_presented_multi_error(self, |mut board| {
+            let ids = board.find_entities_by_indices(indices)?;
 
-    fn try_execute(&mut self, indices: &[usize], state: State) -> DomainResultMultiError<()> {
-        let mut board = self.storage.load();
+            let history_for_undo = ids.into_iter()
+                .map(|id| Self::move_issue(&mut board, id, state))
+                .flatten()
+                .collect();
 
-        let ids = board.find_entities_by_indices(indices)?;
+            Self::update_history(&mut board, history_for_undo);
 
-        let history_for_undo = ids.into_iter()
-            .map(|id| Self::move_issue(&mut board, id, state))
-            .flatten()
-            .collect();
-
-        Self::update_history(&mut board, history_for_undo);
-
-        self.storage.save(&board);
-        self.presenter.render_board(&board);
-
-        Ok(())
+            Ok(board)
+        })
     }
 
     fn update_history(board: &mut HistorizedBoard<Issue>, history_elements: Vec<MoveHistoryElement>) {

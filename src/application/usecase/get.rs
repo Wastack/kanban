@@ -3,8 +3,6 @@ use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::application::usecase::usecase::{HasPresenter, HasStorage};
 
-// ToDo: use use-case traits
-
 #[derive(Default, StorageHolder, PresenterHolder)]
 pub(crate) struct GetUseCase<I: IssueStorage, P: Presenter> {
     storage: I,

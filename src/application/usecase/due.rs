@@ -1,11 +1,10 @@
 use internal_macros::{PresenterHolder, StorageHolder};
 use crate::adapters::storages::IssueStorage;
-use crate::application::domain::error::{DomainResult};
 use crate::application::domain::history::{DueHistoryElement, UndoableHistoryElement};
 use crate::application::domain::parse_date::DateParser;
 use crate::application::ports::presenter::Presenter;
 use crate::application::ports::time::TodayProvider;
-use crate::application::usecase::usecase::{HasPresenter, HasStorage};
+use crate::application::usecase::usecase::{with_board_saved_and_presented_single_error, HasPresenter, HasStorage};
 
 #[derive(Default, PresenterHolder, StorageHolder)]
 pub(crate) struct DueUseCase<I: IssueStorage, P: Presenter, T: TodayProvider> {
@@ -16,34 +15,27 @@ pub(crate) struct DueUseCase<I: IssueStorage, P: Presenter, T: TodayProvider> {
 
 impl<I: IssueStorage, P: Presenter, T:TodayProvider> DueUseCase<I, P, T> {
     pub(crate) fn execute(&self, index: usize, date: Option<&str>) {
-        let _ = self.try_execute(index, date)
-            .inspect_err(|e| self.presenter.render_error(e));
-    }
+        with_board_saved_and_presented_single_error(self, |mut board| {
+            let id = board.find_entity_id_by_index(index)?;
 
-    fn try_execute(&self, index: usize, date: Option<&str>) -> DomainResult<()> {
-        let mut board = self.storage.load();
-        let id = board.find_entity_id_by_index(index)?;
+            let date_parser = DateParser {
+                today_provider: &self.today_provider,
+            };
 
-        let date_parser = DateParser {
-            today_provider: &self.today_provider,
-        };
+            let parsed_date = date.map(|d| date_parser.parse(d)).transpose()?;
 
-        let parsed_date = date.map(|d| date_parser.parse(d)).transpose()?;
+            let previous_due = board.get(id).due_date;
+            board.get_mut(id).due_date = parsed_date;
 
-        let previous_due = board.get(id).due_date;
-        board.get_mut(id).due_date = parsed_date;
+            let undo_item = UndoableHistoryElement::Due(DueHistoryElement{
+                index,
+                previous_due,
+            });
 
-        let undo_item = UndoableHistoryElement::Due(DueHistoryElement{
-            index,
-            previous_due,
-        });
+            board.history.add(undo_item);
 
-        board.history.add(undo_item);
-
-        self.storage.save(&board);
-        self.presenter.render_board(&board);
-
-        Ok(())
+            Ok(board)
+        })
     }
 }
 

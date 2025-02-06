@@ -2,9 +2,8 @@ use internal_macros::{PresenterHolder, StorageHolder};
 use crate::adapters::storages::IssueStorage;
 use crate::application::domain::history::{FlushHistoryElement, UndoableHistoryElement};
 use crate::application::ports::presenter::Presenter;
-use crate::application::usecase::usecase::{HasStorage, HasPresenter};
+use crate::application::usecase::usecase::{HasStorage, HasPresenter, with_board_saved_and_presented};
 
-// ToDo: use use-case traits
 #[derive(Default, PresenterHolder, StorageHolder)]
 pub(crate) struct FlushUseCase<I: IssueStorage, P: Presenter> {
     pub(crate) storage: I,
@@ -13,16 +12,15 @@ pub(crate) struct FlushUseCase<I: IssueStorage, P: Presenter> {
 
 impl<I: IssueStorage, P: Presenter> FlushUseCase<I, P> {
     pub(crate) fn execute(&mut self) {
-        let mut board = self.storage.load();
+        with_board_saved_and_presented(self, |mut board| {
+            let number_of_issues_affected = board.flush();
 
-        let number_of_issues_affected = board.flush();
+            board.history.add(UndoableHistoryElement::Flush(FlushHistoryElement{
+                number_of_issues_affected,
+            }));
 
-        board.history.add(UndoableHistoryElement::Flush(FlushHistoryElement{
-            number_of_issues_affected,
-        }));
-
-        self.storage.save(&board);
-        self.presenter.render_board(&board)
+            board
+        });
     }
 }
 

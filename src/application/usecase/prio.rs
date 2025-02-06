@@ -4,10 +4,9 @@ use uuid::Uuid;
 use crate::application::board::Board;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
-use crate::application::domain::error::DomainResult;
 use crate::application::domain::history::{PrioHistoryElement, UndoableHistoryElement};
 use crate::application::Issue;
-use crate::application::usecase::usecase::{HasStorage, HasPresenter};
+use crate::application::usecase::usecase::{HasStorage, HasPresenter, with_board_saved_and_presented_single_error};
 
 pub(crate) trait PriorityModifier: Default {
     fn modify_priority(board: &mut Board<Issue>, id: Uuid);
@@ -49,7 +48,6 @@ impl PriorityModifier for DownPriority {
     }
 }
 
-// ToDo: use use-case traits
 #[derive(Default, PresenterHolder, StorageHolder)]
 pub(crate) struct PriorityUseCase<I: IssueStorage, P: Presenter, PM: PriorityModifier> {
     storage: I,
@@ -59,30 +57,22 @@ pub(crate) struct PriorityUseCase<I: IssueStorage, P: Presenter, PM: PriorityMod
 }
 impl<I: IssueStorage, P: Presenter, PM: PriorityModifier> PriorityUseCase<I, P, PM> {
     pub(crate) fn execute(&self, index: usize) {
-        let _ = self.try_execute(index)
-            .inspect_err(|e| self.presenter.render_error(e));
-    }
+        with_board_saved_and_presented_single_error(self, |mut board| {
+            let id = board.find_entity_id_by_index(index)?;
 
-    fn try_execute(&self, index: usize) -> DomainResult<()> {
-        let mut historized_board = self.storage.load();
+            PM::modify_priority(&mut board.board, id);
 
-        let id = historized_board.find_entity_id_by_index(index)?;
+            let new_index = board.position(id);
 
-        PM::modify_priority(&mut historized_board.board, id);
+            if index != new_index {
+                board.history.add(UndoableHistoryElement::Prio(PrioHistoryElement{
+                    original_index: index,
+                    new_index,
+                }));
+            }
 
-        let new_index = historized_board.position(id);
-
-        if index != new_index {
-            historized_board.history.add(UndoableHistoryElement::Prio(PrioHistoryElement{
-                original_index: index,
-                new_index,
-            }));
-        }
-
-        self.storage.save(&historized_board);
-        self.presenter.render_board(&historized_board);
-
-        Ok(())
+            Ok(board)
+        })
     }
 }
 

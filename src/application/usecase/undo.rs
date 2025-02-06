@@ -8,7 +8,7 @@ use crate::application::Issue;
 use crate::application::domain::historized_board::HistorizedBoard;
 use crate::application::issue::{Description, Entity};
 use crate::application::ports::presenter::Presenter;
-use crate::application::usecase::usecase::{HasStorage, HasPresenter};
+use crate::application::usecase::usecase::{HasStorage, HasPresenter, with_board_saved_and_presented_single_error};
 
 #[derive(Default, PresenterHolder, StorageHolder)]
 pub(crate) struct UndoUseCase<I: IssueStorage, P: Presenter> {
@@ -18,33 +18,27 @@ pub(crate) struct UndoUseCase<I: IssueStorage, P: Presenter> {
 
 impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
     pub(crate) fn execute(&self) {
-        let _ = self.try_execute()
-            .inspect_err(|e| self.presenter.render_error(e));
-    }
+        with_board_saved_and_presented_single_error(self, |board| {
+            let HistorizedBoard {
+                mut board,
+                mut history,
+            } = board;
 
-    fn try_execute(&self) -> DomainResult<()> {
-        let HistorizedBoard {
-            mut board,
-            mut history,
-        } = self.storage.load();
+            let event_to_undo = history.last()
+                .ok_or(DomainError::EmptyHistory)?;
 
-        let event_to_undo = history.last()
-            .ok_or(DomainError::EmptyHistory)?;
+            Self::undo_event(&mut board, event_to_undo)?;
 
-        Self::undo_event(&mut board, event_to_undo)?;
+            // When successful, we need to remove the history element that has been undone.
+            history.pop();
 
-        // When successful, we need to remove the history element that has been undone.
-        history.pop();
+            let historized_board = HistorizedBoard {
+                board,
+                history,
+            };
 
-        let historized_board = HistorizedBoard {
-            board,
-            history,
-        };
-
-        self.storage.save(&historized_board);
-        self.presenter.render_board(&historized_board);
-
-        Ok(())
+            Ok(historized_board)
+        })
     }
 
     /// Undoes and event based on the history element. It does not mutate the history.

@@ -1,11 +1,10 @@
-use crate::application::domain::error::DomainResultMultiError;
+use internal_macros::{PresenterHolder, StorageHolder};
 use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, UndoableHistoryElement};
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
+use crate::application::usecase::usecase::{with_board_saved_and_presented_multi_error, HasPresenter, HasStorage};
 
-
-// ToDo: use use-case traits
-#[derive(Default)]
+#[derive(Default, PresenterHolder, StorageHolder)]
 pub(crate) struct DeleteUseCase<I: IssueStorage, P: Presenter> {
     storage: I,
     presenter: P
@@ -13,33 +12,25 @@ pub(crate) struct DeleteUseCase<I: IssueStorage, P: Presenter> {
 
 impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
     pub(crate) fn execute(&mut self, indices: &[usize]) {
-        let _ = self.try_execute(indices)
-            .inspect_err(|errors| self.presenter.render_errors(errors));
-    }
+        with_board_saved_and_presented_multi_error(self, |mut board| {
+            let ids = board.find_entities_by_indices(indices)?;
 
-    fn try_execute(&mut self, indices: &[usize]) -> DomainResultMultiError<()> {
-        let mut board = self.storage.load();
+            let history_elements = ids.into_iter().map(|id| {
+                let original_index = board.position(id);
 
-        let ids = board.find_entities_by_indices(indices)?;
+                board.mark_as_deleted(id);
 
-        let history_elements = ids.into_iter().map(|id| {
-            let original_index = board.position(id);
+                DeleteHistoryElement { original_position_in_issues: original_index }
+            }).collect();
 
-            board.mark_as_deleted(id);
-
-            DeleteHistoryElement { original_position_in_issues: original_index }
-        }).collect();
-
-        board.history.add(UndoableHistoryElement::Delete(
+            board.history.add(UndoableHistoryElement::Delete(
                 DeleteHistoryElements {
                     deletions: history_elements,
                 },
             ));
 
-        self.presenter.render_board(&board);
-        self.storage.save(&board);
-
-        Ok(())
+            Ok(board)
+        })
     }
 }
 

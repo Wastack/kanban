@@ -2,9 +2,9 @@ use internal_macros::{PresenterHolder, StorageHolder};
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::application::ports::editor::Editor;
-use crate::application::domain::error::{DomainError, DomainResult};
+use crate::application::domain::error::{DomainError};
 use crate::application::domain::history::{EditHistoryElement, UndoableHistoryElement};
-use crate::application::usecase::usecase::{HasPresenter, HasStorage};
+use crate::application::usecase::usecase::{with_board_saved_and_presented_single_error, HasPresenter, HasStorage};
 
 #[derive(Default, StorageHolder, PresenterHolder)]
 pub(crate) struct EditUseCase<I: IssueStorage, P: Presenter, E: Editor> {
@@ -15,37 +15,29 @@ pub(crate) struct EditUseCase<I: IssueStorage, P: Presenter, E: Editor> {
 
 impl<I: IssueStorage, P: Presenter, E: Editor> EditUseCase<I, P, E> {
     pub(crate) fn execute(&mut self, index: usize) {
-        let _  = self.try_execute(index)
-            .inspect_err(|e| self.presenter.render_error(e));
-    }
+        with_board_saved_and_presented_single_error(self, |mut board| {
+            let id = board.find_entity_id_by_index(index)?;
 
-    fn try_execute(&mut self, index: usize) -> DomainResult<()> {
-        let mut board = self.storage.load();
+            let entity = board.get(id);
 
-        let id = board.find_entity_id_by_index(index)?;
+            let original_description = String::from(entity.description.as_str());
 
-        let entity = board.get(id);
+            let edited_description = self.editor
+                .open_editor_with( entity.description.as_str())
+                .map_err(|e|DomainError::from(e))?;
 
-        let original_description = String::from(entity.description.as_str());
+            let issue = board.get_mut(id);
+            issue.description.set(&edited_description);
 
-        let edited_description = self.editor
-            .open_editor_with( entity.description.as_str())
-            .map_err(|e|DomainError::from(e))?;
+            board.history.add(UndoableHistoryElement::Edit(
+                EditHistoryElement {
+                    original_description,
+                    index,
+                }
+            ));
 
-        let issue = board.get_mut(id);
-        issue.description.set(&edited_description);
-
-        board.history.add(UndoableHistoryElement::Edit(
-            EditHistoryElement {
-                original_description,
-                index,
-            }
-        ));
-
-        self.storage.save(&board);
-        self.presenter.render_board(&board);
-
-        Ok(())
+            Ok(board)
+        })
     }
 }
 
