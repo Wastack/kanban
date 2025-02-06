@@ -66,10 +66,18 @@ mod tests {
 
         let stored_board = get_stored_and_presented_board(&add_use_case);
 
-        stored_board
-            .assert_issue_count(5)
-            .assert_first_issue_content()
-            .assert_history_consists_of_one_addition();
+
+        stored_board.assert_issue_count(5);
+
+        let issue = stored_board.get_with_index(0);
+        check!(issue.description == Description::from("New task"), "Expected specific description of added issue");
+        check!(issue.state == State::Review, "Expected specific state of added issue");
+        check!(issue.time_created == DEFAULT_FAKE_TODAY, "Expected creation time to be set");
+        check!(issue.due_date == Some(date!(2023-01-02)));
+
+        let history = stored_board.history.last();
+        let_assert!(Some(history) = history, "Expected to have an item in history");
+        assert_eq!(history, &UndoableHistoryElement::Add, "Expected item in history to represent and addition of an issue");
     }
 
     fn given_add_use_case_with(board: HistorizedBoard<Issue>) -> AddUseCase<MemoryIssueStorage, NilPresenter, FakeTodayProvider> {
@@ -79,26 +87,6 @@ mod tests {
         AddUseCase {
             storage,
             ..Default::default()
-        }
-    }
-
-    impl HistorizedBoard<Issue> {
-        fn assert_first_issue_content(&self) -> &Self {
-            let issue = self.get(self.find_entity_id_by_index(0).unwrap());
-            check!(issue.description == Description::from("New task"), "Expected specific description of added issue");
-            check!(issue.state == State::Review, "Expected specific state of added issue");
-            check!(issue.time_created == DEFAULT_FAKE_TODAY, "Expected creation time to have been set");
-            check!(issue.due_date == Some(date!(2023-01-02)));
-
-            self
-        }
-
-        fn assert_history_consists_of_one_addition(&self) -> &Self {
-            let history = self.history.last();
-            let_assert!(Some(history) = history, "Expected to have an item in history");
-            assert_eq!(history, &UndoableHistoryElement::Add, "Expected item in history to represent and addition of an issue");
-
-            self
         }
     }
 }
