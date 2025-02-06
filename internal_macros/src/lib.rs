@@ -34,10 +34,6 @@ pub fn derive_presenter_holder(input: TokenStream) -> TokenStream {
             fn presenter_ref(&self) -> &#presenter_type {
                 &self.presenter
             }
-
-            fn presenter_mut(&mut self) -> &mut #presenter_type {
-                &mut self.presenter
-            }
         }
     };
 
@@ -74,10 +70,6 @@ pub fn derive_storage_holder(input: TokenStream) -> TokenStream {
         impl #impl_generics HasStorage<#storage_type> for #struct_name #ty_generics #where_clause {
             fn storage_ref(&self) -> &#storage_type {
                 &self.storage
-            }
-
-            fn storage_mut(&mut self) -> &mut #storage_type {
-                &mut self.storage
             }
         }
     };

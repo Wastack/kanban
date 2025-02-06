@@ -6,14 +6,10 @@ use crate::application::Issue;
 
 pub trait HasPresenter<P: Presenter> {
     fn presenter_ref(&self) -> &P;
-    // ToDo: remove
-    fn presenter_mut(&mut self) -> &mut P;
 }
 
 pub trait HasStorage<S: IssueStorage> {
     fn storage_ref(&self) -> &S;
-    // ToDo: remove
-    fn storage_mut(&mut self) -> &mut S;
 }
 
 pub fn with_board_saved_and_presented_single_error<U, P: Presenter, S: IssueStorage, F>(use_case: &U, f: F)
