@@ -36,7 +36,7 @@ impl<I: IssueStorage, P: Presenter> DeleteUseCase<I, P> {
 
 #[cfg(test)]
 mod tests {
-    use assert2::let_assert;
+    use assert2::{check, let_assert};
     use crate::application::Issue;
     use crate::application::issue::Description;
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
@@ -47,6 +47,7 @@ mod tests {
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::domain::history::{DeleteHistoryElement, UndoableHistoryElement};
     use crate::application::usecase::delete::DeleteUseCase;
+    use crate::application::usecase::test_utils::get_stored_and_presented_board;
 
     #[test]
     fn test_execute_successful_deletion() {
@@ -58,11 +59,19 @@ mod tests {
         let _ = sut.execute(&vec![1, 3, 0]);
 
         // Then
-        let stored_board = sut.storage.load();
+        let stored_board = get_stored_and_presented_board(&sut);
 
-        stored_board
-            .assert_third_issue_is_the_only_one_left()
-            .assert_deleted_issues_consists_of_three_deletions();
+        check!(stored_board.entity_count() == 1, "Expected only 1 issue in board after deletion");
+
+        let remaining_issue = stored_board.get_with_index(0);
+        check!(remaining_issue.description == Description::from("Task inserted second"), "Expected the third task to remain with index 0");
+
+        let deleted_issues = stored_board.get_deleted_entities();
+        check!(deleted_issues.len() == 3, "Expected 3 deleted issues in board");
+
+        check!(deleted_issues[0].description == "Task inserted fourth".into());
+        check!(deleted_issues[1].description == "Task inserted first".into());
+        check!(deleted_issues[2].description == "Task inserted third".into());
 
         let stored_history = stored_board.history.last()
             .expect("Expected a delete history");
@@ -74,10 +83,6 @@ mod tests {
                 DeleteHistoryElement{ original_position_in_issues: 2 }, // decreased because of index shift
                 DeleteHistoryElement{ original_position_in_issues: 0 },
             ]  = stored_delete_history_elements.deletions.as_slice());
-
-        let cell = sut.presenter.last_board_rendered.borrow();
-        let presented_board = cell.as_ref().expect("Expected a board to be presented");
-        check_boards_are_equal(&presented_board, &stored_board);
     }
 
     #[test]
@@ -95,28 +100,6 @@ mod tests {
         delete_use_case.storage.load()
             .assert_issue_count(4)
             .assert_has_original_issues();
-    }
-
-    impl HistorizedBoard<Issue> {
-        fn assert_third_issue_is_the_only_one_left(&self) -> &Self {
-            assert_eq!(self.entity_count(), 1, "Expected only 1 issue in board after deletion");
-
-            let remaining_issue = self.get(self.find_entity_id_by_index(0).expect("Expected to have an issue with index 0"));
-            assert_eq!(remaining_issue.description, Description::from("Task inserted second"), "Expected the third task to remain with index 0");
-
-            self
-        }
-
-        fn assert_deleted_issues_consists_of_three_deletions(&self) -> &Self {
-            let deleted_issues = self.get_deleted_entities();
-            assert_eq!(deleted_issues.len(), 3, "Expected 3 deleted issues in board");
-
-            assert_eq!(deleted_issues[0].description, "Task inserted fourth".into());
-            assert_eq!(deleted_issues[1].description, "Task inserted first".into());
-            assert_eq!(deleted_issues[2].description, "Task inserted third".into());
-
-            self
-        }
     }
 
     fn given_delete_use_case_with(board: HistorizedBoard<Issue>) -> DeleteUseCase<MemoryIssueStorage, NilPresenter> {

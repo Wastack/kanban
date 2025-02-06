@@ -80,6 +80,8 @@ mod tests {
         assert_eq!(history, &UndoableHistoryElement::Add, "Expected item in history to represent and addition of an issue");
     }
 
+    // ToDo: failure for Add use case?
+
     fn given_add_use_case_with(board: HistorizedBoard<Issue>) -> AddUseCase<MemoryIssueStorage, NilPresenter, FakeTodayProvider> {
         let storage = MemoryIssueStorage::default();
         storage.save(&board);
