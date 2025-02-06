@@ -35,13 +35,13 @@ impl MaybeFormattedString {
 impl<T: TodayProvider> Presenter for TabularTextRenderer<T> {
 
 
-    fn render_board(&mut self, board: &HistorizedBoard<Issue>) {
+    fn render_board(&self, board: &HistorizedBoard<Issue>) {
         let result = self.format_board(board);
 
         println!("{}", result)
     }
 
-    fn render_error(&mut self, err: &DomainError) {
+    fn render_error(&self, err: &DomainError) {
         println!("{}", err)
     }
 }

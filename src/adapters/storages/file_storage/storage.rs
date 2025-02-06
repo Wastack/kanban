@@ -35,7 +35,7 @@ impl IssueStorage for FileStorage {
         stored_board.into()
     }
 
-    fn save(&mut self, board: &HistorizedBoard<Issue>) {
+    fn save(&self, board: &HistorizedBoard<Issue>) {
         let content = Self::board_to_yaml(board);
 
         let mut file = fs::File::create(&self.source).expect("cannot open file to write board");

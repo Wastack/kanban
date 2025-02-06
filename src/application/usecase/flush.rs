@@ -1,8 +1,11 @@
+use internal_macros::{PresenterHolder, StorageHolder};
 use crate::adapters::storages::IssueStorage;
 use crate::application::domain::history::{FlushHistoryElement, UndoableHistoryElement};
 use crate::application::ports::presenter::Presenter;
+use crate::application::usecase::usecase::{HasStorage, HasPresenter};
 
-#[derive(Default)]
+// ToDo: use use-case traits
+#[derive(Default, PresenterHolder, StorageHolder)]
 pub(crate) struct FlushUseCase<I: IssueStorage, P: Presenter> {
     pub(crate) storage: I,
     presenter: P,
@@ -30,11 +33,11 @@ mod tests {
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
-    use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::domain::history::{FlushHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
     use crate::application::usecase::flush::FlushUseCase;
+    use crate::application::usecase::test_utils::get_stored_and_presented_board;
 
     #[test]
     fn test_execute_successful_flush() {
@@ -47,7 +50,7 @@ mod tests {
         sut.execute();
 
         // Then
-        let stored_board = sut.storage.load();
+        let stored_board = get_stored_and_presented_board(&sut);
 
         // One remains, because the done issue is not flushed
         check!(stored_board.board.entity_count() == 1);
@@ -61,13 +64,10 @@ mod tests {
         check!(deleted_entities[2].description == Description::from("Task inserted fourth"));
 
         let_assert!(Some(UndoableHistoryElement::Flush(FlushHistoryElement{ number_of_issues_affected: 3 })) = stored_board.history.last());
-
-        let presented_board = sut.presenter.last_board_rendered.expect("Expected a board to be presented");
-        check_boards_are_equal(&presented_board, &stored_board);
     }
 
     fn given_flush_use_case_with(board: HistorizedBoard<Issue>) -> FlushUseCase<MemoryIssueStorage, NilPresenter> {
-        let mut storage = MemoryIssueStorage::default();
+        let storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         FlushUseCase {

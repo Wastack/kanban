@@ -487,7 +487,6 @@ pub(crate) mod test_utils {
     use assert2::{check, let_assert};
     use time::macros::date;
     use crate::application::{Issue, State};
-    use crate::application::domain::error::DomainResult;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::issue::{Description, Entity};
 

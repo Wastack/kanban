@@ -1,11 +1,12 @@
+use internal_macros::{PresenterHolder, StorageHolder};
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::application::ports::editor::Editor;
 use crate::application::domain::error::{DomainError, DomainResult};
 use crate::application::domain::history::{EditHistoryElement, UndoableHistoryElement};
+use crate::application::usecase::usecase::{HasPresenter, HasStorage};
 
-
-#[derive(Default)]
+#[derive(Default, StorageHolder, PresenterHolder)]
 pub(crate) struct EditUseCase<I: IssueStorage, P: Presenter, E: Editor> {
     storage: I,
     presenter: P,
@@ -57,12 +58,12 @@ mod tests {
     use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::application::{Issue, State};
-    use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::{DomainError};
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::issue::Entity;
     use crate::application::ports::editor::Editor;
     use crate::application::usecase::edit::EditUseCase;
+    use crate::application::usecase::test_utils::{check_no_errors, get_stored_and_presented_board};
 
     #[test]
     fn test_execute_successful_editing() {
@@ -72,15 +73,13 @@ mod tests {
 
         edit_use_case.execute(2);
 
-        assert!(edit_use_case.presenter.errors_presented.is_empty(), "expected no error");
+        check_no_errors(&edit_use_case);
 
-        let stored_board = edit_use_case.storage.load();
+        let stored_board = get_stored_and_presented_board(&edit_use_case);
         then_stored_issue_of_the(&stored_board)
             .assert_description_edited()
             .assert_other_issues_did_not_change();
 
-        let presented_board = edit_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
-        check_boards_are_equal(&presented_board, &stored_board);
     }
 
     #[test]
@@ -94,7 +93,8 @@ mod tests {
         then_edited_board(&edit_use_case)
             .assert_has_original_issues();
 
-        let_assert!([DomainError::IndexOutOfRange(4)] = edit_use_case.presenter.errors_presented.as_slice());
+        let cell = edit_use_case.presenter.errors_presented.borrow();
+        let_assert!([DomainError::IndexOutOfRange(4)] = cell.as_slice());
     }
 
     #[test]
@@ -109,7 +109,8 @@ mod tests {
             .assert_issue_count(4)
             .assert_has_original_issues();
 
-        let_assert!([DomainError::EditorError{..}] = edit_use_case.presenter.errors_presented.as_slice());
+        let cell = edit_use_case.presenter.errors_presented.borrow();
+        let_assert!([DomainError::EditorError{..}] = cell.as_slice());
     }
 
     fn then_edited_board<E: Editor>(sut: &EditUseCase<MemoryIssueStorage, NilPresenter, E>) -> HistorizedBoard<Issue> {
@@ -153,7 +154,7 @@ mod tests {
     }
 
     fn given_edit_usecase_with<E: Editor + Default>(board: HistorizedBoard<Issue>) -> EditUseCase<MemoryIssueStorage, NilPresenter, E> {
-        let mut storage = MemoryIssueStorage::default();
+        let storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         EditUseCase {

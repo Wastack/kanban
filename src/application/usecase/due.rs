@@ -15,12 +15,12 @@ pub(crate) struct DueUseCase<I: IssueStorage, P: Presenter, T: TodayProvider> {
 }
 
 impl<I: IssueStorage, P: Presenter, T:TodayProvider> DueUseCase<I, P, T> {
-    pub(crate) fn execute(&mut self, index: usize, date: Option<&str>) {
+    pub(crate) fn execute(&self, index: usize, date: Option<&str>) {
         let _ = self.try_execute(index, date)
             .inspect_err(|e| self.presenter.render_error(e));
     }
 
-    fn try_execute(&mut self, index: usize, date: Option<&str>) -> DomainResult<()> {
+    fn try_execute(&self, index: usize, date: Option<&str>) -> DomainResult<()> {
         let mut board = self.storage.load();
         let id = board.find_entity_id_by_index(index)?;
 
@@ -51,13 +51,11 @@ impl<I: IssueStorage, P: Presenter, T:TodayProvider> DueUseCase<I, P, T> {
 #[cfg(test)]
 mod test {
     use assert2::{check, let_assert};
-    use time::Date;
     use time::macros::date;
     use crate::adapters::presenters::nil_presenter::test::NilPresenter;
     use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::adapters::time_providers::fake::{FakeTodayProvider, DEFAULT_FAKE_TODAY};
-    use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::{Issue, State};
@@ -69,7 +67,7 @@ mod test {
 
     #[test]
     fn test_typical_due() {
-        let mut use_case = given_due_usecase_with(
+        let use_case = given_due_usecase_with(
             HistorizedBoard::default().with_4_typical_issues(),
         );
 
@@ -87,15 +85,18 @@ mod test {
 
     #[test]
     fn test_index_error() {
-        let mut use_case = DueUseCase::<MemoryIssueStorage, NilPresenter, FakeTodayProvider>::default();
+        let use_case = DueUseCase::<MemoryIssueStorage, NilPresenter, FakeTodayProvider>::default();
+
         use_case.execute(1, None);
-        let error = use_case.presenter_ref().errors_presented.first().expect("error to be presented");
+
+        let errors_presented_cell = use_case.presenter_ref().errors_presented.borrow();
+        let error = errors_presented_cell.first().expect("error to be presented");
         let_assert!(DomainError::IndexOutOfRange(1) = error);
     }
 
     #[test]
     fn test_clear_due() {
-        let mut use_case = given_due_usecase_with(
+        let use_case = given_due_usecase_with(
             HistorizedBoard::default().with_issue(due_issue()),
         );
         use_case.execute(0, None);
@@ -112,7 +113,7 @@ mod test {
 
     #[test]
     fn test_overwrite_due_with_tomorrow() {
-        let mut use_case = given_due_usecase_with(
+        let use_case = given_due_usecase_with(
             HistorizedBoard::default().with_issue(due_issue()),
         );
         use_case.execute(0, Some("tomorrow"));
@@ -138,7 +139,7 @@ mod test {
     }
 
     fn given_due_usecase_with(board: HistorizedBoard<Issue>) -> DueUseCase<MemoryIssueStorage, NilPresenter, FakeTodayProvider> {
-        let mut storage = MemoryIssueStorage::default();
+        let storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         DueUseCase {

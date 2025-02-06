@@ -1,3 +1,4 @@
+use internal_macros::{PresenterHolder, StorageHolder};
 use uuid::Uuid;
 use crate::adapters::storages::IssueStorage;
 use crate::application::board::Board;
@@ -7,20 +8,21 @@ use crate::application::Issue;
 use crate::application::domain::historized_board::HistorizedBoard;
 use crate::application::issue::{Description, Entity};
 use crate::application::ports::presenter::Presenter;
+use crate::application::usecase::usecase::{HasStorage, HasPresenter};
 
-#[derive(Default)]
-pub(crate) struct UndoUseCase<I, P> {
+#[derive(Default, PresenterHolder, StorageHolder)]
+pub(crate) struct UndoUseCase<I: IssueStorage, P: Presenter> {
     storage: I,
     presenter: P,
 }
 
 impl<I: IssueStorage, P: Presenter> UndoUseCase<I, P> {
-    pub(crate) fn execute(&mut self) {
+    pub(crate) fn execute(&self) {
         let _ = self.try_execute()
             .inspect_err(|e| self.presenter.render_error(e));
     }
 
-    fn try_execute(&mut self) -> DomainResult<()> {
+    fn try_execute(&self) -> DomainResult<()> {
         let HistorizedBoard {
             mut board,
             mut history,
@@ -165,16 +167,17 @@ pub(crate) mod tests {
     use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::adapters::time_providers::fake::{DEFAULT_FAKE_TODAY};
-    use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::domain::history::{DeleteHistoryElement, DeleteHistoryElements, EditHistoryElement, FlushHistoryElement, History, MoveHistoryElement, MoveHistoryElements, PrioHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
+    use crate::application::usecase::test_utils::{check_no_errors, get_stored_and_presented_board};
     use crate::application::usecase::undo::UndoUseCase;
+    use crate::application::usecase::usecase::HasPresenter;
 
     #[test]
     fn test_undo_add() {
-        let mut undo_use_case = given_undo_usecase_with(
+        let undo_use_case = given_undo_usecase_with(
             HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_an_issue_added_additionally(),
@@ -190,7 +193,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_undo_delete_one_issue() {
-        let mut undo_use_case = given_undo_usecase_with(
+        let undo_use_case = given_undo_usecase_with(
             HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_an_issue_deleted(),
@@ -206,7 +209,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_undo_delete_multiple_issue() {
-        let mut undo_use_case = given_undo_usecase_with(
+        let undo_use_case = given_undo_usecase_with(
             HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_1_0_2_issues_deleted(),
@@ -222,17 +225,18 @@ pub(crate) mod tests {
 
     #[test]
     fn test_undo_on_empty_board() {
-        let mut undo_use_case = given_undo_usecase_with( HistorizedBoard::default() );
+        let undo_use_case = given_undo_usecase_with( HistorizedBoard::default() );
 
         undo_use_case.execute();
 
-        let maybe_error = undo_use_case.presenter.errors_presented.last();
+        let cell = undo_use_case.presenter.errors_presented.borrow();
+        let maybe_error = cell.last();
         let_assert!(Some(DomainError::EmptyHistory) = maybe_error);
     }
 
     #[test]
     fn test_undo_move_simple() {
-        let mut undo_use_case = given_undo_usecase_with(
+        let undo_use_case = given_undo_usecase_with(
             HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_1_moved_from_done_to_open()
@@ -248,7 +252,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_undo_move_with_prio_change() {
-        let mut undo_use_case = given_undo_usecase_with(
+        let undo_use_case = given_undo_usecase_with(
             HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_issue_moved_to_done()
@@ -264,7 +268,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_2_undos_in_sequence() {
-        let mut undo_use_case = given_undo_usecase_with(
+        let undo_use_case = given_undo_usecase_with(
             HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_an_issue_added_additionally()
@@ -290,7 +294,7 @@ pub(crate) mod tests {
     #[test]
     fn test_undo_delete_inconsistent_board() {
         // Given
-        let mut undo_use_case = given_undo_usecase_with(
+        let undo_use_case = given_undo_usecase_with(
             HistorizedBoard::default()
                 .with_4_typical_issues()
                 .with_inconsistent_delete_history()
@@ -300,7 +304,8 @@ pub(crate) mod tests {
         undo_use_case.execute();
 
         // Then
-        let error = undo_use_case.presenter.errors_presented.last()
+        let cell = undo_use_case.presenter.errors_presented.borrow();
+        let error = cell.last()
             .expect("Expected error to have been presented");
 
         let_assert!(DomainError::InvalidBoard(error_reason) = error, "Expected InvalidBoard error");
@@ -309,13 +314,14 @@ pub(crate) mod tests {
 
     #[test]
     fn test_undo_empty_history() {
-        let mut undo_use_case = given_undo_usecase_with(
+        let undo_use_case = given_undo_usecase_with(
             HistorizedBoard::default()
         );
         undo_use_case.execute();
 
         // Then
-        let error = undo_use_case.presenter.errors_presented.last()
+        let cell = undo_use_case.presenter_ref().errors_presented.borrow();
+        let error = cell.last()
             .expect("Expected error to have been presented");
 
         let_assert!(DomainError::EmptyHistory = error, "Expected Empty History error");
@@ -325,13 +331,14 @@ pub(crate) mod tests {
     fn test_undo_invalid_add() {
         // Given
         let board = HistorizedBoard::new( vec![], vec![], vec![UndoableHistoryElement::Add]);
-        let mut undo_use_case = given_undo_usecase_with(board);
+        let undo_use_case = given_undo_usecase_with(board);
 
         // When
         undo_use_case.execute();
 
         // Then
-        let err = undo_use_case.presenter.errors_presented.last().expect("Expected error");
+        let cell = undo_use_case.presenter.errors_presented.borrow();
+        let err = cell.last().expect("Expected error");
         let_assert!(DomainError::InvalidBoard(error_message) = err);
         check!(error_message.as_str() == "Index `0` is out of range");
     }
@@ -354,13 +361,14 @@ pub(crate) mod tests {
             }],
         })]);
 
-        let mut undo_use_case = given_undo_usecase_with(board);
+        let undo_use_case = given_undo_usecase_with(board);
 
         // When
         undo_use_case.execute();
 
         // then
-        let err = undo_use_case.presenter.errors_presented.last().expect("Expected error");
+        let cell = undo_use_case.presenter.errors_presented.borrow();
+        let err = cell.last().expect("Expected error");
         let_assert!(DomainError::InvalidBoard(error_message) = err);
         check!(error_message.as_str() == "Index is out of range: Index `1` is out of range");
 
@@ -398,16 +406,16 @@ pub(crate) mod tests {
             ]
         })];
 
-        let mut undo_use_case = given_undo_usecase_with(
+        let undo_use_case = given_undo_usecase_with(
             HistorizedBoard::new(entities, vec![], history ));
 
         // When
         undo_use_case.execute();
 
-        let_assert!([] = undo_use_case.presenter.errors_presented.as_slice(), "Expected errors not to have occurred");
+        check_no_errors(&undo_use_case);
 
         // Then
-        let stored_board = undo_use_case.storage.load();
+        let stored_board = get_stored_and_presented_board(&undo_use_case);
 
         for (index, expected_description, expected_state) in [
                 (0, "I finished this first", State::Done),
@@ -420,9 +428,6 @@ pub(crate) mod tests {
         }
 
         check!(stored_board.history == History::default(), "Expected history to have been cleared");
-        let_assert!(Some(presented_board) = undo_use_case.presenter.last_board_rendered, "Expected board to have been presented");
-
-        check_boards_are_equal(&stored_board, &presented_board);
     }
 
     #[test]
@@ -435,19 +440,15 @@ pub(crate) mod tests {
             })
         ]);
 
-        let mut use_case = given_undo_usecase_with(board);
+        let use_case = given_undo_usecase_with(board);
 
         // when
         use_case.execute();
 
         // then
-        let_assert!([] = use_case.presenter.errors_presented.as_slice(), "Expected errors not to have occurred");
-
-        let stored_board = use_case.storage.load();
-
+        check_no_errors(&use_case);
+        let stored_board = get_stored_and_presented_board(&use_case);
         check_priorities_unswapped(&stored_board);
-        let_assert!(None = stored_board.history.last(), "Expected history element to be removed after undo");
-        check_boards_are_equal(&stored_board, &use_case.presenter.last_board_rendered.expect("Expected board to be rendered"));
     }
 
     #[test]
@@ -460,25 +461,22 @@ pub(crate) mod tests {
             })
         ]);
 
-        let mut use_case = given_undo_usecase_with(board);
+        let use_case = given_undo_usecase_with(board);
 
         // when
         use_case.execute();
 
         // then
-        let_assert!([] = use_case.presenter.errors_presented.as_slice(), "Expected errors not to have occurred");
-
-        let stored_board = use_case.storage.load();
-
+        check_no_errors(&use_case);
+        let stored_board = get_stored_and_presented_board(&use_case);
         check_priorities_unswapped(&stored_board);
         let_assert!(None = stored_board.history.last(), "Expected history element to be removed after undo");
-        check_boards_are_equal(&stored_board, &use_case.presenter.last_board_rendered.expect("Expected board to be rendered"));
     }
 
     #[test]
     fn test_undo_priority_invalid_original_index() {
         // given
-        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
+        let use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
             Issue { description: Description::from("An issue"), state: State::Open,
                 time_created: DEFAULT_FAKE_TODAY,
                 due_date: None,
@@ -490,14 +488,15 @@ pub(crate) mod tests {
         // when
         use_case.execute();
 
-        let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
+        let errors_presented = use_case.presenter.errors_presented.borrow();
+        let_assert!([DomainError::InvalidBoard(error_message)] = errors_presented.as_slice(), "Expected an error to have occurred");
         check!(error_message == "Original index is out of range: Index `1` is out of range");
     }
 
     #[test]
     fn test_undo_prority_invalid_new_index() {
         // given
-        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
+        let use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
             Issue { description: Description::from("An issue"), state: State::Open,
                 time_created: DEFAULT_FAKE_TODAY,
                 due_date: None,
@@ -509,14 +508,15 @@ pub(crate) mod tests {
         // when
         use_case.execute();
 
-        let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
+        let errors_presented = use_case.presenter.errors_presented.borrow();
+        let_assert!([DomainError::InvalidBoard(error_message)] = errors_presented.as_slice(), "Expected an error to have occurred");
         check!(error_message == "Index is out of range: Index `1` is out of range");
     }
 
     #[test]
     fn test_undo_delete_invalid_original_index() {
         // given
-        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
+        let use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
             Issue { description: Description::from("An issue"), state: State::Open,
                 time_created: DEFAULT_FAKE_TODAY,
                 due_date: None,
@@ -535,14 +535,15 @@ pub(crate) mod tests {
         // when
         use_case.execute();
 
-        let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
+        let errors_presented = use_case.presenter.errors_presented.borrow();
+        let_assert!([DomainError::InvalidBoard(error_message)] = errors_presented.as_slice(), "Expected an error to have occurred");
         check!(error_message == "Index `2` is out of range");
     }
 
     #[test]
     fn test_undo_move_invalid_new_index() {
         // given
-        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
+        let use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
             Issue { description: Description::from("An issue"), state: State::Done,
                 time_created: DEFAULT_FAKE_TODAY,
                 due_date: None,
@@ -560,13 +561,14 @@ pub(crate) mod tests {
         // when
         use_case.execute();
 
-        let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice(), "Expected an error to have occurred");
+        let errors_presented = use_case.presenter.errors_presented.borrow();
+        let_assert!([DomainError::InvalidBoard(error_message)] = errors_presented.as_slice(), "Expected an error to have occurred");
         check!(error_message == "Index is out of range: Index `123` is out of range");
     }
 
     #[test]
     fn test_undo_flush_not_enough_deleted_items() {
-        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![], vec![
+        let use_case = given_undo_usecase_with(HistorizedBoard::new(vec![], vec![
             Issue { description: Description::from("First deleted issue"), state: State::Open,
                 time_created: DEFAULT_FAKE_TODAY,
                 due_date: None,
@@ -584,13 +586,14 @@ pub(crate) mod tests {
         // when
         use_case.execute();
 
-        let_assert!([DomainError::InvalidBoard(error_message)] = use_case.presenter.errors_presented.as_slice());
+        let errors_presented = use_case.presenter.errors_presented.borrow();
+        let_assert!([DomainError::InvalidBoard(error_message)] = errors_presented.as_slice());
         check!(error_message == "unable to undo flush of 3 number of issues, when the total number of issues in deleted entities is 2");
     }
 
     #[test]
     fn test_undo_flush() {
-        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
+        let use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
             Issue { description: Description::from("An issue"), state: State::Open,
                 time_created: DEFAULT_FAKE_TODAY,
                 due_date: None,
@@ -621,8 +624,8 @@ pub(crate) mod tests {
         // when
         use_case.execute();
 
-        let_assert!([] = use_case.presenter.errors_presented.as_slice());
-        let stored_board = use_case.storage.load();
+        check_no_errors(&use_case);
+        let stored_board = get_stored_and_presented_board(&use_case);
 
         check!(stored_board.entity_count() == 3 + 1);
         for (expected_description, actual_entity) in [
@@ -632,14 +635,11 @@ pub(crate) mod tests {
             "An issue"].into_iter().zip(stored_board.entities()) {
             check!(actual_entity.description == Description::from(expected_description));
         }
-
-        let_assert!(Some(presented_board) = use_case.presenter.last_board_rendered, "Expected board to have been presented");
-        check_boards_are_equal(&stored_board, &presented_board);
     }
 
     #[test]
     fn test_undo_edit() {
-        let mut use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
+        let use_case = given_undo_usecase_with(HistorizedBoard::new(vec![
             Issue { description: Description::from("An edited issue"), state: State::Open, time_created: DEFAULT_FAKE_TODAY, due_date: None }
         ], vec![], vec![
             UndoableHistoryElement::Edit(EditHistoryElement{
@@ -651,9 +651,7 @@ pub(crate) mod tests {
         // when
         use_case.execute();
 
-        let stored_board = use_case.storage.load();
-        let_assert!(Some(presented_board) = use_case.presenter.last_board_rendered, "Expected board to have been presented");
-        check_boards_are_equal(&stored_board, &presented_board);
+        let stored_board = get_stored_and_presented_board(&use_case);
 
         let description = &stored_board.entities().first().expect("Expected entity to be present").description;
         check!(description == &Description::from("An issue"));
@@ -832,7 +830,7 @@ pub(crate) mod tests {
     }
 
     fn given_undo_usecase_with(board: HistorizedBoard<Issue>) -> UndoUseCase<MemoryIssueStorage, NilPresenter> {
-        let mut storage = MemoryIssueStorage::default();
+        let storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         UndoUseCase {

@@ -1,3 +1,4 @@
+use internal_macros::{PresenterHolder, StorageHolder};
 use uuid::Uuid;
 use crate::application::domain::error::DomainResultMultiError;
 use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
@@ -6,9 +7,11 @@ use crate::application::domain::historized_board::HistorizedBoard;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::application::State;
+use crate::application::usecase::usecase::{HasStorage, HasPresenter};
 
 
-#[derive(Default)]
+// ToDo: use use-case traits
+#[derive(Default, StorageHolder, PresenterHolder)]
 pub(crate) struct MoveUseCase<I: IssueStorage, P: Presenter> {
     storage: I,
     presenter: P,
@@ -83,12 +86,12 @@ mod tests {
     use crate::adapters::storages::IssueStorage;
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::adapters::time_providers::fake::DEFAULT_FAKE_TODAY;
-    use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::error::DomainError;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::domain::history::{MoveHistoryElement, MoveHistoryElements, UndoableHistoryElement};
     use crate::application::issue::Description;
     use crate::application::usecase::r#move::MoveUseCase;
+    use crate::application::usecase::test_utils::get_stored_and_presented_board;
 
     #[test]
     fn test_successful_move_use_case() {
@@ -98,7 +101,7 @@ mod tests {
 
         move_use_case.execute(&vec![1, 0], State::Done);
 
-        let stored_board = move_use_case.storage.load();
+        let stored_board = get_stored_and_presented_board(&move_use_case);
         for index in 0..1 {
             let issue = stored_board.get(stored_board.find_entity_id_by_index(index).unwrap());
             check!(issue.state == State::Done);
@@ -115,9 +118,6 @@ mod tests {
                            },
                        ]
                    }), "Expected a history element with specific content");
-
-        let presented_board = move_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
-        check_boards_are_equal(&presented_board, &stored_board);
     }
 
     /// Tests whether the issue goes on the top of the done list, when being moved there.
@@ -129,7 +129,7 @@ mod tests {
 
         move_use_case.execute(&vec![3], State::Done);
 
-        let stored_board = move_use_case.storage.load();
+        let stored_board = get_stored_and_presented_board(&move_use_case);
 
         for (index, expected_description) in [(1, "Task inserted first"), (2, "Task inserted third")] {
             let issue = stored_board.get(stored_board.find_entity_id_by_index(index).unwrap());
@@ -149,8 +149,6 @@ mod tests {
                        ]
                    }), "Expected a history element with specific content");
 
-        let presented_board = move_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
-        check_boards_are_equal(&presented_board, &stored_board);
     }
 
     /// Open
@@ -202,7 +200,7 @@ mod tests {
         sut.execute(&[3, 2], State::Done);
 
         // Then
-        let stored_board = sut.storage.load();
+        let stored_board = get_stored_and_presented_board(&sut);
         [
             (0, State::Done, "I'm doing it now, A"),
             (1, State::Done, "I'm doing it now, B"),
@@ -229,9 +227,6 @@ mod tests {
                            },
                        ]
                    }), "Expected a history element with specific content");
-
-        let presented_board = sut.presenter.last_board_rendered.expect("Expected a board to be presented");
-        check_boards_are_equal(&presented_board, &stored_board);
     }
 
 
@@ -243,7 +238,7 @@ mod tests {
 
         move_use_case.execute(&vec![1, 4, 5], State::Done);
 
-        let errors = move_use_case.presenter.errors_presented;
+        let errors = move_use_case.presenter.errors_presented.borrow();
         let_assert!([DomainError::IndexOutOfRange(4), DomainError::IndexOutOfRange(5)] = errors.as_slice());
 
         let stored_board = move_use_case.storage.load();
@@ -253,7 +248,7 @@ mod tests {
     }
 
     fn given_move_use_case_with(board: HistorizedBoard<Issue>) -> MoveUseCase<MemoryIssueStorage, NilPresenter> {
-        let mut storage = MemoryIssueStorage::default();
+        let storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         MoveUseCase {

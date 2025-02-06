@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use internal_macros::{PresenterHolder, StorageHolder};
 use uuid::Uuid;
 use crate::application::board::Board;
 use crate::application::ports::issue_storage::IssueStorage;
@@ -6,6 +7,7 @@ use crate::application::ports::presenter::Presenter;
 use crate::application::domain::error::DomainResult;
 use crate::application::domain::history::{PrioHistoryElement, UndoableHistoryElement};
 use crate::application::Issue;
+use crate::application::usecase::usecase::{HasStorage, HasPresenter};
 
 pub(crate) trait PriorityModifier: Default {
     fn modify_priority(board: &mut Board<Issue>, id: Uuid);
@@ -47,7 +49,8 @@ impl PriorityModifier for DownPriority {
     }
 }
 
-#[derive(Default)]
+// ToDo: use use-case traits
+#[derive(Default, PresenterHolder, StorageHolder)]
 pub(crate) struct PriorityUseCase<I: IssueStorage, P: Presenter, PM: PriorityModifier> {
     storage: I,
     presenter: P,
@@ -55,12 +58,12 @@ pub(crate) struct PriorityUseCase<I: IssueStorage, P: Presenter, PM: PriorityMod
     _priority_modifier: PhantomData<PM>
 }
 impl<I: IssueStorage, P: Presenter, PM: PriorityModifier> PriorityUseCase<I, P, PM> {
-    pub(crate) fn execute(&mut self, index: usize) {
+    pub(crate) fn execute(&self, index: usize) {
         let _ = self.try_execute(index)
             .inspect_err(|e| self.presenter.render_error(e));
     }
 
-    fn try_execute(&mut self, index: usize) -> DomainResult<()> {
+    fn try_execute(&self, index: usize) -> DomainResult<()> {
         let mut historized_board = self.storage.load();
 
         let id = historized_board.find_entity_id_by_index(index)?;
@@ -98,52 +101,53 @@ mod test {
     use crate::application::domain::history::{PrioHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
     use crate::application::usecase::prio::{BottomPriority, DownPriority, PriorityModifier, PriorityUseCase, TopPriority, UpPriority};
+    use crate::application::usecase::test_utils::{check_no_errors, get_stored_and_presented_board};
+    use crate::application::usecase::usecase::HasPresenter;
 
     #[test]
     fn test_prio_top() {
-        let mut use_case = given_prio_use_case_with::<TopPriority>(simple_board());
+        let use_case = given_prio_use_case_with::<TopPriority>(simple_board());
 
         // when
         use_case.execute(1);
 
         // then
-        assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
+        check_no_errors(&use_case);
 
-        let stored_board = use_case.storage.load();
+        let stored_board = get_stored_and_presented_board(&use_case);
 
         let history = stored_board.history.stack.as_slice();
 
         let_assert!([UndoableHistoryElement::Prio( PrioHistoryElement{ original_index: 1, new_index: 0, } )] = history);
 
         check_issues_are_swapped(&stored_board);
-        check_boards_are_equal(
-            &use_case.presenter.last_board_rendered.expect("Expected board to be displayed"),
-            &stored_board);
     }
 
     #[test]
     fn test_prio_index_out_of_range() {
-        let mut use_case = given_prio_use_case_with::<TopPriority>(simple_board());
+        let use_case = given_prio_use_case_with::<TopPriority>(simple_board());
 
         // when
         use_case.execute(2);
 
         // then
-        let error = use_case.presenter.errors_presented.last();
+        let cell = use_case.presenter_ref().errors_presented.borrow();
+        let error = cell.last();
         let_assert!(Some(DomainError::IndexOutOfRange(2)) = error);
     }
 
     #[test]
     fn test_prio_successful_no_order_change() {
-        let mut use_case = given_prio_use_case_with::<TopPriority>(simple_board());
+        let use_case = given_prio_use_case_with::<TopPriority>(simple_board());
 
         // when
         use_case.execute(0);
 
         // then
-        assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
+        check_no_errors(&use_case);
 
-        let displayed_board = use_case.presenter.last_board_rendered.expect("Expected board to be displayed");
+        let cell = use_case.presenter_ref().last_board_rendered.borrow();
+        let displayed_board = cell.as_ref().expect("Expected board to be displayed");
 
         check_boards_are_equal(&simple_board(), &displayed_board); // remained the same
         check_boards_are_equal(&displayed_board, &use_case.storage.load());
@@ -151,45 +155,44 @@ mod test {
 
     #[test]
     fn test_prio_bottom() {
-        let mut use_case = given_prio_use_case_with::<BottomPriority>(simple_board());
+        let use_case = given_prio_use_case_with::<BottomPriority>(simple_board());
 
         // when
         use_case.execute(0);
 
         // then
-        assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
+        check_no_errors(&use_case);
 
-        let displayed_board = use_case.presenter.last_board_rendered.expect("Expected board to be displayed");
-        check_issues_are_swapped(&displayed_board);
-        check_boards_are_equal(&displayed_board, &use_case.storage.load());
+        let stored_board = get_stored_and_presented_board(&use_case);
+        check_issues_are_swapped(&stored_board);
     }
     #[test]
     fn test_prio_up() {
-        let mut use_case = given_prio_use_case_with::<UpPriority>(simple_board());
+        let use_case = given_prio_use_case_with::<UpPriority>(simple_board());
 
         // when
         use_case.execute(1);
 
         // then
-        assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
+        check_no_errors(&use_case);
 
-        let displayed_board = use_case.presenter.last_board_rendered.expect("Expected board to be displayed");
+        let stored_board = get_stored_and_presented_board(&use_case);
 
-        check_issues_are_swapped(&displayed_board);
-        check_boards_are_equal(&displayed_board, &use_case.storage.load());
+        check_issues_are_swapped(&stored_board);
     }
 
     #[test]
     fn test_prio_down() {
-        let mut use_case = given_prio_use_case_with::<DownPriority>(simple_board());
+        let use_case = given_prio_use_case_with::<DownPriority>(simple_board());
 
         // when
         use_case.execute(0);
 
         // then
-        assert!(use_case.presenter.errors_presented.is_empty(), "Expected no errors");
+        check_no_errors(&use_case);
 
-        let displayed_board = use_case.presenter.last_board_rendered.expect("Expected board to be displayed");
+        let cell = use_case.presenter.last_board_rendered.borrow();
+        let displayed_board = cell.as_ref().expect("Expected board to be displayed");
 
         check_issues_are_swapped(&displayed_board);
         check_boards_are_equal(&displayed_board, &use_case.storage.load());
@@ -220,7 +223,7 @@ mod test {
     }
 
     fn given_prio_use_case_with<PM: PriorityModifier>(board: HistorizedBoard<Issue>) -> PriorityUseCase<MemoryIssueStorage, NilPresenter, PM> {
-        let mut storage = MemoryIssueStorage::default();
+        let storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         PriorityUseCase {

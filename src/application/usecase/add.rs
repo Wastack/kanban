@@ -1,14 +1,17 @@
+use internal_macros::{PresenterHolder, StorageHolder};
 use crate::application::{Issue, State};
-use crate::application::domain::error::DomainResult;
 use crate::application::domain::history::UndoableHistoryElement;
 use crate::application::domain::parse_date::DateParser;
 use crate::application::issue::Description;
 use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 use crate::application::ports::time::{TodayProvider};
+use crate::application::usecase::usecase::{HasStorage, HasPresenter, with_board_saved_and_presented_single_error};
 
 
-#[derive(Default)]
+// ToDo: use use-case traits
+
+#[derive(Default, PresenterHolder, StorageHolder)]
 pub(crate) struct AddUseCase<I: IssueStorage, P: Presenter, T: TodayProvider> {
     pub(crate) storage: I,
     presenter: P,
@@ -16,33 +19,25 @@ pub(crate) struct AddUseCase<I: IssueStorage, P: Presenter, T: TodayProvider> {
 }
 
 impl<I: IssueStorage, P: Presenter, T: TodayProvider> AddUseCase<I, P, T> {
-    pub(crate) fn execute(&mut self, description: &str, state: State, due_date: Option<String>) {
-        let _ = self.try_execute(description, state, due_date)
-            .inspect_err(|e| self.presenter.render_error(e));
-    }
+    pub(crate) fn execute(&self, description: &str, state: State, due_date: Option<String>) {
+        with_board_saved_and_presented_single_error(self, |mut board| {
+            let date_parser = DateParser {
+                today_provider: &self.time_provider,
+            };
 
-    pub(crate) fn try_execute(&mut self, description: &str, state: State, due_date: Option<String>) -> DomainResult<()> {
-        let mut board = self.storage.load();
+            let due_date = due_date.map(|due_text| date_parser.parse(due_text.as_str()))
+                .transpose()?;
 
-        let date_parser = DateParser {
-            today_provider: &self.time_provider,
-        };
+            board.append_entity(Issue{
+                description: Description::from(description),
+                state,
+                time_created: self.time_provider.today(),
+                due_date,
+            });
+            board.history.add(UndoableHistoryElement::Add);
 
-        let due_date = due_date.map(|due_text| date_parser.parse(due_text.as_str()))
-            .transpose()?;
-
-        board.append_entity(Issue{
-            description: Description::from(description),
-            state,
-            time_created: self.time_provider.today(),
-            due_date,
+            Ok(board)
         });
-        board.history.add(UndoableHistoryElement::Add);
-
-        self.storage.save(&board);
-        self.presenter.render_board(&board);
-
-        Ok(())
     }
 }
 
@@ -55,33 +50,30 @@ mod tests {
     use crate::adapters::storages::memory_issue_storage::test::MemoryIssueStorage;
     use crate::adapters::time_providers::fake::{FakeTodayProvider, DEFAULT_FAKE_TODAY};
     use crate::application::{Issue, State};
-    use crate::application::board::test_utils::check_boards_are_equal;
     use crate::application::domain::historized_board::HistorizedBoard;
     use crate::application::domain::history::UndoableHistoryElement;
     use crate::application::issue::Description;
     use crate::application::usecase::add::AddUseCase;
+    use crate::application::usecase::test_utils::get_stored_and_presented_board;
 
     #[test]
     fn test_successful_add_use_case() {
-        let mut add_use_case = given_add_use_case_with(
+        let add_use_case = given_add_use_case_with(
             HistorizedBoard::default().with_4_typical_issues(),
         );
 
         add_use_case.execute("New task", State::Review, Some(String::from("2023-01-02")));
 
-        let stored_board = add_use_case.storage.load();
+        let stored_board = get_stored_and_presented_board(&add_use_case);
 
         stored_board
             .assert_issue_count(5)
             .assert_first_issue_content()
             .assert_history_consists_of_one_addition();
-
-        let presented_board = add_use_case.presenter.last_board_rendered.expect("Expected a board to be presented");
-        check_boards_are_equal(&presented_board, &stored_board);
     }
 
     fn given_add_use_case_with(board: HistorizedBoard<Issue>) -> AddUseCase<MemoryIssueStorage, NilPresenter, FakeTodayProvider> {
-        let mut storage = MemoryIssueStorage::default();
+        let storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         AddUseCase {

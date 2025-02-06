@@ -4,6 +4,7 @@ use crate::application::ports::issue_storage::IssueStorage;
 use crate::application::ports::presenter::Presenter;
 
 
+// ToDo: use use-case traits
 #[derive(Default)]
 pub(crate) struct DeleteUseCase<I: IssueStorage, P: Presenter> {
     storage: I,
@@ -83,7 +84,8 @@ mod tests {
                 DeleteHistoryElement{ original_position_in_issues: 0 },
             ]  = stored_delete_history_elements.deletions.as_slice());
 
-        let presented_board = sut.presenter.last_board_rendered.expect("Expected a board to be presented");
+        let cell = sut.presenter.last_board_rendered.borrow();
+        let presented_board = cell.as_ref().expect("Expected a board to be presented");
         check_boards_are_equal(&presented_board, &stored_board);
     }
 
@@ -95,8 +97,9 @@ mod tests {
 
         delete_use_case.execute(&vec![1, 4, 5]);
 
-        let errors = delete_use_case.presenter.errors_presented;
-        let_assert!([DomainError::IndexOutOfRange(4), DomainError::IndexOutOfRange(5)] = errors.as_slice());
+        let cell = delete_use_case.presenter.errors_presented.borrow();
+        let errors = cell.as_slice();
+        let_assert!([DomainError::IndexOutOfRange(4), DomainError::IndexOutOfRange(5)] = errors);
 
         delete_use_case.storage.load()
             .assert_issue_count(4)
@@ -126,7 +129,7 @@ mod tests {
     }
 
     fn given_delete_use_case_with(board: HistorizedBoard<Issue>) -> DeleteUseCase<MemoryIssueStorage, NilPresenter> {
-        let mut storage = MemoryIssueStorage::default();
+        let storage = MemoryIssueStorage::default();
         storage.save(&board);
 
         DeleteUseCase {
