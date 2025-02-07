@@ -179,8 +179,9 @@ pub(crate) mod tests {
 
         undo_use_case.execute();
 
-        then_board_for(&undo_use_case)
-            .assert_issue_count(4)
+        let stored_board = get_stored_and_presented_board(&undo_use_case);
+        check!(stored_board.entity_count() == 4);
+        stored_board
             .has_the_original_4_issues_in_order()
             .has_original_history();
     }
@@ -195,8 +196,9 @@ pub(crate) mod tests {
 
         undo_use_case.execute();
 
-        then_board_for(&undo_use_case)
-            .assert_issue_count(4)
+        let stored_board = get_stored_and_presented_board(&undo_use_case);
+        check!(stored_board.entity_count() == 4);
+        stored_board
             .has_the_original_4_issues_in_order()
             .has_original_history();
     }
@@ -211,8 +213,10 @@ pub(crate) mod tests {
 
         undo_use_case.execute();
 
-        then_board_for(&undo_use_case)
-            .assert_issue_count(4)
+        let stored_board = get_stored_and_presented_board(&undo_use_case);
+        check!(stored_board.entity_count() == 4);
+
+        stored_board
             .has_the_original_4_issues_in_order()
             .has_original_history();
     }
@@ -238,8 +242,10 @@ pub(crate) mod tests {
 
         undo_use_case.execute();
 
-        then_board_for(&undo_use_case)
-            .assert_issue_count(4)
+        let stored_board = get_stored_and_presented_board(&undo_use_case);
+        check!(stored_board.entity_count() == 4);
+
+        stored_board
             .has_the_original_4_issues_in_order()
             .has_original_history();
     }
@@ -254,8 +260,10 @@ pub(crate) mod tests {
 
         undo_use_case.execute();
 
-        then_board_for(&undo_use_case)
-            .assert_issue_count(4)
+        let stored_board = get_stored_and_presented_board(&undo_use_case);
+        check!(stored_board.entity_count() == 4);
+
+        stored_board
             .has_the_original_4_issues_in_order()
             .has_original_history();
     }
@@ -272,7 +280,10 @@ pub(crate) mod tests {
         // When undoing move
         undo_use_case.execute();
 
-        then_board_for(&undo_use_case)
+        let stored_board = get_stored_and_presented_board(&undo_use_case);
+        check!(stored_board.entity_count() == 5);
+
+        stored_board
             .assert_has_original_issues()
             .has_additional_issue_added_with_state_open()
             .has_the_addition_in_history();
