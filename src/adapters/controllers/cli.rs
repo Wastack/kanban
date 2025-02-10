@@ -137,8 +137,6 @@ pub(crate) enum Command {
         /// Date in the format of `yyyy-mm-dd`  or `mm--dd` or `dd` or "tomorrow" or "tom" or
         ///
         /// You can also use "m" "tu", "w", "th", "f", "sa", "su" for the next occurrence of that weekday (excluding today).
-        ///
-        /// ToDo(dev): Don't show due date if it's done
         date: Option<String>,
     }
 }

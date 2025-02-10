@@ -68,9 +68,6 @@ fn parse_to_weekday(text: &str) -> DomainResult<time::Weekday> {
     }
 }
 
-
-// ToDo: remove a buttload of mutability with cells
-
 #[cfg(test)]
 mod tests {
     use assert2::{check, let_assert};
