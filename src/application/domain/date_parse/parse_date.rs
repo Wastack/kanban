@@ -1,7 +1,6 @@
 use time;
 use chumsky::prelude::*;
-
-use crate::application::domain::error::{DomainError, DomainResult, ParseError};
+use crate::application::domain::date_parse::error::DateParseError;
 use crate::application::ports::time::TodayProvider;
 
 pub struct DateParser<'a, T: TodayProvider> {
@@ -16,37 +15,41 @@ impl<T: TodayProvider> DateParser<'_, T> {
     ///   + 0 padding is accepted for years, months, days
     /// - "today", "tomorrow"
     /// - "m" "tu", "w", "th", "f", "sa", "su" for the next occurrence of that weekday (excluding today).
-    pub(crate) fn parse(&self, text: &str) -> DomainResult<time::Date> {
-        self.parse_as_relative_day(text)
-            .or(self.parse_as_relative_weekday(text))
-            .or(self.parse_date(text).map_err(|e| e.into()))
-    }
+    pub(crate) fn parse(&self, text: &str) -> Result<time::Date, DateParseError> {
+        let maybe_relative_date = self.parse_as_relative_day(text)
+            .or(self.parse_as_relative_weekday(text));
 
-    fn parse_as_relative_day(&self, text: &str) -> DomainResult<time::Date> {
-        match text.to_lowercase().as_str() {
-            "today" | "now" => {
-                Ok(self.today_provider.today())
-            },
-            "tomorrow" => {
-                Ok(self.today_provider.today().next_day().unwrap())
-            },
-            _ => Err(DomainError::InternalError(String::from("not a relative day")))
+        match maybe_relative_date {
+            Some(relative_date) => Ok(relative_date),
+            None => self.parse_date(text).map_err(|e| e.into())
         }
     }
-    fn parse_as_relative_weekday(&self, text: &str) -> DomainResult<time::Date> {
+
+    fn parse_as_relative_day(&self, text: &str) -> Option<time::Date> {
+        match text.to_lowercase().as_str() {
+            "today" | "now" => {
+                Some(self.today_provider.today())
+            },
+            "tomorrow" => {
+                Some(self.today_provider.today().next_day().unwrap())
+            },
+            _ => None,
+        }
+    }
+    fn parse_as_relative_weekday(&self, text: &str) -> Option<time::Date> {
         let week_day = parse_to_weekday(text)?;
 
-        Ok(self.today_provider.today().next_occurrence(week_day))
+        Some(self.today_provider.today().next_occurrence(week_day))
     }
 
-    fn parse_date(&self, text: &str) -> Result<time::Date, ParseError> {
+    fn parse_date(&self, text: &str) -> Result<time::Date, DateParseError> {
         let parser = date_parser();
         let parsed = parser.parse(text)?;
 
         self.try_from_parsed_date(parsed)
     }
 
-    fn try_from_parsed_date(&self, parsed_date: ParsedDate) -> Result<time::Date, ParseError> {
+    fn try_from_parsed_date(&self, parsed_date: ParsedDate) -> Result<time::Date, DateParseError> {
         let ParsedDate { year, month, day } = parsed_date;
         let month = match month {
             None => self.today_provider.today().month().into(),
@@ -69,16 +72,16 @@ impl<T: TodayProvider> DateParser<'_, T> {
 }
 
 
-fn parse_to_weekday(text: &str) -> DomainResult<time::Weekday> {
+fn parse_to_weekday(text: &str) -> Option<time::Weekday> {
     match text.to_lowercase().as_str() {
-        "m" | "mo" | "mon" | "mond" | "monda" | "monday" => Ok(time::Weekday::Monday),
-        "tu" | "tue" | "tues" | "tuesd" | "tuesda" | "tuesday" => Ok(time::Weekday::Tuesday),
-        "w" | "we" | "wed" | "wedn" | "wedne" | "wednes" | "wednesd" | "wednesda" | "wednesday" => Ok(time::Weekday::Wednesday),
-        "th" | "thu" | "thur" | "thurs" | "thursd" | "thursda" | "thursday" => Ok(time::Weekday::Thursday),
-        "f" | "fr" | "fri" | "frid" | "frida" | "friday" => Ok(time::Weekday::Friday),
-        "sa" | "sat" | "satu" | "satur" | "saturd" | "saturda" | "saturday" => Ok(time::Weekday::Saturday),
-        "su" | "sun" | "sund" | "sunda" | "sunday" => Ok(time::Weekday::Sunday),
-        _ => Err(DomainError::InternalError(String::from("not a weekday")))
+        "m" | "mo" | "mon" | "mond" | "monda" | "monday" => Some(time::Weekday::Monday),
+        "tu" | "tue" | "tues" | "tuesd" | "tuesda" | "tuesday" => Some(time::Weekday::Tuesday),
+        "w" | "we" | "wed" | "wedn" | "wedne" | "wednes" | "wednesd" | "wednesda" | "wednesday" => Some(time::Weekday::Wednesday),
+        "th" | "thu" | "thur" | "thurs" | "thursd" | "thursda" | "thursday" => Some(time::Weekday::Thursday),
+        "f" | "fr" | "fri" | "frid" | "frida" | "friday" => Some(time::Weekday::Friday),
+        "sa" | "sat" | "satu" | "satur" | "saturd" | "saturda" | "saturday" => Some(time::Weekday::Saturday),
+        "su" | "sun" | "sund" | "sunda" | "sunday" => Some(time::Weekday::Sunday),
+        _ => None,
     }
 }
 
@@ -117,9 +120,8 @@ mod tests {
     use assert2::{check, let_assert};
     use time::macros::date;
     use crate::adapters::time_providers::fake::FakeTodayProvider;
-    use crate::application::domain::error::DomainError;
-    use crate::application::domain::parse_date::{date_parser, DateParser, ParsedDate};
     use chumsky::Parser;
+    use crate::application::domain::date_parse::parse_date::{date_parser, DateParser, ParsedDate};
 
     #[test]
     fn test_parse_date() {
@@ -159,7 +161,8 @@ mod tests {
 
         for input in test_table_failure {
             let result = date_parser.parse(input);
-            let_assert!(Err(DomainError::ParseError(_)) = result, "input: {}", input);
+            // ToDo: more precise error handling
+            check!(result.is_err());
         }
     }
 
