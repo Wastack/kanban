@@ -54,7 +54,7 @@ mod test {
     use crate::application::domain::history::{DueHistoryElement, UndoableHistoryElement};
     use crate::application::issue::Description;
     use crate::application::usecase::due::{DueUseCase};
-    use crate::application::usecase::test_utils::get_stored_and_presented_board;
+    use crate::application::usecase::test_utils::{check_no_errors, get_stored_and_presented_board};
     use crate::application::usecase::usecase::HasPresenter;
 
     #[test]
@@ -109,6 +109,8 @@ mod test {
             HistorizedBoard::default().with_issue(due_issue()),
         );
         use_case.execute(0, Some("tomorrow"));
+
+        check_no_errors(&use_case);
 
         let stored_board = get_stored_and_presented_board(&use_case);
         let issue = stored_board.get_with_index(0);

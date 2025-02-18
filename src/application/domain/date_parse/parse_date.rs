@@ -1,7 +1,9 @@
 use time;
-use chumsky::prelude::*;
+use crate::application::domain::date_parse;
+use crate::application::domain::date_parse::chumsky::ParsedDate;
 use crate::application::domain::date_parse::error::DateParseError;
 use crate::application::ports::time::TodayProvider;
+use chumsky::Parser;
 
 pub struct DateParser<'a, T: TodayProvider> {
     pub today_provider: &'a T,
@@ -17,12 +19,14 @@ impl<T: TodayProvider> DateParser<'_, T> {
     /// - "m" "tu", "w", "th", "f", "sa", "su" for the next occurrence of that weekday (excluding today).
     pub(crate) fn parse(&self, text: &str) -> Result<time::Date, DateParseError> {
         let maybe_relative_date = self.parse_as_relative_day(text)
-            .or(self.parse_as_relative_weekday(text));
+                    .or(self.parse_as_relative_weekday(text));
 
-        match maybe_relative_date {
-            Some(relative_date) => Ok(relative_date),
-            None => self.parse_date(text).map_err(|e| e.into())
-        }
+        let date = match maybe_relative_date {
+            None => self.parse_date(text)?,
+            Some(relative_date) => relative_date,
+        };
+
+        Ok(date)
     }
 
     fn parse_as_relative_day(&self, text: &str) -> Option<time::Date> {
@@ -43,7 +47,7 @@ impl<T: TodayProvider> DateParser<'_, T> {
     }
 
     fn parse_date(&self, text: &str) -> Result<time::Date, DateParseError> {
-        let parser = date_parser();
+        let parser = date_parse::chumsky::date_parser();
         let parsed = parser.parse(text)?;
 
         self.try_from_parsed_date(parsed)
@@ -86,42 +90,12 @@ fn parse_to_weekday(text: &str) -> Option<time::Weekday> {
 }
 
 
-#[derive(Debug, PartialEq)]
-struct ParsedDate {
-    year: Option<i32>,
-    month: Option<i32>,
-    day: i32,
-}
-
-fn date_parser() -> impl Parser<char, ParsedDate, Error = Simple<char>> {
-    let number = text::int(10).map(|s: String| s.parse::<i32>().unwrap());
-
-    let number_padded_zero = filter(|c: &char| *c == '0').repeated().at_most(1).ignored().ignore_then(number);
-    let additional_number = just("-").ignored().ignore_then(number_padded_zero);
-
-    // ToDo: zero padded years should not be accepted.
-    number_padded_zero
-        .then(additional_number.or_not())
-        .then(additional_number.or_not())
-        //.then_ignore(end())
-        .map(|((first, second), third)|{
-            match second {
-                None => ParsedDate { year: None, month: None, day: first },
-                Some(second) => match third {
-                    None => ParsedDate { year: None, month: Some(first), day: second },
-                    Some(third) => ParsedDate { year: Some(first), month: Some(second ), day: third },
-                },
-            }
-        })
-}
-
 #[cfg(test)]
 mod tests {
     use assert2::{check, let_assert};
     use time::macros::date;
     use crate::adapters::time_providers::fake::FakeTodayProvider;
-    use chumsky::Parser;
-    use crate::application::domain::date_parse::parse_date::{date_parser, DateParser, ParsedDate};
+    use crate::application::domain::date_parse::parse_date::DateParser;
 
     #[test]
     fn test_parse_date() {
@@ -166,24 +140,4 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_chumsky_parse_date() {
-        // ToDo: test failure cases?
-        // ToDo: zero padded years should not be accepted.
-        let test_table = [
-            ("2025-02-09", ParsedDate{ year: Some(2025), month: Some(2), day: 9, }),
-            ("2025-2-09", ParsedDate{ year: Some(2025), month: Some(2), day: 9, }),
-            ("2025-02-9", ParsedDate{ year: Some(2025), month: Some(2), day: 9, }),
-            ("02-9", ParsedDate{ year: None, month: Some(2), day: 9, }),
-            ("2-09", ParsedDate{ year: None, month: Some(2), day: 9, }),
-            ("09", ParsedDate{ year: None, month: None, day: 9, }),
-            ("9", ParsedDate{ year: None, month: None, day: 9, }),
-        ];
-
-        for (input, expected_output) in test_table {
-            let result = date_parser().parse(input);
-            let_assert!(Ok(result) = result, "input: {}, expected output: {:?}", input, expected_output);
-            check!(result == expected_output, "input: {}", input);
-        }
-    }
 }
