@@ -1,7 +1,9 @@
 use std::{io};
+use std::num::TryFromIntError;
+use chumsky::prelude::Simple;
 use nonempty_collections::NEVec;
 use thiserror::Error;
-use time::error;
+use time::error::ComponentRange;
 
 pub type DomainResult<T> = Result<T, DomainError>;
 pub type DomainResultMultiError<T> = Result<T, NEVec<DomainError>>;
@@ -23,15 +25,27 @@ pub enum DomainError {
     EmptyHistory,
 
     #[error("Parse error: {0}")]
-    ParseError(error::Parse),
+    ParseError(#[from] ParseError),
 
     #[error("Internal error: {0}")]
     InternalError(String),
 }
 
-impl From<error::Parse> for DomainError {
-    fn from(value: error::Parse) -> Self {
-        Self::ParseError(value)
+#[derive(Debug, Error, Clone)]
+pub enum ParseError {
+    #[error(transparent)]
+    IntError(#[from] TryFromIntError),
+
+    #[error(transparent)]
+    ComponentRange(#[from] ComponentRange),
+
+    #[error("Chumsky error: {0:?}")]
+    ChumskyError(Vec<Simple<char>>),
+}
+
+impl From<Vec<Simple<char>>> for ParseError {
+    fn from(value: Vec<Simple<char>>) -> Self {
+        Self::ChumskyError(value)
     }
 }
 
