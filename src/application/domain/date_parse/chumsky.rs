@@ -1,6 +1,6 @@
 use chumsky::{text, Parser};
 use chumsky::error::Simple;
-use chumsky::prelude::{filter, just};
+use chumsky::prelude::{filter, one_of};
 
 #[derive(Debug, PartialEq)]
 pub struct ParsedDate {
@@ -13,12 +13,12 @@ pub fn date_parser() -> impl Parser<char, ParsedDate, Error = Simple<char>> {
     let number = text::int(10).map(|s: String| s.parse::<i32>().unwrap());
 
     let number_padded_zero = filter(|c: &char| *c == '0').repeated().at_most(1).ignored().ignore_then(number);
-    let additional_number = just("-").ignored().ignore_then(number_padded_zero);
+    let additional_number = one_of("-./").ignored().ignore_then(number_padded_zero);
 
     // ToDo: zero padded years should not be accepted.
     number_padded_zero
-        .then(additional_number.or_not())
-        .then(additional_number.or_not())
+        .then(additional_number.clone().or_not())
+        .then(additional_number.clone().or_not())
         //.then_ignore(end())
         .map(|((first, second), third)|{
             match second {
@@ -43,6 +43,8 @@ mod tests {
         // ToDo: zero padded years should not be accepted.
         let test_table = [
             ("2025-02-09", ParsedDate{ year: Some(2025), month: Some(2), day: 9, }),
+            ("2025.02.09", ParsedDate{ year: Some(2025), month: Some(2), day: 9, }),
+            ("2025/02/09", ParsedDate{ year: Some(2025), month: Some(2), day: 9, }),
             ("2025-2-09", ParsedDate{ year: Some(2025), month: Some(2), day: 9, }),
             ("2025-02-9", ParsedDate{ year: Some(2025), month: Some(2), day: 9, }),
             ("02-9", ParsedDate{ year: None, month: Some(2), day: 9, }),
