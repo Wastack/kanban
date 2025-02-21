@@ -1,13 +1,9 @@
 use chumsky::error::Simple;
 use thiserror::Error;
-use std::num::TryFromIntError;
 use time::error::ComponentRange;
 
 #[derive(Debug, Error, Clone)]
 pub enum DateParseError {
-    #[error(transparent)]
-    IntError(#[from] TryFromIntError),
-
     #[error(transparent)]
     ComponentRange(#[from] ComponentRange),
 

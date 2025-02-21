@@ -17,8 +17,12 @@ impl<T: TodayProvider> DateParser<'_, T> {
     /// - "today", "tomorrow"
     /// - "m" "tu", "w", "th", "f", "sa", "su" for the next occurrence of that weekday (excluding today).
     pub(crate) fn parse(&self, text: &str) -> Result<time::Date, DateParseError> {
-            ParsedDateAst::parser().parse(text).map_err(|e| e.into())
-                .and_then(|parsed| self.eval(parsed)).map_err(Into::into)
+            ParsedDateAst::parser()
+                .parse(text)
+                .map_err(DateParseError::from)
+                .and_then(|parsed|
+                    self.eval(parsed))
+                        .map_err(DateParseError::from)
     }
 
     pub fn eval(&self, parsed_date: ParsedDateAst) -> Result<time::Date, DateParseError> {
@@ -32,27 +36,13 @@ impl<T: TodayProvider> DateParser<'_, T> {
 
     fn try_from_parsed_date(&self, parsed_date: ParsedDate) -> Result<time::Date, DateParseError> {
         let ParsedDate { year, month, day } = parsed_date;
-        let month = match month {
-            None => self.today_provider.today().month().into(),
-            Some(month) => u8::try_from(month)?,
-        };
 
-        let month = time::Month::try_from(month)?;
-
-        let year = match year {
-            None => self.today_provider.today().year(),
-            Some(year) => year,
-        };
-
-        let day = u8::try_from(day)?;
-
-        let date = time::Date::from_calendar_date(year, month, day)?;
-
-        Ok(date)
+        time::Date::from_calendar_date(
+            year.unwrap_or(self.today_provider.today().year()),
+            month.unwrap_or(self.today_provider.today().month()),
+            day).map_err(DateParseError::from)
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -94,7 +84,7 @@ mod tests {
         }
 
         let test_table_failure = [
-            "unparsable", "-", "--", "tomorroww", "2034-",
+            "unparsable","-", "--", "tomorroww", "2034-",
             "2024-23-01", "2025-02-29", "-2-02-02",
             "t", "-2034", "", "2025-02-29-12", "41"];
 
