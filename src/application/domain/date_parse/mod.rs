@@ -1,5 +1,5 @@
 pub mod parse_date;
 pub mod error;
-mod chumsky;
+mod parser;
 
 pub use parse_date::DateParser;
