@@ -86,7 +86,7 @@ mod tests {
         let test_table_failure = [
             "unparsable","-", "--", "tomorroww", "2034-",
             "2024-23-01", "2025-02-29", "-2-02-02",
-            "t", "-2034", "", "2025-02-29-12", "41"];
+            "t", "-2034", "", "2025-02-29-12", "41", "02025-02-11"];
 
         for input in test_table_failure {
             let result = date_parser.parse(input);

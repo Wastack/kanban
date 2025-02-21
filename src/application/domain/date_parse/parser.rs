@@ -55,15 +55,22 @@ impl ParsedDate {
     fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
         let number = text::int(10).map(|s: String| s.parse::<i32>().unwrap());
 
+        // Parser that remembers if there were any padding zeroes
+        let number_padded_not_ignored_zero= filter(|c: &char| *c == '0')
+            .repeated()
+            .at_most(1)
+            .map(|v| !v.is_empty())
+            .then(number);
+
         let number_padded_zero = filter(|c: &char| *c == '0').repeated().at_most(1).ignored().ignore_then(number);
         let additional_number = one_of("-./").ignored().ignore_then(number_padded_zero);
 
         // ToDo: zero padded years should not be accepted.
-        number_padded_zero
+        number_padded_not_ignored_zero
             .then(additional_number.clone().or_not())
             .then(additional_number.clone().or_not())
             .then_ignore(end())
-            .try_map(|((first, second), third), span|{
+            .try_map(|(((first_had_padding_zero ,first), second), third), span|{
                 let parsed_date = match second {
                     None => ParsedDate {
                         year: None,
@@ -76,10 +83,18 @@ impl ParsedDate {
                             month: Some(Self::i32_to_month(first, span.clone())?),
                             day: Self::i32_to_u8(second, span)?,
                         },
-                        Some(third) => ParsedDate {
-                            year: Some(first),
-                            month: Some(Self::i32_to_month(second, span.clone())?),
-                            day: Self::i32_to_u8(third, span)?,
+                        Some(third) => {
+                            // Now we know that `first` is a year. In this case, padding zeroes should
+                            // not have been accepted.
+                            if first_had_padding_zero {
+                                return Err(Simple::custom(span, "Year component started with zero digit"));
+                            }
+
+                            ParsedDate {
+                                year: Some(first),
+                                month: Some(Self::i32_to_month(second, span.clone())?),
+                                day: Self::i32_to_u8(third, span)?,
+                            }
                         },
                     },
                 };
@@ -112,7 +127,6 @@ mod tests {
     #[test]
     fn test_chumsky_parse_date() {
         // ToDo: test failure cases?
-        // ToDo: zero padded years should not be accepted.
         let test_table = [
             ("2025-02-09", ParsedDate{ year: Some(2025), month: Some(Month::February), day: 9, }),
             ("2025.02.09", ParsedDate{ year: Some(2025), month: Some(Month::February), day: 9, }),
