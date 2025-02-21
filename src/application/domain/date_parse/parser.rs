@@ -55,7 +55,7 @@ impl ParsedDate {
     fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
         let number = text::int(10).map(|s: String| s.parse::<i32>().unwrap());
 
-        // Parser that remembers if there were any padding zeroes
+        // Number parser that remembers if there were any padding zeroes
         let number_padded_not_ignored_zero= filter(|c: &char| *c == '0')
             .repeated()
             .at_most(1)
@@ -65,7 +65,6 @@ impl ParsedDate {
         let number_padded_zero = filter(|c: &char| *c == '0').repeated().at_most(1).ignored().ignore_then(number);
         let additional_number = one_of("-./").ignored().ignore_then(number_padded_zero);
 
-        // ToDo: zero padded years should not be accepted.
         number_padded_not_ignored_zero
             .then(additional_number.clone().or_not())
             .then(additional_number.clone().or_not())
